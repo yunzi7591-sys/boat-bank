@@ -1,0 +1,185 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// Auth.js Standard Models + Custom Fields
+// -------------------------------------------------------------
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  // Custom fields
+  points        Int       @default(1000)
+  role          String    @default("BUYER")
+  bio           String?   // 自己紹介 (Phase 8 追加)
+  
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  predictions   Prediction[]  @relation("Author")
+  transactions  Transaction[] @relation("Buyer")
+  
+  followers     Follows[] @relation("following")
+  following     Follows[] @relation("follower")
+  
+  notifications Notification[]
+}
+
+model Follows {
+  followerId  String
+  followingId String
+  follower    User   @relation("follower", fields: [followerId], references: [id])
+  following   User   @relation("following", fields: [followingId], references: [id])
+
+  @@id([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  
+  access_token       String?  
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// -------------------------------------------------------------
+// BOAT BANK Custom Models
+// -------------------------------------------------------------
+
+// 予想記事モデル
+model Prediction {
+  id               String   @id @default(cuid())
+  title            String?
+  commentary       String?  // 見解や予想コメント
+  price            Int      // 消費ポイント（0なら無料）
+  
+  // PostgreSQLのネイティブなJson型を利用して買い目と個別金額を保存
+  predictedNumbers Json   
+  
+  isPrivate        Boolean  @default(false) // 自分用の賭けかどうか (Phase 12追加)
+  
+  authorId         String
+  author           User     @relation("Author", fields: [authorId], references: [id], onDelete: Cascade)
+  
+  // レース情報（RaceResultとの照合用）
+  placeName        String   // 例: 桐生、平和島、等
+  raceNumber       Int      // レース番号 (1~12)
+  raceDate         DateTime // レース日時（YYYY-MM-DDなど一意に判別できるもの）
+  
+  // 締切時刻と人気
+  deadlineAt       DateTime @default(now()) // 締切時刻
+  viewCount        Int      @default(0)     // 人気カウンター
+  
+  // 結果判定
+  resultChecked    Boolean  @default(false)
+  isHit            Boolean  @default(false)
+  refundAmount     Int      @default(0) // 払戻金シミュレーション用
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  transactions     Transaction[]
+}
+
+// ポイント消費・予想購入履歴モデル
+model Transaction {
+  id           String     @id @default(cuid())
+  points       Int        // 消費されたポイント数 (取得の場合はプラス, 消費はマイナス等で管理)
+  action       String     // 例: "BUY_PREDICTION", "LOGIN_BONUS", "WELCOME_BONUS"
+  
+  // 購入者（またはポイント受取ユーザー）
+  userId       String
+  user         User       @relation("Buyer", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 購入された予想記事（購入アクションの場合）
+  predictionId String?
+  prediction   Prediction? @relation(fields: [predictionId], references: [id], onDelete: SetNull)
+  
+  createdAt    DateTime   @default(now())
+}
+
+// レース結果モデル (成績バッチ照合用)
+model RaceResult {
+  id           String   @id @default(cuid())
+  placeName    String   // 場名
+  raceNumber   Int      // 1~12
+  raceDate     DateTime // レース開催日
+  
+  // 出目情報 (順位別)
+  firstPlace   Int      // 1着
+  secondPlace  Int      // 2着
+  thirdPlace   Int      // 3着
+  
+  // 払戻金情報
+  // Json型で配列保存
+  // 例: "[{\"type\":\"3連単\",\"numbers\":\"1-2-3\",\"amount\":1540}]"
+  refunds      Json   
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([placeName, raceNumber, raceDate])
+}
+
+// 本日のレース予定モデル (API連携用)
+model RaceSchedule {
+  id           String   @id @default(cuid())
+  placeName    String   // 場名
+  raceNumber   Int      // 1~12
+  raceDate     DateTime // 開催日
+  deadlineAt   DateTime // 締切時刻
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([placeName, raceNumber, raceDate])
+}
+
+// 通知モデル (Phase 13追加)
+model Notification {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String   // "SALE", "FOLLOW", "SYSTEM" など
+  message      String   // 通知メッセージ本文
+  isRead       Boolean  @default(false)
+  
+  createdAt    DateTime @default(now())
+}
