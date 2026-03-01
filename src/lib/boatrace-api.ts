@@ -4,6 +4,25 @@ import { VENUES } from "@/lib/constants/venues";
 const SCHEDULE_API_URL = "https://boatraceopenapi.github.io/programs/v2/today.json";
 const RESULTS_API_URL = "https://boatraceopenapi.github.io/results/v2/today.json";
 
+function extractGrade(gradeNumber: number): string {
+    switch (gradeNumber) {
+        case 1: return "SG";
+        case 2: return "G1";
+        case 3: return "G2";
+        case 4: return "G3";
+        case 5: return "一般";
+        default: return "一般";
+    }
+}
+
+function extractDay(subtitle: string): string {
+    if (!subtitle) return "開催中";
+    if (subtitle.includes("優勝戦") && !subtitle.includes("準")) return "最終日";
+    if (subtitle.includes("準優勝戦")) return "5日目";
+    if (subtitle.includes("ドリーム")) return "初日";
+    return "開催中";
+}
+
 export async function syncTodaySchedule() {
     try {
         console.log(`[API] Fetching schedule from ${SCHEDULE_API_URL}...`);
@@ -35,6 +54,10 @@ export async function syncTodaySchedule() {
             // but for simplicity, we treat the exact string as UTC or parse as local. Let's append JST +0900.
             const deadlineAt = new Date(`${prog.race_closed_at.replace(' ', 'T')}+09:00`);
 
+            // Phase 22: Extract Grade and Day
+            const grade = extractGrade(prog.race_grade_number);
+            const day = extractDay(prog.race_subtitle);
+
             await prisma.raceSchedule.upsert({
                 where: {
                     placeName_raceNumber_raceDate: {
@@ -43,12 +66,14 @@ export async function syncTodaySchedule() {
                         raceDate,
                     }
                 },
-                update: { deadlineAt },
+                update: { deadlineAt, grade, day },
                 create: {
                     placeName,
                     raceNumber,
                     raceDate,
                     deadlineAt,
+                    grade,
+                    day
                 }
             });
             syncedCount++;

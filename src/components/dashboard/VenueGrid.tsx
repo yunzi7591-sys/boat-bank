@@ -45,8 +45,11 @@ export async function VenueGrid() {
             <div className="grid grid-cols-4 gap-2">
                 {VENUES.map((venue) => {
                     const isActive = activeVenueNames.has(venue.name);
-                    const grade = "一般"; // Placeholder fallback
-                    const eventDay = "-日目"; // Placeholder fallback
+                    const venueSchedules = schedules.filter(s => s.placeName === venue.name).sort((a, b) => a.raceNumber - b.raceNumber);
+
+                    // Extract grade and day from the first available schedule for this venue
+                    const grade = venueSchedules.length > 0 && venueSchedules[0].grade ? venueSchedules[0].grade : "一般";
+                    const eventDay = venueSchedules.length > 0 && venueSchedules[0].day ? venueSchedules[0].day : "-日目";
 
                     if (!isActive) {
                         return (
@@ -66,7 +69,6 @@ export async function VenueGrid() {
                     }
 
                     // Active venue details
-                    const venueSchedules = schedules.filter(s => s.placeName === venue.name).sort((a, b) => a.raceNumber - b.raceNumber);
                     const nextRace = venueSchedules.find(s => new Date(s.deadlineAt) > now);
                     const isFinished = !nextRace;
 
