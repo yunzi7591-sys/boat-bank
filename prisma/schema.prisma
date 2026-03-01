@@ -109,6 +109,11 @@ model Prediction {
   deadlineAt       DateTime @default(now()) // 締切時刻
   viewCount        Int      @default(0)     // 人気カウンター
   
+  // 賭け設定 (Phase 27追加)
+  betAmount        Int      @default(0)     // この予想にユーザーが賭けた合計ポイント
+  hitAmount        Int      @default(0)     // 的中時の獲得金額（払い戻し）
+  originalPredictionId String?              // 他人の予想の丸乗り（Ride on）した場合の元予想ID
+  
   // 結果判定
   resultChecked    Boolean  @default(false)
   isHit            Boolean  @default(false)
