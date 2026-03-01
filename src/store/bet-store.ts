@@ -16,7 +16,7 @@ interface BetStore {
     cart: Formation[];
 
     // Cart actions
-    addFormationToCart: () => void; // Helper that takes current selections -> formations -> cart
+    addFormationToCart: (defaultAmount?: number) => void; // Helper that takes current selections -> formations -> cart
     updateCartItemAmount: (formationId: string, combinationId: string, amount: number) => void;
     updateCartFormationAmount: (formationId: string, amount: number) => void;
     removeCombination: (formationId: string, combinationId: string) => void;
@@ -80,17 +80,23 @@ export const useBetStore = create<BetStore>((set, get) => ({
 
     cart: [],
 
-    addFormationToCart: () => {
+    addFormationToCart: (defaultAmount = 0) => {
         set((state) => {
             const unrolled = unrollCombinations(state.activeBetType, state.selections);
             if (unrolled.length === 0) return state; // Do nothing if invalid formation
+
+            // Map the defaultAmount if provided
+            const combinationsWithAmount = unrolled.map(c => ({
+                ...c,
+                amount: defaultAmount
+            }));
 
             const newFormation: Formation = {
                 id: generateId(),
                 betType: state.activeBetType,
                 selections: JSON.parse(JSON.stringify(state.selections)), // deep copy
-                combinations: unrolled,
-                totalExpectedAmount: 0,
+                combinations: combinationsWithAmount,
+                totalExpectedAmount: defaultAmount,
                 isIndividualAmount: false,
             };
 
