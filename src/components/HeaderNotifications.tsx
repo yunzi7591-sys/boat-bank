@@ -60,7 +60,7 @@ export function HeaderNotifications({ notifications }: { notifications: Notifica
                                 </p>
                                 <span className="text-[10px] font-bold text-slate-400">
                                     {new Date(n.createdAt).toLocaleString('ja-JP', {
-                                        month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                                        timeZone: 'Asia/Tokyo', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                                     })}
                                 </span>
                             </div>

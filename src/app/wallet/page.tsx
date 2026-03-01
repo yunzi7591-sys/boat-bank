@@ -93,7 +93,7 @@ export default async function WalletPage() {
                                         <div className="pr-4">
                                             <div className="text-[10px] font-bold text-slate-400 mb-1">
                                                 {tx.createdAt.toLocaleString('ja-JP', {
-                                                    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                                                    timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                                                 })}
                                             </div>
                                             <div className="text-xs font-bold text-slate-700 leading-tight">

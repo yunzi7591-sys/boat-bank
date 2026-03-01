@@ -98,7 +98,7 @@ export default async function PlacePage(props: {
                         <div className="flex items-center gap-2 mb-1">
                             <span className="bg-slate-800 text-white font-black px-2 py-0.5 rounded text-sm">{activeRaceNumber}R</span>
                             <span className="text-[11px] font-bold text-slate-400 tracking-wider">
-                                {currentSchedule ? currentSchedule.deadlineAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '未定'} 締切
+                                {currentSchedule ? currentSchedule.deadlineAt.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' }) : '未定'} 締切
                             </span>
                         </div>
                         <h2 className="text-[10px] font-bold text-slate-500">

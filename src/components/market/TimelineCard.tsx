@@ -56,7 +56,7 @@ export function TimelineCard({
                                 {prediction.placeName} {prediction.raceNumber}R
                             </span>
                             <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md flex items-center gap-1">
-                                締切 {new Date(prediction.deadlineAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                締切 {new Date(prediction.deadlineAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })}
                             </span>
                             {isClosed && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">締切済</Badge>}
                         </div>
@@ -82,7 +82,7 @@ export function TimelineCard({
                     {/* Footer Meta Row */}
                     <div className="px-5 py-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
                         <span className="text-[10px] text-slate-400 font-medium">
-                            {new Date(prediction.createdAt).toLocaleString('ja-JP')}
+                            {new Date(prediction.createdAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </span>
 
                         {prediction.viewCount > 0 && (
