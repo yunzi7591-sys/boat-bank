@@ -13,11 +13,16 @@ export function ApiActionForms() {
 
     const handleSync = () => {
         startTransitionSync(async () => {
-            const result = await triggerSyncSchedule();
-            if (result.success) {
-                toast.success(`同期完了: ${result.count}件のスケジュールをDBに保存しました`);
-            } else {
-                toast.error(`同期失敗: ${result.error || "データが取得できませんでした"}`);
+            try {
+                const res = await fetch('/api/sync?secret=' + (process.env.NEXT_PUBLIC_CRON_SECRET || ''));
+                const result = await res.json();
+                if (res.ok && result.success) {
+                    toast.success(`同期完了: スケジュール ${result.schedule?.count || 0}件, スクレイピング ${result.scrape?.count || 0}件`);
+                } else {
+                    toast.error(`同期失敗: ${result.error || "データが取得できませんでした"}`);
+                }
+            } catch (error: any) {
+                toast.error(`同期エラー: ${error.message}`);
             }
         });
     };
@@ -50,10 +55,10 @@ export function ApiActionForms() {
                     className="w-full h-12 text-sm font-bold bg-blue-600 hover:bg-blue-700 rounded-xl"
                 >
                     <DownloadCloud className={`w-4 h-4 mr-2 ${isPendingSync ? 'animate-bounce' : ''}`} />
-                    {isPendingSync ? "同期中..." : "本日のレース予定をAPIから同期"}
+                    {isPendingSync ? "同期・スクレイピング中..." : "本日のレース予定＆公式データ(グレード等)を同期"}
                 </Button>
                 <p className="text-xs text-slate-500 mt-2">
-                    APIから「本日の開催場」「全レース番号」「締切時刻」を一括取得し、データベースに保存します。
+                    APIからスケジュールを取得し、同時にboatrace.jpをスクレイピングして「グレード」「何日目か」の正確な情報をDBに保存します。
                 </p>
             </div>
 

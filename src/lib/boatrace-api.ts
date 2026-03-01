@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { VENUES } from "@/lib/constants/venues";
+import * as cheerio from "cheerio";
 
 const SCHEDULE_API_URL = "https://boatraceopenapi.github.io/programs/v2/today.json";
 const RESULTS_API_URL = "https://boatraceopenapi.github.io/results/v2/today.json";
@@ -82,6 +83,99 @@ export async function syncTodaySchedule() {
         return { success: true, count: syncedCount };
     } catch (e: any) {
         console.error("[API Error] Failed to sync schedule:", e);
+        return { success: false, error: e.message };
+    }
+}
+
+// Phase 23: Scrape official grade and day from boatrace.jp
+export async function syncOfficialGradeAndDay() {
+    try {
+        console.log("[Scraper] Fetching official site for precise Grade and Day...");
+        const res = await fetch("https://www.boatrace.jp/owpc/pc/race/index", {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+            }
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch boatrace.jp");
+
+        const html = await res.text();
+        const $ = cheerio.load(html);
+
+        // Find all venues that have an active image like "/static_extra/pc/images/text_place1_01.png" -> 桐生
+        let updateCount = 0;
+
+        $('img[src*="text_place1_"]').each((i, el) => {
+            const src = $(el).attr('src') || '';
+            const match = src.match(/text_place1_(\d+)\.png/);
+            if (!match) return;
+
+            const stadiumId = match[1];
+            const venue = VENUES.find(v => v.id === stadiumId);
+            if (!venue) return;
+
+            const placeName = venue.name;
+            const rowBody = $(el).closest('tbody');
+            if (!rowBody.length) return;
+
+            // Extract Day
+            let day = "-日目";
+            const dayElem = rowBody.find('.is-p10-0');
+            if (dayElem.length) {
+                day = dayElem.text().trim();
+            }
+
+            // Extract Grade
+            let grade = "一般";
+            const gradeIcons = rowBody.find('td[class*="is-g"], td[class*="is-sg"], td[class*="is-ippan"]');
+            if (gradeIcons.length) {
+                const cls = gradeIcons.attr('class') || '';
+                if (cls.includes('is-sg')) grade = "SG";
+                else if (cls.includes('is-g1')) grade = "G1";
+                else if (cls.includes('is-g2')) grade = "G2";
+                else if (cls.includes('is-g3')) grade = "G3";
+                else if (cls.includes('is-ippan')) grade = "一般";
+            }
+
+            // Update today's records for this venue in the DB
+            // Determine today's date in JST
+            const nowJst = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+            const yyyy = nowJst.getFullYear();
+            const mm = String(nowJst.getMonth() + 1).padStart(2, '0');
+            const dd = String(nowJst.getDate()).padStart(2, '0');
+            const searchDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
+
+            // Since we can't await inside `.each()`, we store promises or execute synchronously. 
+            // In a better flow, collect to array and Promise.all. 
+            // For MVP simplicity, we will push updates to an array.
+            rowBody.data('updateDetails', { placeName, grade, day, searchDate });
+        });
+
+        // Collect and execute updates
+        const updates: Promise<any>[] = [];
+        $('img[src*="text_place1_"]').each((i, el) => {
+            const data = $(el).closest('tbody').data('updateDetails') as any;
+            if (data) {
+                updates.push(
+                    prisma.raceSchedule.updateMany({
+                        where: {
+                            placeName: data.placeName,
+                            raceDate: data.searchDate
+                        },
+                        data: {
+                            grade: data.grade,
+                            day: data.day
+                        }
+                    })
+                );
+            }
+        });
+
+        await Promise.all(updates);
+        return { success: true, count: updates.length };
+
+    } catch (e: any) {
+        console.error("[Scraper Error] Failed to extract from official site:", e);
         return { success: false, error: e.message };
     }
 }
