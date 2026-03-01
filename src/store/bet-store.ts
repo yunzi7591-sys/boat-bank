@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { BetType, BoatSelection, Combination, Formation, unrollCombinations } from '@/lib/bet-logic';
+import { toast } from 'sonner';
 
 interface BetStore {
     // Marksheet state
@@ -83,7 +84,10 @@ export const useBetStore = create<BetStore>((set, get) => ({
     addFormationToCart: (defaultAmount = 0) => {
         set((state) => {
             const unrolled = unrollCombinations(state.activeBetType, state.selections);
-            if (unrolled.length === 0) return state; // Do nothing if invalid formation
+            if (unrolled.length === 0) {
+                toast.error("買い目が選択されていません", { position: 'top-center' });
+                return state;
+            }
 
             // Map the defaultAmount if provided
             const combinationsWithAmount = unrolled.map(c => ({
@@ -99,6 +103,12 @@ export const useBetStore = create<BetStore>((set, get) => ({
                 totalExpectedAmount: defaultAmount,
                 isIndividualAmount: false,
             };
+
+            toast.success(`カートに追加しました（${unrolled.length}点）`, {
+                position: 'top-center',
+                description: `${defaultAmount > 0 ? `${(defaultAmount * unrolled.length).toLocaleString()}pt` : '金額未設定'}`,
+                duration: 2000,
+            });
 
             return {
                 cart: [...state.cart, newFormation],
