@@ -7,7 +7,8 @@ import Link from "next/link";
 import { FollowButton } from "@/components/market/FollowButton";
 import { auth } from "@/auth";
 
-export default async function UserProfilePage({ params }: { params: { id: string } }) {
+export default async function UserProfilePage(props: { params: Promise<{ id: string }> }) {
+    const params = await props.params;
     const session = await auth();
     const currentUserId = session?.user?.id;
     const userId = params.id;
