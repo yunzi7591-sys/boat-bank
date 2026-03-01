@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Formation } from "@/lib/bet-logic";
+import { parseJsonSafely } from "@/lib/utils";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,7 +45,7 @@ export default async function RankingPage() {
         stats.totalRefund += pred.refundAmount;
 
         try {
-            const formations: Formation[] = JSON.parse(pred.predictedNumbers);
+            const formations: Formation[] = parseJsonSafely<Formation[]>(pred.predictedNumbers);
             const investment = formations.reduce((sum, f) => sum + f.combinations.reduce((sub, c) => sub + c.amount, 0), 0);
             stats.totalInvestment += investment;
         } catch (e) {

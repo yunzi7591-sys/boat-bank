@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Formation } from "@/lib/bet-logic";
+import { parseJsonSafely } from "@/lib/utils";
 
 export interface UserStats {
     totalInvestment: number;
@@ -28,7 +29,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     for (const pred of predictions) {
         // 1. Calculate investment for all published predictions
         try {
-            const formations: Formation[] = JSON.parse(pred.predictedNumbers);
+            const formations: Formation[] = parseJsonSafely<Formation[]>(pred.predictedNumbers);
             const predInvestment = formations.reduce((sum, f) => {
                 return sum + f.combinations.reduce((sub, c) => sub + c.amount, 0);
             }, 0);
