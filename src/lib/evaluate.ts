@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Formation, Combination } from "@/lib/bet-logic";
+import { parseJsonSafely } from "@/lib/utils";
 
 export interface RefundData {
     type: string; // "3TR" (3連単), "2TR" (2連単) 等
@@ -23,7 +24,7 @@ export async function evaluateRaceBatch(placeName: string, raceNumber: number, r
 
     let refundsList: RefundData[] = [];
     try {
-        refundsList = JSON.parse(raceResult.refunds) as RefundData[];
+        refundsList = parseJsonSafely<RefundData[]>(raceResult.refunds);
     } catch (e) {
         console.error("Failed to parse refunds JSON", e);
         return { success: false, evaluatedCount: 0 };
@@ -34,7 +35,7 @@ export async function evaluateRaceBatch(placeName: string, raceNumber: number, r
     for (const pred of predictions) {
         let formations: Formation[] = [];
         try {
-            formations = JSON.parse(pred.predictedNumbers);
+            formations = parseJsonSafely<Formation[]>(pred.predictedNumbers);
         } catch (e) {
             continue; // Skip invalid formats
         }
@@ -91,14 +92,14 @@ export async function evaluatePrediction(predictionId: string) {
 
     let refundsList: RefundData[] = [];
     try {
-        refundsList = JSON.parse(raceResult.refunds) as RefundData[];
+        refundsList = parseJsonSafely<RefundData[]>(raceResult.refunds);
     } catch (e) {
         return null;
     }
 
     let formations: Formation[] = [];
     try {
-        formations = JSON.parse(pred.predictedNumbers);
+        formations = parseJsonSafely<Formation[]>(pred.predictedNumbers);
     } catch (e) {
         return null;
     }

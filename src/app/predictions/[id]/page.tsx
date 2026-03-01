@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { UnlockButton } from "@/components/predictions/UnlockButton";
 import { Formation } from "@/lib/bet-logic";
+import { parseJsonSafely } from "@/lib/utils";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 
@@ -50,7 +51,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
     // Safe parse
     let formations: Formation[] = [];
     try {
-        formations = JSON.parse(prediction.predictedNumbers);
+        formations = parseJsonSafely<Formation[]>(prediction.predictedNumbers);
     } catch (e) {
         formations = [];
     }
