@@ -118,27 +118,42 @@ export async function syncOfficialGradeAndDay() {
             if (!venue) return;
 
             const placeName = venue.name;
-            const textAll = $(el).text().replace(/\s+/g, ' ').trim();
 
-            // Extract Day using Regex on the full text block (e.g. "2/24-3/1最終日" -> "最終日")
             let day = "-日目";
-            const dayMatch = textAll.match(/(初日|[１-９1-9]{1,2}日目|最終日)/);
-            if (dayMatch) {
-                day = dayMatch[1];
-            }
+            // First let's check exact match like /(初日|[１-９1-9]{1,2}日目|最終日)/
+            $(el).find('td').each((_, td) => {
+                let text = $(td).text().trim();
+                // Convert full-width characters to half-width before regex matching
+                text = text.replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0));
 
-            // Extract Grade from any child element's classes or src
-            let grade = "一般";
-            const allClasses: string[] = [];
-            $(el).find('*').each((_, child) => {
-                if ($(child).attr('class')) allClasses.push($(child).attr('class')!);
+                const dayMatch = text.match(/(初日|[1-9]{1,2}日目|最終日)/);
+                if (dayMatch) {
+                    // It should be a short text string or contain a date range like 2/24 to ensure it's the right block
+                    if (text.length < 25 || text.includes('/')) {
+                        day = dayMatch[1];
+                    }
+                }
             });
-            const clsString = allClasses.join(' ');
-            if (clsString.includes('is-sg')) grade = "SG";
-            else if (clsString.includes('is-g1')) grade = "G1";
-            else if (clsString.includes('is-g2')) grade = "G2";
-            else if (clsString.includes('is-g3')) grade = "G3";
-            else if (clsString.includes('is-ippan')) grade = "一般";
+
+            let grade = "一般";
+            let broke = false;
+            $(el).find('td, th').each((_, cell) => {
+                if (broke) return;
+                const cls = $(cell).attr('class') || '';
+                if (cls.includes('is-sg')) { grade = "SG"; broke = true; }
+                else if (cls.includes('is-g1')) { grade = "G1"; broke = true; }
+                else if (cls.includes('is-g2')) { grade = "G2"; broke = true; }
+                else if (cls.includes('is-g3')) { grade = "G3"; broke = true; }
+                else if (cls.includes('is-ippan')) { grade = "一般"; broke = true; }
+
+                $(cell).find('img').each((_, img) => {
+                    const imgSrc = $(img).attr('src') || '';
+                    if (imgSrc.includes('text_sg')) grade = "SG";
+                    else if (imgSrc.includes('text_g1')) grade = "G1";
+                    else if (imgSrc.includes('text_g2')) grade = "G2";
+                    else if (imgSrc.includes('text_g3')) grade = "G3";
+                });
+            });
 
             // Determine today's date in JST
             const nowJst = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
@@ -155,7 +170,7 @@ export async function syncOfficialGradeAndDay() {
             });
         });
 
-        console.log("Scraped Results:", scrapedData);
+        console.log("Scraped Results (PC Strict):", scrapedData);
 
         // Collect and execute updates
         const updates: Promise<any>[] = [];
