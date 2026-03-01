@@ -167,6 +167,11 @@ model RaceSchedule {
   raceDate     DateTime // 開催日
   deadlineAt   DateTime // 締切時刻
   
+  // Phase 22: 大会グレード・開催日目
+  grade        String?
+  day          String?
+  
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
