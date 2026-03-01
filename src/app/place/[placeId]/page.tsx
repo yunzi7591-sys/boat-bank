@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BOAT_COLORS } from "@/lib/bet-logic";
 
-export default async function PlacePage({
-    params,
-    searchParams
-}: {
-    params: { placeId: string };
-    searchParams: { race?: string };
+export default async function PlacePage(props: {
+    params: Promise<{ placeId: string }>;
+    searchParams: Promise<{ race?: string }>;
 }) {
+    const params = await props.params;
+    const searchParams = await props.searchParams;
+
     const venue = VENUES.find(v => v.id === params.placeId);
 
     if (!venue) {
