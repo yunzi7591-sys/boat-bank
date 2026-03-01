@@ -103,10 +103,13 @@ export async function syncOfficialGradeAndDay() {
         const $ = cheerio.load(html);
 
         // Find all venues that have an active image like "/static_extra/pc/images/text_place1_01.png" -> 桐生
-        let updateCount = 0;
+        let scrapedData: any[] = [];
 
-        $('img[src*="text_place1_"]').each((i, el) => {
-            const src = $(el).attr('src') || '';
+        $('tbody').each((i, el) => {
+            const venueImg = $(el).find('img[src*="text_place1_"]');
+            if (!venueImg.length) return;
+
+            const src = venueImg.attr('src') || '';
             const match = src.match(/text_place1_(\d+)\.png/);
             if (!match) return;
 
@@ -115,29 +118,28 @@ export async function syncOfficialGradeAndDay() {
             if (!venue) return;
 
             const placeName = venue.name;
-            const rowBody = $(el).closest('tbody');
-            if (!rowBody.length) return;
+            const textAll = $(el).text().replace(/\s+/g, ' ').trim();
 
-            // Extract Day
+            // Extract Day using Regex on the full text block (e.g. "2/24-3/1最終日" -> "最終日")
             let day = "-日目";
-            const dayElem = rowBody.find('.is-p10-0');
-            if (dayElem.length) {
-                day = dayElem.text().trim();
+            const dayMatch = textAll.match(/(初日|[１-９1-9]{1,2}日目|最終日)/);
+            if (dayMatch) {
+                day = dayMatch[1];
             }
 
-            // Extract Grade
+            // Extract Grade from any child element's classes or src
             let grade = "一般";
-            const gradeIcons = rowBody.find('td[class*="is-g"], td[class*="is-sg"], td[class*="is-ippan"]');
-            if (gradeIcons.length) {
-                const cls = gradeIcons.attr('class') || '';
-                if (cls.includes('is-sg')) grade = "SG";
-                else if (cls.includes('is-g1')) grade = "G1";
-                else if (cls.includes('is-g2')) grade = "G2";
-                else if (cls.includes('is-g3')) grade = "G3";
-                else if (cls.includes('is-ippan')) grade = "一般";
-            }
+            const allClasses: string[] = [];
+            $(el).find('*').each((_, child) => {
+                if ($(child).attr('class')) allClasses.push($(child).attr('class')!);
+            });
+            const clsString = allClasses.join(' ');
+            if (clsString.includes('is-sg')) grade = "SG";
+            else if (clsString.includes('is-g1')) grade = "G1";
+            else if (clsString.includes('is-g2')) grade = "G2";
+            else if (clsString.includes('is-g3')) grade = "G3";
+            else if (clsString.includes('is-ippan')) grade = "一般";
 
-            // Update today's records for this venue in the DB
             // Determine today's date in JST
             const nowJst = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
             const yyyy = nowJst.getFullYear();
@@ -145,17 +147,21 @@ export async function syncOfficialGradeAndDay() {
             const dd = String(nowJst.getDate()).padStart(2, '0');
             const searchDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
 
-            // Since we can't await inside `.each()`, we store promises or execute synchronously. 
-            // In a better flow, collect to array and Promise.all. 
-            // For MVP simplicity, we will push updates to an array.
-            rowBody.data('updateDetails', { placeName, grade, day, searchDate });
+            scrapedData.push({
+                placeName,
+                grade,
+                day,
+                searchDate
+            });
         });
+
+        console.log("Scraped Results:", scrapedData);
 
         // Collect and execute updates
         const updates: Promise<any>[] = [];
-        $('img[src*="text_place1_"]').each((i, el) => {
-            const data = $(el).closest('tbody').data('updateDetails') as any;
-            if (data) {
+        for (const data of scrapedData) {
+            // Only update if we extracted something meaningful, or just always update to ensure sync
+            if (data.grade !== "一般" || data.day !== "-日目") {
                 updates.push(
                     prisma.raceSchedule.updateMany({
                         where: {
@@ -169,10 +175,10 @@ export async function syncOfficialGradeAndDay() {
                     })
                 );
             }
-        });
+        }
 
         await Promise.all(updates);
-        return { success: true, count: updates.length };
+        return { success: true, count: updates.length, results: scrapedData };
 
     } catch (e: any) {
         console.error("[Scraper Error] Failed to extract from official site:", e);
