@@ -110,7 +110,7 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
                                         <div>
                                             <p className="text-xs text-slate-400 font-bold mb-0.5">{pred.placeName} {pred.raceNumber}R</p>
                                             <p className="font-bold text-base text-slate-800">{pred.title}</p>
-                                            <p className="text-[10px] text-slate-400 mt-2">{new Date(pred.createdAt).toLocaleDateString()}</p>
+                                            <p className="text-[10px] text-slate-400 mt-2">{new Date(pred.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</p>
                                         </div>
                                         <div className="text-right flex flex-col items-end gap-2">
                                             <span className="text-sm font-black text-green-500">{pred.price} pt</span>

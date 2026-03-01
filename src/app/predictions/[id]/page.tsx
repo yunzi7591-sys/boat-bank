@@ -68,7 +68,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                 {prediction.placeName} {prediction.raceNumber}R
                             </span>
                             <span className="text-xs font-medium text-slate-400">
-                                締切 {new Date(prediction.deadlineAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                締切 {new Date(prediction.deadlineAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })}
                             </span>
                         </div>
                     </div>
@@ -82,7 +82,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                     </div>
                     <div className="flex flex-col">
                         <span className="font-extrabold text-[13px] text-slate-800">{prediction.author?.name || "Anonymous"}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{new Date(prediction.createdAt).toLocaleDateString('ja-JP')}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">{new Date(prediction.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>
                     </div>
                 </div>
             </div>

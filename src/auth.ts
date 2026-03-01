@@ -1,4 +1,4 @@
-import NextAuth from "next-auth"
+import NextAuth, { DefaultSession } from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import CredentialsProvider from "next-auth/providers/credentials"
@@ -61,3 +61,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   }
 })
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      role: string
+      bio?: string
+    } & DefaultSession["user"]
+  }
+
+  interface User {
+    id?: string
+    role?: string
+    bio?: string
+  }
+}

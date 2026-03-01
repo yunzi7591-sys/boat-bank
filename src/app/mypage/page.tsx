@@ -145,7 +145,7 @@ export default async function MyPage() {
                                                 <div>
                                                     <p className="text-sm text-blue-600 font-bold mb-1">{pred.placeName} {pred.raceNumber}R</p>
                                                     <p className="font-bold text-lg">{pred.title}</p>
-                                                    <p className="text-xs text-neutral-400 mt-2">{new Date(pred.createdAt).toLocaleDateString()}</p>
+                                                    <p className="text-xs text-neutral-400 mt-2">{new Date(pred.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</p>
                                                 </div>
                                                 <div className="text-right flex flex-col items-end gap-2">
                                                     <span className="text-sm font-bold text-neutral-600">{pred.price} pt</span>
