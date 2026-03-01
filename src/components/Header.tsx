@@ -63,16 +63,18 @@ export async function Header() {
                             </form>
                         </>
                     ) : (
-                        <form
-                            action={async () => {
-                                "use server";
-                                await signIn("github"); // Or standard provider logic
-                            }}
-                        >
-                            <Button type="submit" className="bg-yellow-500 hover:bg-yellow-400 text-blue-950 font-bold">
-                                ログイン / 登録
-                            </Button>
-                        </form>
+                        <div className="flex items-center gap-2">
+                            <Link href="/login">
+                                <Button variant="outline" className="bg-transparent border-blue-400 text-blue-100 hover:bg-blue-800 hover:text-white font-bold h-9">
+                                    ログイン
+                                </Button>
+                            </Link>
+                            <Link href="/register">
+                                <Button className="bg-yellow-500 hover:bg-yellow-400 text-blue-950 font-bold h-9">
+                                    新規登録
+                                </Button>
+                            </Link>
+                        </div>
                     )}
                 </div>
             </div>
