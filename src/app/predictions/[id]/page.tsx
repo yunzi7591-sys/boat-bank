@@ -7,6 +7,7 @@ import { parseJsonSafely } from "@/lib/utils";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 import { ShareButton } from "@/components/predictions/ShareButton";
+import { RideButton } from "@/components/predictions/RideButton";
 
 export default async function PredictionPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
@@ -29,13 +30,13 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
         notFound();
     }
 
-    let isUnlocked = false;
+    let isUnlocked = prediction.price === 0;
     const isClosed = new Date(prediction.deadlineAt) < new Date();
 
     if (userId) {
-        if (prediction.authorId === userId || prediction.price === 0) {
+        if (prediction.authorId === userId) {
             isUnlocked = true;
-        } else {
+        } else if (!isUnlocked) {
             const transaction = await prisma.transaction.findFirst({
                 where: {
                     userId,
@@ -143,6 +144,20 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                     </CardContent>
                                 </Card>
                             ))}
+
+                            {/* Ride on this prediction! */}
+                            {userId && prediction.authorId !== userId && (
+                                <div className="mt-4 pt-4 border-t border-slate-200">
+                                    <RideButton
+                                        predictionId={prediction.id}
+                                        betAmount={prediction.betAmount}
+                                        isClosed={isClosed}
+                                    />
+                                    <p className="text-center text-xs text-slate-400 mt-2">
+                                        ※ボタンを押すと、自分のアカウントからポイントを消費して非公開の買い目（相乗り）として保存されます。
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="w-full bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-slate-200 shadow-sm relative overflow-hidden">
