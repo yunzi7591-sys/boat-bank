@@ -119,21 +119,19 @@ export async function syncOfficialGradeAndDay() {
 
             const placeName = venue.name;
 
-            let day = "-日目";
-            // First let's check exact match like /(初日|[１-９1-9]{1,2}日目|最終日)/
-            $(el).find('td').each((_, td) => {
-                let text = $(td).text().trim();
-                // Convert full-width characters to half-width before regex matching
-                text = text.replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0));
+            let extractedDay = "-日目";
 
-                const dayMatch = text.match(/(初日|[1-9]{1,2}日目|最終日)/);
+            $(el).find('td').each((_, td) => {
+                const text = $(td).text();
+                const dayMatch = text.match(/(初日|[2-7]日目|最終日)/);
                 if (dayMatch) {
-                    // It should be a short text string or contain a date range like 2/24 to ensure it's the right block
-                    if (text.length < 25 || text.includes('/')) {
-                        day = dayMatch[1];
-                    }
+                    extractedDay = dayMatch[1];
                 }
             });
+
+            // 強制バリデーション（絶対防衛線）
+            const validDays = ["初日", "2日目", "3日目", "4日目", "5日目", "6日目", "7日目", "最終日"];
+            let day = validDays.includes(extractedDay) ? extractedDay : "-日目";
 
             let grade = "一般";
             let broke = false;
