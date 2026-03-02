@@ -123,9 +123,11 @@ export async function syncOfficialGradeAndDay() {
 
             $(el).find('td').each((_, td) => {
                 const text = $(td).text();
-                const dayMatch = text.match(/(初日|[2-7]日目|最終日)/);
+                // 全角数字を含めてマッチさせる
+                const dayMatch = text.match(/(初日|[2-7２-７]日目|最終日)/);
                 if (dayMatch) {
-                    extractedDay = dayMatch[1];
+                    // 抽出した文字列に対してのみ全角数字を半角に変換（例: "２日目" -> "2日目"）
+                    extractedDay = dayMatch[1].replace(/[２-７]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0));
                 }
             });
 
