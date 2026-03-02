@@ -152,11 +152,16 @@ export default async function MyPage() {
                                                     <span className="text-sm font-bold text-neutral-600">{pred.price} pt</span>
 
                                                     {/* Result Badge */}
-                                                    {!pred.resultChecked ? (
+                                                    {!pred.isSettled ? (
                                                         <Badge variant="outline" className="text-neutral-500 border-neutral-300 bg-neutral-50">🕒 結果待ち</Badge>
                                                     ) : pred.isHit ? (
                                                         <Badge className="bg-red-500 text-white border-red-600 shadow-sm animate-pulse">
-                                                            🎯 的中 (+{pred.refundAmount} pt)
+                                                            🎯 的中 (+{pred.hitAmount || pred.refundAmount} pt)
+                                                        </Badge>
+                                                    ) : pred.hitAmount && pred.hitAmount > 0 ? (
+                                                        // Point gain without hit means full refund
+                                                        <Badge className="bg-yellow-500 text-white border-yellow-600 shadow-sm">
+                                                            ↩️ 返還 (+{pred.hitAmount} pt)
                                                         </Badge>
                                                     ) : (
                                                         <Badge variant="secondary" className="text-neutral-600">❌ 不的中</Badge>
@@ -188,12 +193,14 @@ export default async function MyPage() {
                                                 <div className="text-right flex flex-col items-end gap-2">
                                                     <span className="text-sm font-bold text-yellow-600">購入済み</span>
                                                     {/* Result Badge for Buyer */}
-                                                    {pred.resultChecked && (
-                                                        pred.isHit ? (
-                                                            <Badge className="bg-red-500 text-white">🎯 的中</Badge>
-                                                        ) : (
-                                                            <Badge variant="secondary">❌ 不的中</Badge>
-                                                        )
+                                                    {!pred.isSettled ? (
+                                                        null // Wait
+                                                    ) : pred.isHit ? (
+                                                        <Badge className="bg-red-500 text-white">🎯 的中</Badge>
+                                                    ) : pred.hitAmount && pred.hitAmount > 0 ? (
+                                                        <Badge className="bg-yellow-500 text-white">↩️ 返還</Badge>
+                                                    ) : (
+                                                        <Badge variant="secondary">❌ 不的中</Badge>
                                                     )}
                                                 </div>
                                             </CardContent>

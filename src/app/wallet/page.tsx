@@ -39,6 +39,10 @@ export default async function WalletPage() {
                 return `【購入】${prediction?.placeName || ''} ${prediction?.raceNumber || ''}R 予想`;
             case 'SELL_PREDICTION':
                 return `【売上】${prediction?.placeName || ''} ${prediction?.raceNumber || ''}R 予想`;
+            case 'WIN':
+                return `【的中】${prediction?.placeName || ''} ${prediction?.raceNumber || ''}R 払戻`;
+            case 'REFUND':
+                return `【返還】${prediction?.placeName || ''} ${prediction?.raceNumber || ''}R 払戻`;
             case 'LOGIN_BONUS':
                 return 'ログインボーナス';
             case 'WELCOME_BONUS':

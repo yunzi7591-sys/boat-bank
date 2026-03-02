@@ -26,7 +26,7 @@ export function DemoEvalButton() {
                         const raceNumber = parseInt(formData.get('raceNumber') as string) || 12;
                         const res = await triggerDemoEvaluation(placeName, raceNumber, formData);
                         if (res.success) {
-                            setResultMsg(`Evaluated ${res.evaluatedCount} predictions.`);
+                            setResultMsg(`Evaluated ${res.settledCount} predictions.`);
                         }
                     } catch (e: any) {
                         setResultMsg(e.message || "Error occurred");

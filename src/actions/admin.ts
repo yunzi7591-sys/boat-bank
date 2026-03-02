@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { evaluateRaceBatch } from "@/lib/evaluate";
+import { settleRacePredictions } from "@/lib/evaluate";
 import { syncTodaySchedule, fetchAndSaveRaceResult } from "@/lib/boatrace-api";
 import { revalidatePath } from "next/cache";
 
@@ -24,11 +24,12 @@ export async function submitManualResult(formData: FormData) {
     const p2TRPayout = parseInt(formData.get("p2TRPayout") as string);
     const p3TRPayout = parseInt(formData.get("p3TRPayout") as string);
 
-    const refundsData = [
+    const payoutsData = [
         { type: "3TR", numbers: `${first}-${second}-${third}`, amount: p3TRPayout },
         { type: "2TR", numbers: `${first}-${second}`, amount: p2TRPayout },
         { type: "WIN", numbers: `${first}`, amount: winPayout },
     ];
+    const refundedBoats: number[] = [];
 
     await prisma.raceResult.upsert({
         where: {
@@ -42,7 +43,8 @@ export async function submitManualResult(formData: FormData) {
             firstPlace: first,
             secondPlace: second,
             thirdPlace: third,
-            refunds: JSON.stringify(refundsData),
+            payouts: payoutsData,
+            refunds: refundedBoats,
         },
         create: {
             placeName,
@@ -51,11 +53,12 @@ export async function submitManualResult(formData: FormData) {
             firstPlace: first,
             secondPlace: second,
             thirdPlace: third,
-            refunds: JSON.stringify(refundsData),
+            payouts: payoutsData,
+            refunds: refundedBoats,
         },
     });
 
-    await evaluateRaceBatch(placeName, raceNumber, raceDate);
+    await settleRacePredictions(placeName, raceNumber, raceDate);
     revalidatePath('/admin');
     revalidatePath('/mypage');
 }
@@ -78,11 +81,12 @@ export async function triggerDemoEvaluation(placeName: string, raceNumber: numbe
     const third = parseInt(formData.get("third") as string) || 3;
     const payout = parseInt(formData.get("payout") as string) || 1540;
 
-    const refundsData = [
+    const payoutsData = [
         { type: "3TR", numbers: `${first}-${second}-${third}`, amount: payout },
         { type: "2TR", numbers: `${first}-${second}`, amount: Math.floor(payout / 3) },
         { type: "WIN", numbers: `${first}`, amount: 300 },
     ];
+    const refundedBoats: number[] = [];
 
     const raceDate = new Date(); // Using today for simplicity
 
@@ -98,7 +102,8 @@ export async function triggerDemoEvaluation(placeName: string, raceNumber: numbe
             firstPlace: first,
             secondPlace: second,
             thirdPlace: third,
-            refunds: JSON.stringify(refundsData),
+            payouts: payoutsData,
+            refunds: refundedBoats,
         },
         create: {
             placeName,
@@ -107,11 +112,12 @@ export async function triggerDemoEvaluation(placeName: string, raceNumber: numbe
             firstPlace: first,
             secondPlace: second,
             thirdPlace: third,
-            refunds: JSON.stringify(refundsData),
+            payouts: payoutsData,
+            refunds: refundedBoats,
         },
     });
 
-    const result = await evaluateRaceBatch(placeName, raceNumber, raceDate);
+    const result = await settleRacePredictions(placeName, raceNumber, raceDate);
     revalidatePath('/mypage');
     revalidatePath('/predictions');
 
@@ -146,10 +152,14 @@ export async function triggerApiEvaluation(formData: FormData) {
         }
 
         // 2. Evaluate
-        const todayStr = new Date().toISOString().split('T')[0];
-        const raceDate = new Date(todayStr); // Assuming today for MVP
+        const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
+        const currentDate = new Date(todayStr);
+        const yyyy = currentDate.getFullYear();
+        const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(currentDate.getDate()).padStart(2, '0');
+        const raceDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
 
-        await evaluateRaceBatch(placeName, raceNumber, raceDate);
+        await settleRacePredictions(placeName, raceNumber, raceDate);
 
         revalidatePath('/admin');
         revalidatePath('/mypage');

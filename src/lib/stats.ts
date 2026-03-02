@@ -14,33 +14,27 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     const predictions = await prisma.prediction.findMany({
         where: { authorId: userId },
         select: {
-            predictedNumbers: true,
-            resultChecked: true,
+            isSettled: true,
             isHit: true,
-            refundAmount: true,
+            betAmount: true,
+            hitAmount: true,
+            refundAmount: true, // fallback
         },
     });
 
     let totalInvestment = 0;
-    let totalRefund = 0;
+    let totalRefund = 0; // Total returned to the user (wins + refunds)
     let hitCount = 0;
     let totalPredictions = predictions.length;
 
     for (const pred of predictions) {
-        // 1. Calculate investment for all published predictions
-        try {
-            const formations: Formation[] = parseJsonSafely<Formation[]>(pred.predictedNumbers);
-            const predInvestment = formations.reduce((sum, f) => {
-                return sum + f.combinations.reduce((sub, c) => sub + c.amount, 0);
-            }, 0);
-            totalInvestment += predInvestment;
-        } catch (e) {
-            console.error("Failed to parse predictedNumbers for investment sum");
-        }
+        // sum up all bets made by the user
+        totalInvestment += pred.betAmount || 0;
 
-        // 2. Accumulate refunds and hits only for evaluated predictions
-        if (pred.resultChecked) {
-            totalRefund += pred.refundAmount;
+        // sum up all returns
+        if (pred.isSettled) {
+            // Using hitAmount as the unified field for earned points (includes refunds and wins)
+            totalRefund += (pred.hitAmount || pred.refundAmount || 0);
             if (pred.isHit) hitCount++;
         }
     }
