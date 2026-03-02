@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { Formation } from "@/lib/bet-logic";
 
@@ -118,7 +119,7 @@ export async function ridePrediction(predictionId: string) {
                 title: `[相乗り] ${original.title || '無題'}`,
                 commentary: "",
                 price: 0,
-                predictedNumbers: original.predictedNumbers,
+                predictedNumbers: original.predictedNumbers as Prisma.InputJsonValue,
                 authorId: userId,
                 placeName: original.placeName,
                 raceNumber: original.raceNumber,
