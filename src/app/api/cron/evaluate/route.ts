@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { evaluatePrediction } from '@/lib/evaluate';
+import { settleRacePredictions } from '@/lib/evaluate';
 
 // This API route evaluates all pending predictions that are past their deadline.
 export async function GET(request: Request) {
@@ -14,45 +14,46 @@ export async function GET(request: Request) {
     try {
         console.log("[Cron] Starting background evaluation batch...");
 
-        // 1. Find all predictions that are past deadline but not checked
+        // 1. Find all distinct races that have unsettled predictions past deadline
         const pendingPredictions = await prisma.prediction.findMany({
             where: {
-                resultChecked: false,
+                isSettled: false,
                 deadlineAt: {
                     lt: new Date()
                 }
             },
             select: {
-                id: true,
                 placeName: true,
                 raceNumber: true,
                 raceDate: true
-            }
+            },
+            distinct: ['placeName', 'raceNumber', 'raceDate'],
         });
 
-        const checkedIds = [];
-        let hitCount = 0;
+        let totalSettled = 0;
 
-        // 2. Try to evaluate them.
-        for (const pred of pendingPredictions) {
-            // evaluatePrediction attempts to find matching RaceResult and sums refund
-            // If RaceResult isn't there, it won't check it. So it's safe to run on missing results.
-            const stats = await evaluatePrediction(pred.id);
-            if (stats) {
-                checkedIds.push(pred.id);
-                if (stats.isHit) hitCount++;
+        // 2. Try to settle each pending race.
+        for (const race of pendingPredictions) {
+            // settleRacePredictions attempts to find matching RaceResult and sum refunds/hits
+            // If RaceResult isn't there, it handles gracefully.
+            try {
+                const stats = await settleRacePredictions(race.placeName, race.raceNumber, race.raceDate);
+                if (stats.success) {
+                    totalSettled += stats.settledCount;
+                }
+            } catch (e) {
+                // If race result is not found, we just skip it for now and it will be evaluated later
             }
         }
 
-        console.log(`[Cron] Batch evaluated ${checkedIds.length} out of ${pendingPredictions.length} pending past-deadline predictions. ${hitCount} were hits.`);
+        console.log(`[Cron] Batch evaluated ${pendingPredictions.length} pending races. Settled ${totalSettled} predictions.`);
 
         return NextResponse.json({
             success: true,
             message: `Batch completed`,
             stats: {
-                pendingConsidered: pendingPredictions.length,
-                actuallyEvaluated: checkedIds.length,
-                hits: hitCount
+                racesConsidered: pendingPredictions.length,
+                predictionsSettled: totalSettled
             }
         });
     } catch (error: any) {

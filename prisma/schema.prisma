@@ -115,6 +115,7 @@ model Prediction {
   originalPredictionId String?              // 他人の予想の丸乗り（Ride on）した場合の元予想ID
   
   // 結果判定
+  isSettled        Boolean  @default(false) // 払い戻し・精算処理が完了したか
   resultChecked    Boolean  @default(false)
   isHit            Boolean  @default(false)
   refundAmount     Int      @default(0) // 払戻金シミュレーション用
@@ -157,7 +158,10 @@ model RaceResult {
   // 払戻金情報
   // Json型で配列保存
   // 例: "[{\"type\":\"3連単\",\"numbers\":\"1-2-3\",\"amount\":1540}]"
-  refunds      Json   
+  payouts      Json?   
+  
+  // 返還艇（フライング、欠場など）
+  refunds      Int[]
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

@@ -1,133 +1,124 @@
 import { prisma } from "@/lib/prisma";
-import { Formation, Combination } from "@/lib/bet-logic";
+import { Formation } from "@/lib/bet-logic";
 import { parseJsonSafely } from "@/lib/utils";
 
-export interface RefundData {
-    type: string; // "3TR" (3連単), "2TR" (2連単) 等
+export interface PayoutData {
+    type: string;    // "3TR" (3連単), "2TR" (2連単) 等
     numbers: string; // "1-2-3" 等
-    amount: number; // 100円あたりの払戻金 (例: 1540)
+    amount: number;  // 100円あたりの払戻金 (例: 1540)
 }
 
 /**
- * Executes evaluation against all un-checked predictions for a specific race.
+ * 終了したレースの結果に基づき、未精算の予測（Prediction）を精算（Settlement）します。
+ * - 返還 (REFUND): 買い目に返還対象の艇が含まれる場合、オッズに関わらず投資額を全額返還。
+ * - 的中 (WIN): 返還の対象外で、着順（payouts）と一致した場合、オッズ通りの払戻を実施。
  */
-export async function evaluateRaceBatch(placeName: string, raceNumber: number, raceDate: Date) {
+export async function settleRacePredictions(placeName: string, raceNumber: number, raceDate: Date) {
     const raceResult = await prisma.raceResult.findUnique({
         where: { placeName_raceNumber_raceDate: { placeName, raceNumber, raceDate } },
     });
 
     if (!raceResult) throw new Error("Race result not found");
 
+    // 未精算かつ、賭け金(betAmount)が0より大きい、自身用・販売用含め全てのPredictionを取得
     const predictions = await prisma.prediction.findMany({
-        where: { placeName, raceNumber, raceDate, resultChecked: false },
+        where: {
+            placeName,
+            raceNumber,
+            raceDate,
+            isSettled: false,
+            betAmount: { gt: 0 }
+        },
     });
 
-    let refundsList: RefundData[] = [];
+    let payoutsList: PayoutData[] = [];
     try {
-        refundsList = parseJsonSafely<RefundData[]>(raceResult.refunds);
+        payoutsList = parseJsonSafely<PayoutData[]>(raceResult.payouts) || [];
     } catch (e) {
-        console.error("Failed to parse refunds JSON", e);
-        return { success: false, evaluatedCount: 0 };
+        console.error("Failed to parse payouts JSON", e);
+        return { success: false, settledCount: 0 };
     }
 
-    let evaluatedCount = 0;
+    const refundedBoats: number[] = raceResult.refunds || [];
+    let settledCount = 0;
 
     for (const pred of predictions) {
         let formations: Formation[] = [];
         try {
-            formations = parseJsonSafely<Formation[]>(pred.predictedNumbers);
+            formations = parseJsonSafely<Formation[]>(pred.predictedNumbers) || [];
         } catch (e) {
             continue; // Skip invalid formats
         }
 
         let isHit = false;
-        let totalRefundAmount = 0;
+        let isRefunded = false;
+        let totalRefundAmount = 0; // 返還によるポイントバック額
+        let totalWinAmount = 0;    // 的中によるポイントバック額
 
         for (const formation of formations) {
-            // Find the official refund data for this bet type
-            const officialRefundForType = refundsList.find(r => r.type === formation.betType);
-
-            if (!officialRefundForType) continue;
+            const officialPayoutForType = payoutsList.find(p => p.type === formation.betType);
 
             for (const comb of formation.combinations) {
-                // If the combination matches the official winning numbers
-                if (comb.id === officialRefundForType.numbers) {
+                // 1. 返還チェック (REFUND)
+                // 買い目（"1-2-3"等）の中に、返還艇（[1, 2]等）が含まれているか確認
+                const betNumbers = comb.id.split('-').map(n => parseInt(n, 10));
+                const containsRefundedBoat = betNumbers.some(n => refundedBoats.includes(n));
+
+                if (containsRefundedBoat) {
+                    isRefunded = true;
+                    totalRefundAmount += comb.amount; // 賭け金をそのまま全額返還
+                    continue; // 返還された買い目は的中の判定を行わない
+                }
+
+                // 2. 的中チェック (WIN)
+                if (officialPayoutForType && comb.id === officialPayoutForType.numbers) {
                     isHit = true;
-                    // Calculate refund based on 100pt standard odds
-                    const payout = Math.floor((officialRefundForType.amount / 100) * comb.amount);
-                    totalRefundAmount += payout;
+                    // 例: 払戻金1540円(100円あたり)で 500pt 賭けていたら -> (1540 / 100) * 500 = 7700pt
+                    const winPayout = Math.floor((officialPayoutForType.amount / 100) * comb.amount);
+                    totalWinAmount += winPayout;
                 }
             }
         }
 
-        // Update prediction in DB
-        await prisma.prediction.update({
-            where: { id: pred.id },
-            data: {
-                resultChecked: true,
-                isHit,
-                refundAmount: totalRefundAmount,
-            },
+        const totalEarned = totalRefundAmount + totalWinAmount;
+
+        // DBトランザクションでユーザーポイントへの加算と精算完了フラグを同時に更新
+        await prisma.$transaction(async (tx) => {
+            // 予想ステータスの更新
+            await tx.prediction.update({
+                where: { id: pred.id },
+                data: {
+                    isSettled: true,
+                    resultChecked: true, // 互換性のため残す
+                    isHit: isHit || isRefunded, // ユーザーから見て「ポイントが戻ってきた」ら便宜上Hit扱いまたは別途対応
+                    hitAmount: totalEarned, // 獲得総額
+                    refundAmount: totalEarned, // 互換性のため
+                },
+            });
+
+            if (totalEarned > 0) {
+                // ユーザーのポイント残高を加算
+                await tx.user.update({
+                    where: { id: pred.authorId },
+                    data: {
+                        points: { increment: totalEarned }
+                    }
+                });
+
+                // トランザクション履歴の作成
+                await tx.transaction.create({
+                    data: {
+                        userId: pred.authorId,
+                        points: totalEarned,
+                        action: isRefunded && totalWinAmount === 0 ? "REFUND" : "WIN", // 返還のみか、的中があったか
+                        predictionId: pred.id,
+                    }
+                });
+            }
         });
 
-        evaluatedCount++;
+        settledCount++;
     }
 
-    return { success: true, evaluatedCount };
-}
-
-/**
- * Executes evaluation for a single prediction if the official result is available.
- */
-export async function evaluatePrediction(predictionId: string) {
-    const pred = await prisma.prediction.findUnique({
-        where: { id: predictionId, resultChecked: false },
-    });
-    if (!pred) return null;
-
-    const raceResult = await prisma.raceResult.findUnique({
-        where: { placeName_raceNumber_raceDate: { placeName: pred.placeName, raceNumber: pred.raceNumber, raceDate: pred.raceDate } },
-    });
-    if (!raceResult) return null;
-
-    let refundsList: RefundData[] = [];
-    try {
-        refundsList = parseJsonSafely<RefundData[]>(raceResult.refunds);
-    } catch (e) {
-        return null;
-    }
-
-    let formations: Formation[] = [];
-    try {
-        formations = parseJsonSafely<Formation[]>(pred.predictedNumbers);
-    } catch (e) {
-        return null;
-    }
-
-    let isHit = false;
-    let totalRefundAmount = 0;
-
-    for (const formation of formations) {
-        const officialRefundForType = refundsList.find(r => r.type === formation.betType);
-        if (!officialRefundForType) continue;
-
-        for (const comb of formation.combinations) {
-            if (comb.id === officialRefundForType.numbers) {
-                isHit = true;
-                const payout = Math.floor((officialRefundForType.amount / 100) * comb.amount);
-                totalRefundAmount += payout;
-            }
-        }
-    }
-
-    await prisma.prediction.update({
-        where: { id: pred.id },
-        data: {
-            resultChecked: true,
-            isHit,
-            refundAmount: totalRefundAmount,
-        },
-    });
-
-    return { isHit, refundAmount: totalRefundAmount };
+    return { success: true, settledCount };
 }

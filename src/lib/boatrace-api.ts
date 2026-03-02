@@ -234,39 +234,50 @@ export async function fetchAndSaveRaceResult(placeName: string, raceNumber: numb
             throw new Error("Match not fully concluded (Missing place numbers).");
         }
 
-        // Parse payouts
-        const payouts = raceResult.payouts || {};
-        const refundsData: any[] = [];
+        // Parse payouts (refunds in our old terminology, now payouts)
+        const apiPayouts = raceResult.payouts || {};
+        const payoutsData: any[] = [];
+        const refundedBoats: number[] = []; // 返還艇の番号
+
+        // Extract Returns/Refunds from API
+        // refunds are usually in raceResult.returns or similar, we check "returns" array
+        if (raceResult.returns && Array.isArray(raceResult.returns)) {
+            raceResult.returns.forEach((r: any) => {
+                if (r && typeof r.racer_boat_number === 'number') {
+                    refundedBoats.push(r.racer_boat_number);
+                }
+            });
+        }
 
         // Map payouts to our format
         // trifecta -> 3TR (3連単)
-        if (payouts.trifecta && payouts.trifecta.length > 0) {
-            payouts.trifecta.forEach((p: any) => {
-                refundsData.push({ type: "3TR", numbers: p.combination.replace(/-/g, '-'), amount: p.payout });
+        if (apiPayouts.trifecta && apiPayouts.trifecta.length > 0) {
+            apiPayouts.trifecta.forEach((p: any) => {
+                payoutsData.push({ type: "3TR", numbers: p.combination.replace(/-/g, '-'), amount: p.payout });
             });
         }
         // trio -> 3PL (3連複)
-        if (payouts.trio && payouts.trio.length > 0) {
-            payouts.trio.forEach((p: any) => {
-                refundsData.push({ type: "3PL", numbers: p.combination.replace(/=/g, '-'), amount: p.payout });
+        if (apiPayouts.trio && apiPayouts.trio.length > 0) {
+            apiPayouts.trio.forEach((p: any) => {
+                payoutsData.push({ type: "3PL", numbers: p.combination.replace(/=/g, '-'), amount: p.payout });
             });
         }
         // exacta -> 2TR (2連単)
-        if (payouts.exacta && payouts.exacta.length > 0) {
-            payouts.exacta.forEach((p: any) => {
-                refundsData.push({ type: "2TR", numbers: p.combination.replace(/-/g, '-'), amount: p.payout });
+        if (apiPayouts.exacta && apiPayouts.exacta.length > 0) {
+            apiPayouts.exacta.forEach((p: any) => {
+                payoutsData.push({ type: "2TR", numbers: p.combination.replace(/-/g, '-'), amount: p.payout });
             });
         }
         // quinella -> 2PL (2連複)
-        if (payouts.quinella && payouts.quinella.length > 0) {
-            payouts.quinella.forEach((p: any) => {
-                refundsData.push({ type: "2PL", numbers: p.combination.replace(/=/g, '-'), amount: p.payout });
+        if (apiPayouts.quinella && apiPayouts.quinella.length > 0) {
+            apiPayouts.quinella.forEach((p: any) => {
+                payoutsData.push({ type: "2PL", numbers: p.combination.replace(/=/g, '-'), amount: p.payout });
             });
         }
         // win -> WIN (単勝)
-        const win = payouts.win && payouts.win[0];
+        const win = apiPayouts.win && apiPayouts.win[0];
         if (win) {
-            refundsData.push({ type: "WIN", numbers: win.combination, amount: win.payout });
+            payoutsData.push({ type: "WIN", numbers: win.combination, amount: win.payout });
         }
 
         const savedResult = await prisma.raceResult.upsert({
@@ -281,7 +292,8 @@ export async function fetchAndSaveRaceResult(placeName: string, raceNumber: numb
                 firstPlace: first,
                 secondPlace: second,
                 thirdPlace: third,
-                refunds: JSON.stringify(refundsData)
+                payouts: payoutsData,
+                refunds: refundedBoats
             },
             create: {
                 placeName,
@@ -290,7 +302,8 @@ export async function fetchAndSaveRaceResult(placeName: string, raceNumber: numb
                 firstPlace: first,
                 secondPlace: second,
                 thirdPlace: third,
-                refunds: JSON.stringify(refundsData)
+                payouts: payoutsData,
+                refunds: refundedBoats
             }
         });
 

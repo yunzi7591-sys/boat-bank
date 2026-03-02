@@ -48,6 +48,28 @@ export default async function PlacePage(props: {
         orderBy: { createdAt: 'desc' }
     });
 
+    // Fetch Race Result if available
+    const raceResult = await prisma.raceResult.findUnique({
+        where: {
+            placeName_raceNumber_raceDate: {
+                placeName: venue.name,
+                raceNumber: activeRaceNumber,
+                raceDate: new Date(todayStr)
+            }
+        }
+    });
+
+    // Parse payouts safely
+    let payoutsList: any[] = [];
+    if (raceResult?.payouts) {
+        if (typeof raceResult.payouts === 'string') {
+            try { payoutsList = JSON.parse(raceResult.payouts); } catch (e) { }
+        } else {
+            payoutsList = raceResult.payouts as any[];
+        }
+    }
+    const refundsList: number[] = raceResult?.refunds || [];
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-24">
             {/* Header */}
@@ -111,6 +133,55 @@ export default async function PlacePage(props: {
                     </div>
                 </div>
             </div>
+
+            {/* Race Result Section */}
+            {raceResult && (
+                <div className="px-4 mt-4">
+                    <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-2xl p-4 shadow-sm">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-[13px] font-extrabold text-yellow-800 tracking-wider flex items-center gap-1.5">
+                                🏆 確定結果
+                            </h3>
+                        </div>
+
+                        {refundsList.length > 0 && (
+                            <div className="mb-3 bg-red-100 border border-red-200 text-red-800 text-xs font-bold p-2 rounded-lg flex items-center gap-1">
+                                ⚠️ 返還艇あり: {refundsList.join(", ")}号艇
+                            </div>
+                        )}
+
+                        <div className="flex justify-around items-end bg-white/60 p-3 rounded-xl border border-yellow-100 mb-3">
+                            <div className="flex flex-col items-center">
+                                <span className="text-[10px] font-black text-slate-400 mb-1">1着</span>
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-black shadow-sm ${BOAT_COLORS.find(c => c.no === raceResult.firstPlace)?.colorCls || 'bg-slate-200'}`}>
+                                    {raceResult.firstPlace}
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center pb-1">
+                                <span className="text-[10px] font-black text-slate-400 mb-1">2着</span>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shadow-sm ${BOAT_COLORS.find(c => c.no === raceResult.secondPlace)?.colorCls || 'bg-slate-200'}`}>
+                                    {raceResult.secondPlace}
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center pb-2">
+                                <span className="text-[10px] font-black text-slate-400 mb-1">3着</span>
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shadow-sm ${BOAT_COLORS.find(c => c.no === raceResult.thirdPlace)?.colorCls || 'bg-slate-200'}`}>
+                                    {raceResult.thirdPlace}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            {payoutsList.filter((p: any) => p.type === '3TR').map((p: any, idx: number) => (
+                                <div key={idx} className="flex justify-between items-center text-sm bg-white p-2 rounded-md border border-yellow-100">
+                                    <span className="font-bold text-yellow-800">3連単 {p.numbers}</span>
+                                    <span className="font-black text-lg text-slate-800">¥{p.amount.toLocaleString()}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 3 Main Action Hub Cards */}
             <div className="px-4 mt-6 space-y-4">
