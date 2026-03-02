@@ -13,14 +13,16 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { publishPrediction } from '@/actions/prediction';
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useTransition } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { VENUES } from '@/lib/constants/venues';
 
 export function BetListCart() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const { cart, updateCartItemAmount, updateCartFormationAmount, removeCombination, removeFormation, clearCart } = useBetStore();
-    const [loading, setLoading] = useState(false);
+    const [isPending, startTransition] = useTransition();
     const [error, setError] = useState('');
 
     // Initial values from URL params
@@ -131,27 +133,30 @@ export function BetListCart() {
 
                             <form
                                 className="space-y-4"
-                                action={async (formData) => {
-                                    setLoading(true);
+                                action={(formData) => {
                                     setError('');
-                                    try {
-                                        await publishPrediction({
-                                            title: isPrivate ? `[自分用] ${qPlaceName} ${qRaceNumber}R` : formData.get('title') as string,
-                                            commentary: isPrivate ? '' : formData.get('commentary') as string,
-                                            price: isPrivate ? 0 : (parseInt(formData.get('price') as string) || 0),
-                                            placeName: formData.get('placeName') as string || qPlaceName,
-                                            raceNumber: parseInt(formData.get('raceNumber') as string) || parseInt(qRaceNumber),
-                                            raceDate: new Date(),
-                                            deadlineAt: new Date(formData.get('deadlineAt') as string),
-                                            cartData: cart,
-                                            isPrivate: isPrivate
-                                        });
-                                        clearCart();
-                                    } catch (err: any) {
-                                        setError(err.message || '公開に失敗しました');
-                                    } finally {
-                                        setLoading(false);
-                                    }
+                                    startTransition(async () => {
+                                        try {
+                                            const res = await publishPrediction({
+                                                title: isPrivate ? `[自分用] ${qPlaceName} ${qRaceNumber}R` : formData.get('title') as string,
+                                                commentary: isPrivate ? '' : formData.get('commentary') as string,
+                                                price: isPrivate ? 0 : (parseInt(formData.get('price') as string) || 0),
+                                                placeName: formData.get('placeName') as string || qPlaceName,
+                                                raceNumber: parseInt(formData.get('raceNumber') as string) || parseInt(qRaceNumber),
+                                                raceDate: new Date(),
+                                                deadlineAt: new Date(formData.get('deadlineAt') as string),
+                                                cartData: cart,
+                                                isPrivate: isPrivate
+                                            });
+                                            if (res?.success) {
+                                                clearCart();
+                                                toast.success(isPrivate ? '賭けを確定しました' : '予想を公開しました');
+                                                router.push(`/predictions/${res.predictionId}`);
+                                            }
+                                        } catch (err: any) {
+                                            setError(err.message || '公開に失敗しました');
+                                        }
+                                    });
                                 }}
                             >
                                 <div>
@@ -188,8 +193,8 @@ export function BetListCart() {
 
                                 {error && <p className="text-red-500 text-sm">{error}</p>}
 
-                                <Button type="submit" disabled={loading} className={`w-full font-bold ${isPrivate ? 'bg-slate-800' : 'bg-blue-600'}`}>
-                                    {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                <Button type="submit" disabled={isPending} className={`w-full font-bold ${isPrivate ? 'bg-slate-800' : 'bg-blue-600'}`}>
+                                    {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                                     {isPrivate ? '賭けを確定する（非公開）' : '記事を公開する'}
                                 </Button>
                             </form>

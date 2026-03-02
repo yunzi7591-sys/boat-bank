@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { DemoEvalButton } from "@/components/mypage/DemoEvalButton";
 import { ProfileEditModal } from "@/components/mypage/ProfileEditModal";
+import { AccountSettings } from "@/components/mypage/AccountSettings";
 import { Button } from "@/components/ui/button";
 
 export default async function MyPage() {
@@ -205,9 +206,14 @@ export default async function MyPage() {
                 </Tabs>
             </div>
 
+            {/* Account Settings Menu */}
+            <div className="max-w-4xl mx-auto px-4 mt-8 pb-12">
+                <AccountSettings />
+            </div>
+
             {/* Admin Demo Evaluation Trigger */}
             {user.role === 'ADMIN' && (
-                <div className="max-w-4xl mx-auto px-4 mt-12 opacity-50 hover:opacity-100 transition-opacity">
+                <div className="max-w-4xl mx-auto px-4 mt-6 opacity-50 hover:opacity-100 transition-opacity">
                     <DemoEvalButton />
                 </div>
             )}

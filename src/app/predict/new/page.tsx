@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { useState, Suspense } from 'react';
 import { ChevronDown, ChevronUp, ShoppingCart, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParams } from 'next/navigation';
+import { RaceSelector } from '@/components/betting/RaceSelector';
 
 const BET_TYPES: { type: BetType; label: string }[] = [
     { type: '3TR', label: '3連単' },
@@ -19,9 +21,17 @@ const BET_TYPES: { type: BetType; label: string }[] = [
     { type: 'WIN', label: '単勝' },
 ];
 
-export default function NewPredictionPage() {
+function PredictContent() {
+    const searchParams = useSearchParams();
+    const placeId = searchParams.get('placeId');
+    const raceNumber = searchParams.get('raceNumber');
+
     const { activeBetType, setBetType, cart, clearSelections } = useBetStore();
     const [isCartOpen, setIsCartOpen] = useState(false);
+
+    if (!placeId || !raceNumber) {
+        return <RaceSelector />;
+    }
 
     const totalCartItems = cart.reduce((acc, f) => acc + f.combinations.length, 0);
     const totalCartAmount = cart.reduce((acc, f) => acc + f.combinations.reduce((sub, c) => sub + c.amount, 0), 0);
@@ -132,5 +142,13 @@ export default function NewPredictionPage() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function NewPredictionPage() {
+    return (
+        <Suspense fallback={<div className="w-full p-8 text-center text-slate-400">読み込み中...</div>}>
+            <PredictContent />
+        </Suspense>
     );
 }

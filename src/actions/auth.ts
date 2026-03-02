@@ -25,16 +25,26 @@ export async function registerUser(formData: FormData) {
         return { error: "このメールアドレスは既に登録されています" };
     }
 
-    // Create user
+    // Create user and welcome bonus transaction atomically
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await prisma.user.create({
-        data: {
-            name,
-            email,
-            password: hashedPassword,
-            points: 1000, // Give 1000 points on registration for MVP
-        },
+    await prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+            data: {
+                name,
+                email,
+                password: hashedPassword,
+                points: 10000, // 10,000pt Welcome Bonus!
+            },
+        });
+
+        await tx.transaction.create({
+            data: {
+                userId: user.id,
+                points: 10000,
+                action: "WELCOME_BONUS",
+            }
+        });
     });
 
     return { success: true };
