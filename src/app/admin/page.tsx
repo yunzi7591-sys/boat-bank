@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { submitManualResult, triggerBatchEvaluation } from "@/actions/admin";
 import { ApiActionForms } from "@/components/admin/ApiActionForms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +46,6 @@ export default async function AdminDashboard() {
                     </CardContent>
                 </Card>
 
-                {/* Batch Jobs */}
                 <Card className="shadow-sm border border-slate-200">
                     <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
                         <CardTitle className="text-sm font-black text-slate-800 flex items-center gap-2">
@@ -56,11 +54,6 @@ export default async function AdminDashboard() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-6">
-                        <form action={triggerBatchEvaluation}>
-                            <Button type="submit" variant="outline" className="w-full font-bold h-12 border-slate-300 text-slate-700 hover:bg-slate-100">
-                                未判定の予想すべてを強制再評価
-                            </Button>
-                        </form>
                         <p className="text-[10px] text-slate-400 mt-3 text-center">
                             API Route <code className="bg-slate-100 px-1 rounded text-slate-500">/api/cron/evaluate</code> is active for automated execution.
                         </p>
