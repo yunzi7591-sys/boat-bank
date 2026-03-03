@@ -313,3 +313,125 @@ export async function fetchAndSaveRaceResult(placeName: string, raceNumber: numb
         return { success: false, error: e.message };
     }
 }
+
+// Phase 31: Bulk Sync Today's Results from API
+export async function syncTodayResults() {
+    try {
+        console.log(`[API] Fetching all results from ${RESULTS_API_URL}...`);
+
+        const res = await fetch(RESULTS_API_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error("Result API Fetch failed");
+
+        const data = await res.json();
+        const results = data.results || [];
+
+        if (results.length === 0) {
+            return { success: false, error: "No results today." };
+        }
+
+        let syncedCount = 0;
+        const processedRaces: { placeName: string; raceNumber: number; raceDate: Date }[] = [];
+
+        for (const raceResult of results) {
+            // "race_status" 判定があるとは思いますが、基本的にbots(1-6)とpayoutsがあればレース成立
+            const boats = raceResult.boats || [];
+            if (boats.length === 0) continue; // Not finished yet
+
+            const first = boats.find((b: any) => b.racer_place_number === 1)?.racer_boat_number;
+            const second = boats.find((b: any) => b.racer_place_number === 2)?.racer_boat_number;
+            const third = boats.find((b: any) => b.racer_place_number === 3)?.racer_boat_number;
+
+            if (!first || !second || !third) {
+                continue; // Match not fully concluded
+            }
+
+            const stadiumId = raceResult.race_stadium_number.toString().padStart(2, '0');
+            const venue = VENUES.find(v => v.id === stadiumId);
+            if (!venue) continue; // Unknown venue
+
+            const placeName = venue.name;
+            const raceNumber = raceResult.race_number;
+            const raceDate = new Date(raceResult.race_date);
+
+            // Phase 31: Save full arrivals (1-6)
+            const arrivals = boats.map((b: any) => ({
+                place: b.racer_place_number,
+                boatNumber: b.racer_boat_number,
+                racerName: `${b.racer_last_name} ${b.racer_first_name}`.trim()
+            })).sort((a: any, b: any) => {
+                // Return valid places first, then missing/unplaced at the end
+                if (!a.place) return 1;
+                if (!b.place) return -1;
+                return a.place - b.place;
+            });
+
+            // Parse payouts
+            const apiPayouts = raceResult.payouts || {};
+            const payoutsData: any[] = [];
+            const refundedBoats: number[] = [];
+
+            if (raceResult.returns && Array.isArray(raceResult.returns)) {
+                raceResult.returns.forEach((r: any) => {
+                    if (r && typeof r.racer_boat_number === 'number') {
+                        refundedBoats.push(r.racer_boat_number);
+                    }
+                });
+            }
+
+            // Map payouts
+            if (apiPayouts.trifecta && apiPayouts.trifecta.length > 0) {
+                apiPayouts.trifecta.forEach((p: any) => payoutsData.push({ type: "3TR", numbers: p.combination.replace(/-/g, '-'), amount: p.payout }));
+            }
+            if (apiPayouts.trio && apiPayouts.trio.length > 0) {
+                apiPayouts.trio.forEach((p: any) => payoutsData.push({ type: "3PL", numbers: p.combination.replace(/=/g, '-'), amount: p.payout }));
+            }
+            if (apiPayouts.exacta && apiPayouts.exacta.length > 0) {
+                apiPayouts.exacta.forEach((p: any) => payoutsData.push({ type: "2TR", numbers: p.combination.replace(/-/g, '-'), amount: p.payout }));
+            }
+            if (apiPayouts.quinella && apiPayouts.quinella.length > 0) {
+                apiPayouts.quinella.forEach((p: any) => payoutsData.push({ type: "2PL", numbers: p.combination.replace(/=/g, '-'), amount: p.payout }));
+            }
+            const win = apiPayouts.win && apiPayouts.win[0];
+            if (win) {
+                payoutsData.push({ type: "WIN", numbers: win.combination, amount: win.payout });
+            }
+
+            await prisma.raceResult.upsert({
+                where: {
+                    placeName_raceNumber_raceDate: {
+                        placeName,
+                        raceNumber,
+                        raceDate
+                    }
+                },
+                update: {
+                    firstPlace: first,
+                    secondPlace: second,
+                    thirdPlace: third,
+                    payouts: payoutsData,
+                    refunds: refundedBoats,
+                    arrivals: arrivals // Phase 31 array
+                },
+                create: {
+                    placeName,
+                    raceNumber,
+                    raceDate,
+                    firstPlace: first,
+                    secondPlace: second,
+                    thirdPlace: third,
+                    payouts: payoutsData,
+                    refunds: refundedBoats,
+                    arrivals: arrivals // Phase 31 array
+                }
+            });
+
+            processedRaces.push({ placeName, raceNumber, raceDate });
+            syncedCount++;
+        }
+
+        return { success: true, count: syncedCount, processedRaces };
+    } catch (e: any) {
+        console.error("[API Error] Failed to sync bulk results:", e);
+        return { success: false, error: e.message };
+    }
+}
