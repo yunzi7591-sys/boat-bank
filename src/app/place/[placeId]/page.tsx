@@ -70,6 +70,15 @@ export default async function PlacePage(props: {
     }
     const refundsList: number[] = raceResult?.refunds || [];
 
+    let arrivalsList: any[] = [];
+    if (raceResult?.arrivals) {
+        if (typeof raceResult.arrivals === 'string') {
+            try { arrivalsList = JSON.parse(raceResult.arrivals); } catch (e) { }
+        } else {
+            arrivalsList = raceResult.arrivals as any[];
+        }
+    }
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-24">
             {/* Header */}
@@ -150,25 +159,48 @@ export default async function PlacePage(props: {
                             </div>
                         )}
 
-                        <div className="flex justify-around items-end bg-white/60 p-3 rounded-xl border border-yellow-100 mb-3">
-                            <div className="flex flex-col items-center">
-                                <span className="text-[10px] font-black text-slate-400 mb-1">1着</span>
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-black shadow-sm ${BOAT_COLORS.find(c => c.no === raceResult.firstPlace)?.colorCls || 'bg-slate-200'}`}>
-                                    {raceResult.firstPlace}
+                        <div className="flex flex-col gap-2 bg-white/60 p-3 rounded-xl border border-yellow-100 mb-3">
+                            <span className="text-xs font-black text-slate-500 mb-1 border-b pb-1">🪧 全着順</span>
+                            {arrivalsList.length > 0 ? (
+                                arrivalsList.map((arrival: any, idx: number) => {
+                                    const c = BOAT_COLORS.find(bc => bc.no === arrival.boatNumber);
+                                    return (
+                                        <div key={idx} className="flex items-center gap-3">
+                                            <div className="w-8 text-center text-[10px] font-black text-slate-400">
+                                                {arrival.place ? `${arrival.place}着` : '-'}
+                                            </div>
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shadow-sm ${c?.colorCls || 'bg-slate-200'}`}>
+                                                {arrival.boatNumber}
+                                            </div>
+                                            <div className="text-sm font-bold text-slate-700">
+                                                {arrival.racerName}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                // Fallback to 1-3 if arrivals isn't populated (old data)
+                                <div className="flex justify-around items-end pt-2">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-[10px] font-black text-slate-400 mb-1">1着</span>
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-black shadow-sm ${BOAT_COLORS.find(c => c.no === raceResult.firstPlace)?.colorCls || 'bg-slate-200'}`}>
+                                            {raceResult.firstPlace}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center pb-1">
+                                        <span className="text-[10px] font-black text-slate-400 mb-1">2着</span>
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shadow-sm ${BOAT_COLORS.find(c => c.no === raceResult.secondPlace)?.colorCls || 'bg-slate-200'}`}>
+                                            {raceResult.secondPlace}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center pb-2">
+                                        <span className="text-[10px] font-black text-slate-400 mb-1">3着</span>
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shadow-sm ${BOAT_COLORS.find(c => c.no === raceResult.thirdPlace)?.colorCls || 'bg-slate-200'}`}>
+                                            {raceResult.thirdPlace}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex flex-col items-center pb-1">
-                                <span className="text-[10px] font-black text-slate-400 mb-1">2着</span>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shadow-sm ${BOAT_COLORS.find(c => c.no === raceResult.secondPlace)?.colorCls || 'bg-slate-200'}`}>
-                                    {raceResult.secondPlace}
-                                </div>
-                            </div>
-                            <div className="flex flex-col items-center pb-2">
-                                <span className="text-[10px] font-black text-slate-400 mb-1">3着</span>
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shadow-sm ${BOAT_COLORS.find(c => c.no === raceResult.thirdPlace)?.colorCls || 'bg-slate-200'}`}>
-                                    {raceResult.thirdPlace}
-                                </div>
-                            </div>
+                            )}
                         </div>
 
                         <div className="space-y-1.5">

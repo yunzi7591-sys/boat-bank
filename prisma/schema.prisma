@@ -155,6 +155,10 @@ model RaceResult {
   secondPlace  Int      // 2着
   thirdPlace   Int      // 3着
   
+  // 1着〜6着すべての「着順」「艇番」および「選手名」を保持するための配列 (Phase 31)
+  // 例: "[{\"place\":1,\"boatNumber\":1,\"racerName\":\"峰竜太\"}, ...]"
+  arrivals     Json?
+
   // 払戻金情報
   // Json型で配列保存
   // 例: "[{\"type\":\"3連単\",\"numbers\":\"1-2-3\",\"amount\":1540}]"
