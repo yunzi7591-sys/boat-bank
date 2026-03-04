@@ -13,6 +13,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { publishPrediction } from '@/actions/prediction';
+import { submitBets } from '@/actions/bet';
 import { useState, useTransition } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -23,6 +24,7 @@ export function BetListCart() {
     const router = useRouter();
     const { cart, updateCartItemAmount, updateCartFormationAmount, removeCombination, removeFormation, clearCart } = useBetStore();
     const [isPending, startTransition] = useTransition();
+    const [isBetPending, startBetTransition] = useTransition();
     const [error, setError] = useState('');
 
     // Initial values from URL params
@@ -109,97 +111,150 @@ export function BetListCart() {
                 ))}
 
                 {/* Global Cart Footer */}
-                <div className="sticky bottom-4 left-0 right-0 bg-blue-900 text-white rounded-lg shadow-xl p-4 flex items-center justify-between border border-blue-800">
-                    <div className="flex flex-col">
-                        <span className="text-blue-200 text-xs font-semibold">合計点数・金額</span>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-xl font-bold">{totalCombinations}</span><span className="text-sm">点</span>
-                            <span className="text-2xl font-extrabold ml-2">{totalAmount.toLocaleString()}</span><span className="text-sm">pt</span>
+                <div className="sticky bottom-4 left-0 right-0 bg-blue-900 text-white rounded-lg shadow-xl p-4 border border-blue-800">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex flex-col">
+                            <span className="text-blue-200 text-xs font-semibold">合計点数・金額</span>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-xl font-bold">{totalCombinations}</span><span className="text-sm">点</span>
+                                <span className="text-2xl font-extrabold ml-2">{totalAmount.toLocaleString()}</span><span className="text-sm">pt</span>
+                            </div>
                         </div>
                     </div>
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button size="lg" className="bg-white text-blue-900 hover:bg-neutral-100 font-bold px-8">
-                                予想を販売する
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>予想記事の公開設定</DialogTitle>
-                                <DialogDescription>
-                                    カートの予想データを記事として作成・販売します。
-                                </DialogDescription>
-                            </DialogHeader>
+                    <div className="flex gap-2">
+                        {/* Submit bets button */}
+                        <Button
+                            size="lg"
+                            disabled={isBetPending || totalAmount === 0}
+                            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold"
+                            onClick={() => {
+                                startBetTransition(async () => {
+                                    try {
+                                        // Flatten all cart formations into individual bets
+                                        const allBets = cart.flatMap(formation =>
+                                            formation.combinations.map(comb => ({
+                                                betType: formation.betType,
+                                                combination: comb.id,
+                                                amount: comb.amount,
+                                            }))
+                                        );
 
-                            <form
-                                className="space-y-4"
-                                action={(formData) => {
-                                    setError('');
-                                    startTransition(async () => {
-                                        try {
-                                            const res = await publishPrediction({
-                                                title: isPrivate ? `[自分用] ${qPlaceName} ${qRaceNumber}R` : formData.get('title') as string,
-                                                commentary: isPrivate ? '' : formData.get('commentary') as string,
-                                                price: isPrivate ? 0 : (parseInt(formData.get('price') as string) || 0),
-                                                placeName: formData.get('placeName') as string || qPlaceName,
-                                                raceNumber: parseInt(formData.get('raceNumber') as string) || parseInt(qRaceNumber),
-                                                raceDate: new Date(),
-                                                deadlineAt: new Date(formData.get('deadlineAt') as string),
-                                                cartData: cart,
-                                                isPrivate: isPrivate
-                                            });
-                                            if (res?.success) {
-                                                clearCart();
-                                                toast.success(isPrivate ? '賭けを確定しました' : '予想を公開しました');
-                                                router.push(`/predictions/${res.predictionId}`);
-                                            }
-                                        } catch (err: any) {
-                                            setError(err.message || '公開に失敗しました');
+                                        const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
+                                        const currentDate = new Date(todayStr);
+                                        const yyyy = currentDate.getFullYear();
+                                        const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+                                        const dd = String(currentDate.getDate()).padStart(2, '0');
+
+                                        const res = await submitBets({
+                                            placeName: qPlaceName,
+                                            raceNumber: parseInt(qRaceNumber),
+                                            raceDate: `${yyyy}-${mm}-${dd}T00:00:00.000Z`,
+                                            bets: allBets,
+                                        });
+
+                                        if (res.success) {
+                                            clearCart();
+                                            toast.success(`${res.count}件の買い目を保存しました！`, { position: 'top-center' });
+                                            router.push('/mypage/dashboard');
+                                        } else {
+                                            toast.error(res.error || '投票に失敗しました', { position: 'top-center' });
                                         }
-                                    });
-                                }}
-                            >
-                                <div>
-                                    <label className="text-xs font-bold text-neutral-500">場名</label>
-                                    <Input name="placeName" defaultValue={qPlaceName} readOnly className="bg-slate-50" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-xs font-bold text-neutral-500">レース番号</label>
-                                        <Input name="raceNumber" type="number" defaultValue={qRaceNumber} readOnly className="bg-slate-50" />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-neutral-500">締切時刻 (手動/自動)</label>
-                                        <Input name="deadlineAt" type="datetime-local" required />
-                                    </div>
-                                </div>
-
-                                {!isPrivate && (
-                                    <>
-                                        <div>
-                                            <label className="text-xs font-bold text-neutral-500">タイトル</label>
-                                            <Input name="title" placeholder="自信の勝負レース" required />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-bold text-neutral-500">見解</label>
-                                            <Textarea name="commentary" placeholder="展開予想など..." rows={4} required />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-bold text-neutral-500">販売価格 (pt) - 0なら無料</label>
-                                            <Input name="price" type="number" defaultValue="100" min="0" required />
-                                        </div>
-                                    </>
-                                )}
-
-                                {error && <p className="text-red-500 text-sm">{error}</p>}
-
-                                <Button type="submit" disabled={isPending} className={`w-full font-bold ${isPrivate ? 'bg-slate-800' : 'bg-blue-600'}`}>
-                                    {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                    {isPrivate ? '賭けを確定する（非公開）' : '記事を公開する'}
+                                    } catch (err: any) {
+                                        toast.error(err.message || '投票エラー', { position: 'top-center' });
+                                    }
+                                });
+                            }}
+                        >
+                            {isBetPending ? (
+                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 処理中...</>
+                            ) : (
+                                '投票する'
+                            )}
+                        </Button>
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button size="lg" className="bg-white text-blue-900 hover:bg-neutral-100 font-bold px-8">
+                                    予想を販売する
                                 </Button>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>予想記事の公開設定</DialogTitle>
+                                    <DialogDescription>
+                                        カートの予想データを記事として作成・販売します。
+                                    </DialogDescription>
+                                </DialogHeader>
+
+                                <form
+                                    className="space-y-4"
+                                    action={(formData) => {
+                                        setError('');
+                                        startTransition(async () => {
+                                            try {
+                                                const res = await publishPrediction({
+                                                    title: isPrivate ? `[自分用] ${qPlaceName} ${qRaceNumber}R` : formData.get('title') as string,
+                                                    commentary: isPrivate ? '' : formData.get('commentary') as string,
+                                                    price: isPrivate ? 0 : (parseInt(formData.get('price') as string) || 0),
+                                                    placeName: formData.get('placeName') as string || qPlaceName,
+                                                    raceNumber: parseInt(formData.get('raceNumber') as string) || parseInt(qRaceNumber),
+                                                    raceDate: new Date(),
+                                                    deadlineAt: new Date(formData.get('deadlineAt') as string),
+                                                    cartData: cart,
+                                                    isPrivate: isPrivate
+                                                });
+                                                if (res?.success) {
+                                                    clearCart();
+                                                    toast.success(isPrivate ? '賭けを確定しました' : '予想を公開しました');
+                                                    router.push(`/predictions/${res.predictionId}`);
+                                                }
+                                            } catch (err: any) {
+                                                setError(err.message || '公開に失敗しました');
+                                            }
+                                        });
+                                    }}
+                                >
+                                    <div>
+                                        <label className="text-xs font-bold text-neutral-500">場名</label>
+                                        <Input name="placeName" defaultValue={qPlaceName} readOnly className="bg-slate-50" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-bold text-neutral-500">レース番号</label>
+                                            <Input name="raceNumber" type="number" defaultValue={qRaceNumber} readOnly className="bg-slate-50" />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-neutral-500">締切時刻 (手動/自動)</label>
+                                            <Input name="deadlineAt" type="datetime-local" required />
+                                        </div>
+                                    </div>
+
+                                    {!isPrivate && (
+                                        <>
+                                            <div>
+                                                <label className="text-xs font-bold text-neutral-500">タイトル</label>
+                                                <Input name="title" placeholder="自信の勝負レース" required />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-bold text-neutral-500">見解</label>
+                                                <Textarea name="commentary" placeholder="展開予想など..." rows={4} required />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-bold text-neutral-500">販売価格 (pt) - 0なら無料</label>
+                                                <Input name="price" type="number" defaultValue="100" min="0" required />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {error && <p className="text-red-500 text-sm">{error}</p>}
+
+                                    <Button type="submit" disabled={isPending} className={`w-full font-bold ${isPrivate ? 'bg-slate-800' : 'bg-blue-600'}`}>
+                                        {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                        {isPrivate ? '賭けを確定する（非公開）' : '記事を公開する'}
+                                    </Button>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 </div>
             </div>
         </div>
