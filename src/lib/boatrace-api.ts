@@ -18,9 +18,18 @@ function extractGrade(gradeNumber: number): string {
 
 function extractDay(subtitle: string): string {
     if (!subtitle) return "開催中";
+    // Special keywords first
     if (subtitle.includes("優勝戦") && !subtitle.includes("準")) return "最終日";
     if (subtitle.includes("準優勝戦")) return "5日目";
     if (subtitle.includes("ドリーム")) return "初日";
+    // Parse numeric day: "2日目", "3日目" ... "7日目"
+    const dayMatch = subtitle.match(/(\d+)日目/);
+    if (dayMatch) return `${dayMatch[1]}日目`;
+    // Parse "初日" explicitly
+    if (subtitle.includes("初日")) return "初日";
+    // Parse "Xday" / English-style day markers
+    const edayMatch = subtitle.match(/(\d+)\s*day/i);
+    if (edayMatch) return `${edayMatch[1]}日目`;
     return "開催中";
 }
 
