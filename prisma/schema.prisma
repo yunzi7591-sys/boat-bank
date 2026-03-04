@@ -33,6 +33,7 @@ model User {
   following     Follows[] @relation("follower")
   
   notifications Notification[]
+  userBets      UserBet[]
 }
 
 model Follows {
@@ -234,4 +235,33 @@ model Notification {
   isRead       Boolean  @default(false)
   
   createdAt    DateTime @default(now())
+}
+
+// -------------------------------------------------------------
+// Real Betting Dashboard Models (Phase 37)
+// -------------------------------------------------------------
+model Race {
+  id             String    @id @default(cuid())
+  stadiumNumber  Int
+  gradeNumber    Int
+  
+  userBets       UserBet[]
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model UserBet {
+  id             String    @id @default(cuid())
+  userId         String
+  raceId         String
+  betAmount      Int
+  refundAmount   Int
+  slotNumber     Int
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  race           Race      @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
