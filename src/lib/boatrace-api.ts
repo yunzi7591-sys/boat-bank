@@ -28,6 +28,23 @@ export async function syncTodaySchedule() {
     try {
         console.log(`[API] Fetching schedule from ${SCHEDULE_API_URL}...`);
 
+        // 1. 本日分のデータをすでに取得しているかチェック (高速スキップ機能)
+        const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
+        const currentDate = new Date(todayStr);
+        const yyyy = currentDate.getFullYear();
+        const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(currentDate.getDate()).padStart(2, '0');
+        const searchDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
+
+        const existingCount = await prisma.raceSchedule.count({
+            where: { raceDate: searchDate }
+        });
+
+        if (existingCount > 100) {
+            console.log(`[API] Today's schedule already synced (${existingCount} races found). Skipping full API fetch to save DB load.`);
+            return { success: true, count: existingCount, skipped: true };
+        }
+
         const res = await fetch(SCHEDULE_API_URL, { cache: 'no-store' });
         if (!res.ok) {
             console.error(`[API Error] Schedule API Fetch failed with status: ${res.status} ${res.statusText}`);
@@ -43,9 +60,9 @@ export async function syncTodaySchedule() {
 
         let syncedCount = 0;
 
-        // 1. レース番組表パースと事前チェック
+        // 2. レース番組表パースと事前チェック
         const parsedPrograms: any[] = [];
-        const uniqueRacers = new Map<number, string>();
+        const uniqueRacers = new Map<number, string>(); // Use map to guarantee unique values by ID
 
         for (const prog of programs) {
             const stadiumId = prog.race_stadium_number.toString().padStart(2, '0');
@@ -56,7 +73,6 @@ export async function syncTodaySchedule() {
             const placeName = venue.name;
             const raceNumber = prog.race_number;
             const raceDate = new Date(prog.race_date); // "2026-02-28" resulting in UTC 00:00
-
             // "race_closed_at": "2026-02-28 15:48:00"
             const deadlineAt = new Date(`${prog.race_closed_at.replace(' ', 'T')}+09:00`);
 
@@ -81,79 +97,75 @@ export async function syncTodaySchedule() {
             });
         }
 
-        // 2. 選手(Racer)データを一括でUpsert
-        const racerUpsertPromises = Array.from(uniqueRacers.entries()).map(([rNum, rName]) =>
-            prisma.racer.upsert({
-                where: { racerNumber: rNum },
-                update: { name: rName },
-                create: { racerNumber: rNum, name: rName }
-            })
-        );
+        // 3. 選手(Racer)データを一括でバルクINSERT（重複スキップ）
+        const racerDataArray = Array.from(uniqueRacers.entries()).map(([rNum, rName]) => ({
+            racerNumber: rNum,
+            name: rName
+        }));
 
-        const savedRacers = await Promise.all(racerUpsertPromises);
-        const racerIdMap = new Map(savedRacers.map(r => [r.racerNumber, r.id]));
+        if (racerDataArray.length > 0) {
+            await prisma.racer.createMany({
+                data: racerDataArray,
+                skipDuplicates: true
+            });
+        }
 
-        // 3. RaceScheduleとRaceEntryを一括でUpsertするためのクエリ配列作成
-        const dbOperations: any[] = [];
+        // 紐付けのために、先ほどUpsertした(または既に存在していた)Racersの完全なリストをDBから再取得
+        const racerIds = Array.from(uniqueRacers.keys());
+        const allRacersInDb = await prisma.racer.findMany({
+            where: { racerNumber: { in: racerIds } },
+            select: { id: true, racerNumber: true }
+        });
+        const racerIdMap = new Map(allRacersInDb.map(r => [r.racerNumber, r.id]));
 
+        // 4. RaceSchedule のバルクINSERTデータ作成
+        const scheduleDataArray = parsedPrograms.map(pr => ({
+            placeName: pr.placeName,
+            raceNumber: pr.raceNumber,
+            raceDate: pr.raceDate,
+            deadlineAt: pr.deadlineAt,
+            grade: pr.grade,
+            day: pr.day
+        }));
+
+        if (scheduleDataArray.length > 0) {
+            await prisma.raceSchedule.createMany({
+                data: scheduleDataArray,
+                skipDuplicates: true
+            });
+            syncedCount = scheduleDataArray.length;
+        }
+
+        // 5. RaceEntry のバルクINSERTデータとチャンク分割 (タイムアウト・メモリ圧迫対策)
+        const entriesDataArray: any[] = [];
         for (const pr of parsedPrograms) {
-            // Schedule Upsert
-            dbOperations.push(
-                prisma.raceSchedule.upsert({
-                    where: {
-                        placeName_raceNumber_raceDate: {
-                            placeName: pr.placeName,
-                            raceNumber: pr.raceNumber,
-                            raceDate: pr.raceDate,
-                        }
-                    },
-                    update: { deadlineAt: pr.deadlineAt, grade: pr.grade, day: pr.day },
-                    create: {
-                        placeName: pr.placeName,
-                        raceNumber: pr.raceNumber,
-                        raceDate: pr.raceDate,
-                        deadlineAt: pr.deadlineAt,
-                        grade: pr.grade,
-                        day: pr.day
-                    }
-                })
-            );
-
-            // Entries Upsert
             for (const entry of pr.entriesData) {
                 const racerId = racerIdMap.get(entry.racerNumber);
                 if (racerId) {
-                    dbOperations.push(
-                        prisma.raceEntry.upsert({
-                            where: {
-                                placeName_raceNumber_raceDate_boatNumber: {
-                                    placeName: pr.placeName,
-                                    raceNumber: pr.raceNumber,
-                                    raceDate: pr.raceDate,
-                                    boatNumber: entry.boatNumber
-                                }
-                            },
-                            update: { racerId },
-                            create: {
-                                placeName: pr.placeName,
-                                raceNumber: pr.raceNumber,
-                                raceDate: pr.raceDate,
-                                boatNumber: entry.boatNumber,
-                                racerId
-                            }
-                        })
-                    );
+                    entriesDataArray.push({
+                        placeName: pr.placeName,
+                        raceNumber: pr.raceNumber,
+                        raceDate: pr.raceDate,
+                        boatNumber: entry.boatNumber,
+                        racerId: racerId
+                    });
                 }
             }
-
-            syncedCount++;
         }
 
-        // 4. トランザクション一括実行 (タイムアウト対策)
-        await prisma.$transaction(dbOperations);
+        const CHUNK_SIZE = 500;
+        for (let i = 0; i < entriesDataArray.length; i += CHUNK_SIZE) {
+            const chunk = entriesDataArray.slice(i, i + CHUNK_SIZE);
+            if (chunk.length > 0) {
+                await prisma.raceEntry.createMany({
+                    data: chunk,
+                    skipDuplicates: true
+                });
+            }
+        }
 
-        console.log(`[API] Successfully synced ${syncedCount} race schedules and entries concurrently.`);
-        return { success: true, count: syncedCount };
+        console.log(`[API] Successfully synced ${syncedCount} race schedules and ${entriesDataArray.length} entries using chunked createMany.`);
+        return { success: true, count: syncedCount, entries: entriesDataArray.length };
     } catch (e: any) {
         console.error("[API Error] Failed to sync schedule:", e);
         return { success: false, error: e.message };
