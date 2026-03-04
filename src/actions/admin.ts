@@ -3,7 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { settleRacePredictions } from "@/lib/evaluate";
-import { syncTodaySchedule, fetchAndSaveRaceResult } from "@/lib/boatrace-api";
+import { syncTodaySchedule, fetchAndSaveRaceResult, syncOfficialGradeAndDay } from "@/lib/boatrace-api";
 import { revalidatePath } from "next/cache";
 
 // Function removed
@@ -14,6 +14,19 @@ export async function triggerSyncSchedule() {
         if ((session?.user as any)?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
 
         const result = await syncTodaySchedule();
+        revalidatePath('/admin');
+        return result;
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function triggerSyncScrape() {
+    try {
+        const session = await auth();
+        if ((session?.user as any)?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
+
+        const result = await syncOfficialGradeAndDay();
         revalidatePath('/admin');
         return result;
     } catch (e: any) {
