@@ -13,12 +13,14 @@ export function RaceHubClient({
     schedules,
     allMarketPredictions,
     allRaceResults,
+    allRaceEntries,
     initialActiveRace
 }: {
     venue: any,
     schedules: any[],
     allMarketPredictions: any[],
     allRaceResults: any[],
+    allRaceEntries?: any[],
     initialActiveRace: number
 }) {
     const router = useRouter();
@@ -57,14 +59,23 @@ export function RaceHubClient({
         window.history.replaceState(null, '', `/place/${venue.id}?race=${rNum}`);
     };
 
-    const mockRacers = [
-        { boatNumber: 1, name: "峰 竜太", class: "A1", color: "bg-white text-slate-900 border-slate-200" },
-        { boatNumber: 2, name: "毒島 誠", class: "A1", color: "bg-slate-900 text-white border-slate-900" },
-        { boatNumber: 3, name: "桐生 順平", class: "A1", color: "bg-red-600 text-white border-red-600" },
-        { boatNumber: 4, name: "松井 繁", class: "A1", color: "bg-blue-600 text-white border-blue-600" },
-        { boatNumber: 5, name: "白井 英治", class: "A1", color: "bg-yellow-400 text-slate-900 border-yellow-400" },
-        { boatNumber: 6, name: "瓜生 正義", class: "A1", color: "bg-emerald-600 text-white border-emerald-600" }
-    ];
+    const activeEntries = (allRaceEntries || []).filter(e => e.raceNumber === activeRaceNumber);
+    const currentRacers = activeEntries.map(entry => {
+        let colorClasses = "bg-white text-slate-900 border-slate-200";
+        if (entry.boatNumber === 1) colorClasses = "bg-white text-slate-900 border-slate-200";
+        else if (entry.boatNumber === 2) colorClasses = "bg-slate-900 text-white border-slate-900";
+        else if (entry.boatNumber === 3) colorClasses = "bg-red-600 text-white border-red-600";
+        else if (entry.boatNumber === 4) colorClasses = "bg-blue-600 text-white border-blue-600";
+        else if (entry.boatNumber === 5) colorClasses = "bg-yellow-400 text-slate-900 border-yellow-400";
+        else if (entry.boatNumber === 6) colorClasses = "bg-emerald-600 text-white border-emerald-600";
+
+        return {
+            boatNumber: entry.boatNumber,
+            name: entry.racer?.name || "選手情報なし",
+            class: entry.racer?.grade || "B1",
+            color: colorClasses
+        };
+    }).sort((a, b) => a.boatNumber - b.boatNumber);
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-24">
@@ -140,24 +151,31 @@ export function RaceHubClient({
                         </h3>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                        {mockRacers.map((racer) => (
-                            <div key={racer.boatNumber} className="flex items-center bg-slate-50/80 p-2 rounded-xl border border-slate-100/60 hover:bg-slate-50 hover:border-slate-200 transition-colors">
-                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-xl shadow-sm border-2 ${racer.color}`}>
-                                    {racer.boatNumber}
-                                </div>
-                                <div className="ml-3 flex flex-col justify-center">
-                                    <span className={`text-[10px] font-bold leading-none px-1.5 py-0.5 rounded-sm w-fit mb-0.5 shadow-sm ${racer.class.includes('A1') ? "bg-gradient-to-r from-yellow-200 to-yellow-100 text-yellow-800 border border-yellow-200" :
+                        {currentRacers.length > 0 ? (
+                            currentRacers.map((racer) => (
+                                <div key={racer.boatNumber} className="flex items-center bg-slate-50/80 p-2 rounded-xl border border-slate-100/60 hover:bg-slate-50 hover:border-slate-200 transition-colors">
+                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-xl shadow-sm border-2 ${racer.color}`}>
+                                        {racer.boatNumber}
+                                    </div>
+                                    <div className="ml-3 flex flex-col justify-center">
+                                        <span className={`text-[10px] font-bold leading-none px-1.5 py-0.5 rounded-sm w-fit mb-0.5 shadow-sm ${racer.class.includes('A1') ? "bg-gradient-to-r from-yellow-200 to-yellow-100 text-yellow-800 border border-yellow-200" :
                                             racer.class.includes('A2') ? "bg-slate-200 text-slate-800 border border-slate-200" :
                                                 racer.class.includes('B1') ? "bg-red-100 text-red-800 border border-red-100" : "bg-blue-100 text-blue-800 border border-blue-100"
-                                        }`}>
-                                        {racer.class}
-                                    </span>
-                                    <span className="text-[15px] font-black text-slate-800 tracking-tight leading-none mt-0.5">
-                                        {racer.name}
-                                    </span>
+                                            }`}>
+                                            {racer.class}
+                                        </span>
+                                        <span className="text-[15px] font-black text-slate-800 tracking-tight leading-none mt-0.5">
+                                            {racer.name.replace(/\s+/g, '')}
+                                        </span>
+                                    </div>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="py-8 text-center bg-slate-50/50 border border-slate-200/60 border-dashed rounded-xl flex flex-col items-center justify-center">
+                                <p className="text-xs font-bold text-slate-500 mb-1">出走表データが同期されていません</p>
+                                <p className="text-[10px] text-slate-400">このレースはまだエントリー情報が取得できていません</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             </div>
