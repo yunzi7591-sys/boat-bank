@@ -58,6 +58,20 @@ export default async function PlacePage(props: {
         }
     });
 
+    // Fetch all Race Entries (with Racers) for today for this venue
+    const allRaceEntries = await prisma.raceEntry.findMany({
+        where: {
+            placeName: venue.name,
+            raceDate: new Date(`${localDateStr}T00:00:00.000Z`)
+        },
+        include: {
+            racer: true
+        },
+        orderBy: {
+            boatNumber: 'asc'
+        }
+    });
+
     const activeRaceNumber = searchParams.race ? parseInt(searchParams.race) : 1;
 
     return (
@@ -66,6 +80,7 @@ export default async function PlacePage(props: {
             schedules={schedules}
             allMarketPredictions={allMarketPredictions}
             allRaceResults={allRaceResults}
+            allRaceEntries={allRaceEntries}
             initialActiveRace={activeRaceNumber}
         />
     );
