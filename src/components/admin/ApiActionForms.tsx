@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { DownloadCloud, CheckCircle2, Globe } from "lucide-react";
 import { toast } from "sonner";
-import { triggerSyncSchedule, triggerSyncScrape } from "@/actions/admin";
+import { triggerSyncSchedule, triggerSyncScrape, triggerResultSyncBulk } from "@/actions/admin";
 
 export function ApiActionForms() {
     const [isPendingApiSync, startTransitionApiSync] = useTransition();
@@ -44,12 +44,11 @@ export function ApiActionForms() {
     const handleResultSync = () => {
         startTransitionEval(async () => {
             try {
-                const res = await fetch('/api/cron/sync-results');
-                const result = await res.json();
-                if (res.ok && result.status === 'Success') {
+                const result = await triggerResultSyncBulk();
+                if (result.success) {
                     toast.success(`[結果同期完了] ${result.syncedCount}件取得, ${result.settlementProcessedCount}件精算 (${result.races || 'なし'})`);
                 } else {
-                    toast.error(`結果同期失敗: ${result.message || "データが取得できませんでした"}`);
+                    toast.error(`結果同期失敗: ${result.error || "データが取得できませんでした"}`);
                 }
             } catch (error: any) {
                 toast.error(`結果同期エラー: ${error.message}`);

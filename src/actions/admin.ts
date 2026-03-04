@@ -3,7 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { settleRacePredictions } from "@/lib/evaluate";
-import { syncTodaySchedule, fetchAndSaveRaceResult, syncOfficialGradeAndDay } from "@/lib/boatrace-api";
+import { syncTodaySchedule, fetchAndSaveRaceResult, syncOfficialGradeAndDay, syncTodayResults } from "@/lib/boatrace-api";
 import { revalidatePath } from "next/cache";
 
 // Function removed
@@ -64,6 +64,40 @@ export async function triggerApiEvaluation(formData: FormData) {
         revalidatePath('/ranking');
 
         return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function triggerResultSyncBulk() {
+    try {
+        const session = await auth();
+        if ((session?.user as any)?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
+
+        const syncRes = await syncTodayResults();
+        if (!syncRes.success) {
+            return { success: false, error: syncRes.error };
+        }
+
+        const processedRaces = syncRes.processedRaces || [];
+        let settlementCount = 0;
+        for (const race of processedRaces) {
+            await settleRacePredictions(race.placeName, race.raceNumber, race.raceDate);
+            settlementCount++;
+        }
+
+        revalidatePath('/admin');
+        revalidatePath('/mypage');
+        revalidatePath('/predictions');
+        revalidatePath('/ranking');
+        revalidatePath('/wallet');
+
+        return {
+            success: true,
+            syncedCount: syncRes.count,
+            settlementProcessedCount: settlementCount,
+            races: processedRaces.map((r: any) => `${r.placeName} R${r.raceNumber}`).join(', ')
+        };
     } catch (e: any) {
         return { success: false, error: e.message };
     }
