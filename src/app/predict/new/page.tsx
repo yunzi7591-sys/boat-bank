@@ -45,12 +45,12 @@ function PredictContent() {
     };
 
     const mockRacers: MockRacer[] = [
-        { boat_number: 1, racer_name: "峰 竜太", racer_class: "A1" },
-        { boat_number: 2, racer_name: "毒島 誠", racer_class: "A1" },
-        { boat_number: 3, racer_name: "松井 繁", racer_class: "A2" },
-        { boat_number: 4, racer_name: "白井 英治", racer_class: "A1" },
-        { boat_number: 5, racer_name: "桐生 順平", racer_class: "B1" },
-        { boat_number: 6, racer_name: "瓜生 正義", racer_class: "A2" },
+        { boatNumber: 1, name: "峰 竜太", class: "A1", color: "bg-white text-black border-slate-200" },
+        { boatNumber: 2, name: "毒島 誠", class: "A1", color: "bg-black text-white" },
+        { boatNumber: 3, name: "桐生 順平", class: "A1", color: "bg-red-600 text-white" },
+        { boatNumber: 4, name: "松井 繁", class: "A1", color: "bg-blue-600 text-white" },
+        { boatNumber: 5, name: "白井 英治", class: "A1", color: "bg-yellow-400 text-black" },
+        { boatNumber: 6, name: "瓜生 正義", class: "A1", color: "bg-green-600 text-white" }
     ];
 
     return (

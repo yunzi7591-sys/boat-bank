@@ -57,6 +57,15 @@ export function RaceHubClient({
         window.history.replaceState(null, '', `/place/${venue.id}?race=${rNum}`);
     };
 
+    const mockRacers = [
+        { boatNumber: 1, name: "峰 竜太", class: "A1", color: "bg-white text-slate-900 border-slate-200" },
+        { boatNumber: 2, name: "毒島 誠", class: "A1", color: "bg-slate-900 text-white border-slate-900" },
+        { boatNumber: 3, name: "桐生 順平", class: "A1", color: "bg-red-600 text-white border-red-600" },
+        { boatNumber: 4, name: "松井 繁", class: "A1", color: "bg-blue-600 text-white border-blue-600" },
+        { boatNumber: 5, name: "白井 英治", class: "A1", color: "bg-yellow-400 text-slate-900 border-yellow-400" },
+        { boatNumber: 6, name: "瓜生 正義", class: "A1", color: "bg-emerald-600 text-white border-emerald-600" }
+    ];
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-24">
             {/* Header */}
@@ -108,19 +117,47 @@ export function RaceHubClient({
             <div className="px-4 pt-6 pb-2">
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2">
                             <span className="bg-slate-800 text-white font-black px-2 py-0.5 rounded text-sm">{activeRaceNumber}R</span>
                             <span className="text-[11px] font-bold text-slate-400 tracking-wider">
                                 {currentSchedule ? new Date(currentSchedule.deadlineAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' }) : '未定'} 締切
                             </span>
                         </div>
-                        <h2 className="text-[10px] font-bold text-slate-500">
-                            ※出走表・オッズは公式等をご確認ください
-                        </h2>
                     </div>
                     <div className={`text-xs font-black px-3 py-1.5 rounded-full ${isFinished ? 'bg-slate-100 text-slate-500' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'
                         }`}>
                         {isFinished ? '発売終了' : '受付中'}
+                    </div>
+                </div>
+            </div>
+
+            {/* Entry List Section */}
+            <div className="px-4 mt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+                    <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                        <h3 className="text-[13px] font-extrabold text-slate-800 tracking-wider flex items-center gap-1.5">
+                            📋 出走表 <span className="text-[10px] text-slate-400 font-bold ml-1">Entry List</span>
+                        </h3>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                        {mockRacers.map((racer) => (
+                            <div key={racer.boatNumber} className="flex items-center bg-slate-50/80 p-2 rounded-xl border border-slate-100/60 hover:bg-slate-50 hover:border-slate-200 transition-colors">
+                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-xl shadow-sm border-2 ${racer.color}`}>
+                                    {racer.boatNumber}
+                                </div>
+                                <div className="ml-3 flex flex-col justify-center">
+                                    <span className={`text-[10px] font-bold leading-none px-1.5 py-0.5 rounded-sm w-fit mb-0.5 shadow-sm ${racer.class.includes('A1') ? "bg-gradient-to-r from-yellow-200 to-yellow-100 text-yellow-800 border border-yellow-200" :
+                                            racer.class.includes('A2') ? "bg-slate-200 text-slate-800 border border-slate-200" :
+                                                racer.class.includes('B1') ? "bg-red-100 text-red-800 border border-red-100" : "bg-blue-100 text-blue-800 border border-blue-100"
+                                        }`}>
+                                        {racer.class}
+                                    </span>
+                                    <span className="text-[15px] font-black text-slate-800 tracking-tight leading-none mt-0.5">
+                                        {racer.name}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
