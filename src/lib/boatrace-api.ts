@@ -29,7 +29,10 @@ export async function syncTodaySchedule() {
         console.log(`[API] Fetching schedule from ${SCHEDULE_API_URL}...`);
 
         const res = await fetch(SCHEDULE_API_URL, { cache: 'no-store' });
-        if (!res.ok) throw new Error("Schedule API Fetch failed");
+        if (!res.ok) {
+            console.error(`[API Error] Schedule API Fetch failed with status: ${res.status} ${res.statusText}`);
+            throw new Error(`Schedule API Fetch failed: ${res.status} ${res.statusText}`);
+        }
 
         const data = await res.json();
         const programs = data.programs || [];
@@ -40,8 +43,11 @@ export async function syncTodaySchedule() {
 
         let syncedCount = 0;
 
+        // 1. レース番組表パースと事前チェック
+        const parsedPrograms: any[] = [];
+        const uniqueRacers = new Map<number, string>();
+
         for (const prog of programs) {
-            // "race_stadium_number": 1 -> id: "01"
             const stadiumId = prog.race_stadium_number.toString().padStart(2, '0');
             const venue = VENUES.find(v => v.id === stadiumId);
 
@@ -51,35 +57,102 @@ export async function syncTodaySchedule() {
             const raceNumber = prog.race_number;
             const raceDate = new Date(prog.race_date); // "2026-02-28" resulting in UTC 00:00
 
-            // "race_closed_at": "2026-02-28 15:48:00" -> parsing correctly in Japan time is tricky without a proper library, 
-            // but for simplicity, we treat the exact string as UTC or parse as local. Let's append JST +0900.
+            // "race_closed_at": "2026-02-28 15:48:00"
             const deadlineAt = new Date(`${prog.race_closed_at.replace(' ', 'T')}+09:00`);
 
-            // Phase 22: Extract Grade and Day
             const grade = extractGrade(prog.race_grade_number);
             const day = extractDay(prog.race_subtitle);
 
-            await prisma.raceSchedule.upsert({
-                where: {
-                    placeName_raceNumber_raceDate: {
-                        placeName,
-                        raceNumber,
-                        raceDate,
-                    }
-                },
-                update: { deadlineAt, grade, day },
-                create: {
-                    placeName,
-                    raceNumber,
-                    raceDate,
-                    deadlineAt,
-                    grade,
-                    day
+            const entriesData: any[] = [];
+            const boats = prog.boats || [];
+
+            for (const b of boats) {
+                const rName = typeof b.racer_name === 'string' ? b.racer_name.trim() : "";
+                const rNum = typeof b.racer_number === 'number' ? b.racer_number : null;
+
+                if (rNum && rName && rName !== "undefined undefined") {
+                    uniqueRacers.set(rNum, rName);
+                    entriesData.push({ boatNumber: b.racer_boat_number, racerNumber: rNum });
                 }
+            }
+
+            parsedPrograms.push({
+                placeName, raceNumber, raceDate, deadlineAt, grade, day, entriesData
             });
+        }
+
+        // 2. 選手(Racer)データを一括でUpsert
+        const racerUpsertPromises = Array.from(uniqueRacers.entries()).map(([rNum, rName]) =>
+            prisma.racer.upsert({
+                where: { racerNumber: rNum },
+                update: { name: rName },
+                create: { racerNumber: rNum, name: rName }
+            })
+        );
+
+        const savedRacers = await Promise.all(racerUpsertPromises);
+        const racerIdMap = new Map(savedRacers.map(r => [r.racerNumber, r.id]));
+
+        // 3. RaceScheduleとRaceEntryを一括でUpsertするためのクエリ配列作成
+        const dbOperations: any[] = [];
+
+        for (const pr of parsedPrograms) {
+            // Schedule Upsert
+            dbOperations.push(
+                prisma.raceSchedule.upsert({
+                    where: {
+                        placeName_raceNumber_raceDate: {
+                            placeName: pr.placeName,
+                            raceNumber: pr.raceNumber,
+                            raceDate: pr.raceDate,
+                        }
+                    },
+                    update: { deadlineAt: pr.deadlineAt, grade: pr.grade, day: pr.day },
+                    create: {
+                        placeName: pr.placeName,
+                        raceNumber: pr.raceNumber,
+                        raceDate: pr.raceDate,
+                        deadlineAt: pr.deadlineAt,
+                        grade: pr.grade,
+                        day: pr.day
+                    }
+                })
+            );
+
+            // Entries Upsert
+            for (const entry of pr.entriesData) {
+                const racerId = racerIdMap.get(entry.racerNumber);
+                if (racerId) {
+                    dbOperations.push(
+                        prisma.raceEntry.upsert({
+                            where: {
+                                placeName_raceNumber_raceDate_boatNumber: {
+                                    placeName: pr.placeName,
+                                    raceNumber: pr.raceNumber,
+                                    raceDate: pr.raceDate,
+                                    boatNumber: entry.boatNumber
+                                }
+                            },
+                            update: { racerId },
+                            create: {
+                                placeName: pr.placeName,
+                                raceNumber: pr.raceNumber,
+                                raceDate: pr.raceDate,
+                                boatNumber: entry.boatNumber,
+                                racerId
+                            }
+                        })
+                    );
+                }
+            }
+
             syncedCount++;
         }
 
+        // 4. トランザクション一括実行 (タイムアウト対策)
+        await prisma.$transaction(dbOperations);
+
+        console.log(`[API] Successfully synced ${syncedCount} race schedules and entries concurrently.`);
         return { success: true, count: syncedCount };
     } catch (e: any) {
         console.error("[API Error] Failed to sync schedule:", e);
