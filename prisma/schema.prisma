@@ -192,6 +192,38 @@ model RaceSchedule {
   @@unique([placeName, raceNumber, raceDate])
 }
 
+// -------------------------------------------------------------
+// Racer & Race Entry Models (Phase 33)
+// -------------------------------------------------------------
+model Racer {
+  id           String      @id @default(cuid())
+  racerNumber  Int         @unique // 登録番号 e.g., 4320
+  name         String              // 氏名 e.g., 峰竜太
+  grade        String?             // 級別 A1, A2, B1, B2
+  branch       String?             // 支部
+  
+  entries      RaceEntry[]
+  
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model RaceEntry {
+  id           String   @id @default(cuid())
+  placeName    String   // 場名
+  raceNumber   Int      // 1~12
+  raceDate     DateTime // 開催日
+  boatNumber   Int      // 枠番 (1~6)
+  
+  racerId      String
+  racer        Racer    @relation(fields: [racerId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([placeName, raceNumber, raceDate, boatNumber])
+}
+
 // 通知モデル (Phase 13追加)
 model Notification {
   id           String   @id @default(cuid())
