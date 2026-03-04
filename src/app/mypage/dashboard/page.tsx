@@ -3,7 +3,8 @@
 import React, { useMemo } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
-    PieChart, Pie, Legend
+    PieChart, Pie, Legend,
+    Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Target, TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
@@ -40,22 +41,35 @@ const MOCK_BETS = Array.from({ length: 500 }).map((_, i) => {
     // Grades (1=SG(rare), 5=Ippan(common))
     const gradeNum = Math.random() < 0.1 ? 1 : Math.random() < 0.25 ? 2 : Math.random() < 0.35 ? 3 : Math.random() < 0.5 ? 4 : 5;
 
+    // Boat number bias towards inside boats
+    const boatWeights = [40, 25, 15, 10, 6, 4];
+    let boatNum = 1;
+    let boatRand = Math.random() * 100;
+    for (let j = 0; j < boatWeights.length; j++) {
+        boatRand -= boatWeights[j];
+        if (boatRand <= 0) { boatNum = j + 1; break; }
+    }
+
     // Bet 1,000 ~ 50,000
     const betAmount = (Math.floor(Math.random() * 50) + 1) * 1000;
 
-    // Hit rate ~ 28%
-    const isHit = Math.random() < 0.28;
+    // Hit rate depends on boat number (inside boats hit more often, outside boats pay more)
+    const baseHitRates = [0.45, 0.35, 0.25, 0.20, 0.15, 0.10];
+    const isHit = Math.random() < baseHitRates[boatNum - 1];
 
     // If hit, refund is between 0.5x and 5.0x of bet (sometimes big hits, mostly small)
+    // Outside boats have higher potential multipliers
     let refundMultiplier = 0;
     if (isHit) {
-        refundMultiplier = Math.random() < 0.9 ? (Math.random() * 1.5 + 0.5) : (Math.random() * 10 + 2);
+        const volatility = boatNum; // higher boat = higher volatility
+        refundMultiplier = Math.random() < 0.8 ? (Math.random() * 1.5 + 0.5) : (Math.random() * 10 * (volatility / 2) + 2);
     }
     const refundAmount = isHit ? Math.floor(betAmount * refundMultiplier) : 0;
 
     return {
         id: `bet_${i}`,
         race: { stadiumNumber: stNum, gradeNumber: gradeNum },
+        boatNumber: boatNum,
         betAmount,
         refundAmount
     };
@@ -65,13 +79,14 @@ const MOCK_BETS = Array.from({ length: 500 }).map((_, i) => {
 export default function DashboardPage() {
 
     // Process Data
-    const { summary, stadiumData, gradeData } = useMemo(() => {
+    const { summary, stadiumData, gradeData, boatData } = useMemo(() => {
         let totalBet = 0;
         let totalRefund = 0;
         let hitCount = 0;
 
         const stMap: Record<number, { bet: number, refund: number }> = {};
         const grMap: Record<number, { bet: number, refund: number }> = {};
+        const boatMap: Record<number, { bet: number, refund: number }> = {};
 
         MOCK_BETS.forEach(bet => {
             totalBet += bet.betAmount;
@@ -80,6 +95,7 @@ export default function DashboardPage() {
 
             const stCode = bet.race.stadiumNumber;
             const grCode = bet.race.gradeNumber;
+            const bNum = bet.boatNumber;
 
             if (!stMap[stCode]) stMap[stCode] = { bet: 0, refund: 0 };
             stMap[stCode].bet += bet.betAmount;
@@ -88,6 +104,10 @@ export default function DashboardPage() {
             if (!grMap[grCode]) grMap[grCode] = { bet: 0, refund: 0 };
             grMap[grCode].bet += bet.betAmount;
             grMap[grCode].refund += bet.refundAmount;
+
+            if (!boatMap[bNum]) boatMap[bNum] = { bet: 0, refund: 0 };
+            boatMap[bNum].bet += bet.betAmount;
+            boatMap[bNum].refund += bet.refundAmount;
         });
 
         const overallRecovery = totalBet > 0 ? (totalRefund / totalBet) * 100 : 0;
@@ -118,10 +138,26 @@ export default function DashboardPage() {
             };
         }).filter(d => d.value > 0);
 
+        // Prepare Boat Number Data
+        const bData = Array.from({ length: 6 }).map((_, i) => {
+            const num = i + 1;
+            const d = boatMap[num] || { bet: 0, refund: 0 };
+            const recovery = d.bet > 0 ? (d.refund / d.bet) * 100 : 0;
+            const betRatio = totalBet > 0 ? (d.bet / totalBet) * 100 : 0;
+            return {
+                name: `${num}枠`,
+                recovery: parseFloat(recovery.toFixed(1)),
+                betRatio: parseFloat(betRatio.toFixed(1)),
+                fullBet: d.bet,
+                fullRefund: d.refund
+            };
+        });
+
         return {
             summary: { totalBet, totalRefund, overallRecovery, hitRate, totalBets: MOCK_BETS.length },
             stadiumData: stData,
-            gradeData: grData
+            gradeData: grData,
+            boatData: bData
         };
     }, []);
 
@@ -154,6 +190,27 @@ export default function DashboardPage() {
                     <p className={`text-sm ${data.recovery >= 100 ? 'text-emerald-600' : 'text-rose-600'}`}>
                         回収率: {data.recovery}%
                     </p>
+                </div>
+            );
+        }
+        return null;
+    };
+
+    // Tooltip for Radar Chart
+    const CustomRadarTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            const data = payload[0].payload;
+            return (
+                <div className="bg-white border rounded-lg p-3 shadow-lg text-xs font-bold ring-1 ring-slate-100">
+                    <p className="text-slate-800 font-black mb-1.5 pb-1.5 border-b">{label}</p>
+                    <div className="flex items-center justify-between gap-4 mb-1">
+                        <span className="text-blue-600 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span> 投資割合</span>
+                        <span className="text-slate-800">{data.betRatio}%</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                        <span className="text-emerald-600 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> 回収率</span>
+                        <span className={data.recovery >= 100 ? 'text-emerald-600' : 'text-rose-600'}>{data.recovery}%</span>
+                    </div>
                 </div>
             );
         }
@@ -229,14 +286,16 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
+                {/* Main Charts Layout */}
                 <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
-                    {/* 2. Stadium Analysis Chart (Main) */}
-                    <Card className="border-none shadow-sm lg:col-span-2 flex flex-col">
+
+                    {/* 2. Stadium Analysis Chart (Main, Top) */}
+                    <Card className="border-none shadow-sm lg:col-span-3 flex flex-col">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-[15px] font-black tracking-wider text-slate-800">競艇場別 回収率分析</CardTitle>
                             <CardDescription className="text-xs font-bold text-slate-400">水面ごとの得意・不得意が一目でわかります</CardDescription>
                         </CardHeader>
-                        <CardContent className="flex-1 min-h-[350px] pt-4">
+                        <CardContent className="flex-1 min-h-[300px] pt-4">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={stadiumData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -268,8 +327,8 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
 
-                    {/* 3. Grade Analysis Chart (Sub) */}
-                    <Card className="border-none shadow-sm flex flex-col">
+                    {/* 3. Grade Analysis Chart (Sub L) */}
+                    <Card className="border-none shadow-sm lg:col-span-1 flex flex-col">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-[15px] font-black tracking-wider text-slate-800">グレード別 投資比率</CardTitle>
                             <CardDescription className="text-xs font-bold text-slate-400">大穴狙いか堅実派かのポートフォリオ</CardDescription>
@@ -281,8 +340,8 @@ export default function DashboardPage() {
                                         data={gradeData}
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius={65}
-                                        outerRadius={95}
+                                        innerRadius={60}
+                                        outerRadius={90}
                                         paddingAngle={5}
                                         dataKey="value"
                                         stroke="none"
@@ -302,6 +361,35 @@ export default function DashboardPage() {
                             </ResponsiveContainer>
                         </CardContent>
                     </Card>
+
+                    {/* 4. Boat Number Radar Chart (Sub R) */}
+                    <Card className="border-none shadow-sm lg:col-span-2 flex flex-col">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-[15px] font-black tracking-wider text-slate-800">枠番別 傾向分析</CardTitle>
+                            <CardDescription className="text-xs font-bold text-slate-400">自分自身のイン狙い・アウト狙いの実力値と投資割合</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex-1 min-h-[300px] flex items-center pt-0">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={boatData}>
+                                    <PolarGrid stroke="#e2e8f0" />
+                                    <PolarAngleAxis dataKey="name" tick={{ fill: '#475569', fontSize: 11, fontWeight: 'bold' }} />
+                                    <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
+
+                                    <Radar name="投資割合 (%)" dataKey="betRatio" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                                    <Radar name="回収率 (%)" dataKey="recovery" stroke="#10b981" fill="#10b981" fillOpacity={0.5} />
+
+                                    <RechartsTooltip content={<CustomRadarTooltip />} />
+                                    <Legend
+                                        verticalAlign="bottom"
+                                        height={36}
+                                        iconType="circle"
+                                        formatter={(value) => <span className="text-xs font-bold text-slate-600">{value}</span>}
+                                    />
+                                </RadarChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+
                 </div>
 
             </div>
