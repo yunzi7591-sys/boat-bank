@@ -1,14 +1,14 @@
 "use client";
 
 import { useBetStore } from '@/store/bet-store';
-import { VerticalGrid } from '@/components/betting/VerticalGrid';
+import { VerticalGrid, MockRacer } from '@/components/betting/VerticalGrid';
 import { FundAllocationView } from '@/components/betting/FundAllocationView';
 import { BetListCart } from '@/components/cart/BetListCart';
 import { Button } from '@/components/ui/button';
 import { BetType } from '@/lib/bet-logic';
 import { cn } from '@/lib/utils';
 import { useState, Suspense } from 'react';
-import { ChevronDown, ChevronUp, ShoppingCart, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, ShoppingCart, Trash2, Clock, MapPin, Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import { RaceSelector } from '@/components/betting/RaceSelector';
@@ -24,17 +24,34 @@ const BET_TYPES: { type: BetType; label: string }[] = [
 function PredictContent() {
     const searchParams = useSearchParams();
     const placeId = searchParams.get('placeId');
-    const raceNumber = searchParams.get('raceNumber');
+    const raceNumberString = searchParams.get('raceNumber');
 
     const { activeBetType, setBetType, cart, clearSelections } = useBetStore();
     const [isCartOpen, setIsCartOpen] = useState(false);
 
-    if (!placeId || !raceNumber) {
+    if (!placeId || !raceNumberString) {
         return <RaceSelector />;
     }
 
     const totalCartItems = cart.reduce((acc, f) => acc + f.combinations.length, 0);
     const totalCartAmount = cart.reduce((acc, f) => acc + f.combinations.reduce((sub, c) => sub + c.amount, 0), 0);
+
+    // MOCK DATA based on OpenAPI structure for UI validation
+    const mockRace = {
+        stadium_name: `ボートレース${placeId}`,
+        race_number: parseInt(raceNumberString, 10),
+        race_title: "デイリースポーツ杯争奪戦",
+        closed_at: "16:30",
+    };
+
+    const mockRacers: MockRacer[] = [
+        { boat_number: 1, racer_name: "峰 竜太", racer_class: "A1" },
+        { boat_number: 2, racer_name: "毒島 誠", racer_class: "A1" },
+        { boat_number: 3, racer_name: "松井 繁", racer_class: "A2" },
+        { boat_number: 4, racer_name: "白井 英治", racer_class: "A1" },
+        { boat_number: 5, racer_name: "桐生 順平", racer_class: "B1" },
+        { boat_number: 6, racer_name: "瓜生 正義", racer_class: "A2" },
+    ];
 
     return (
         <div className="relative min-h-[100dvh] bg-slate-50 flex flex-col font-sans pb-[160px]">
@@ -47,7 +64,30 @@ function PredictContent() {
                 </Button>
             </header>
 
-            <main className="flex-1 w-full mx-auto p-4 flex flex-col items-center">
+            <main className="flex-1 w-full max-w-xl mx-auto p-4 flex flex-col items-center">
+
+                {/* 1. Race Header UI */}
+                <div className="w-full bg-white rounded-2xl p-4 sm:p-5 mb-4 shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-bl-full -z-10"></div>
+                    <div>
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                            <span className="bg-blue-600 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-sm flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {mockRace.stadium_name}
+                            </span>
+                            <span className="text-slate-400 text-xs font-bold">・</span>
+                            <span className="text-xs sm:text-sm font-black text-slate-800 tracking-tight flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5 text-blue-500" />
+                                締切 {mockRace.closed_at}
+                            </span>
+                        </div>
+                        <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                            <span className="text-blue-600">{mockRace.race_number}R</span>
+                            <span className="opacity-90">{mockRace.race_title}</span>
+                        </h2>
+                    </div>
+                </div>
+
                 {/* Bet Type Selector */}
                 <div className="flex w-full bg-slate-200/50 rounded-xl p-1 mb-6 shadow-inner">
                     {BET_TYPES.map(({ type, label }) => (
@@ -73,11 +113,13 @@ function PredictContent() {
                 </div>
 
                 {/* Marksheet Form */}
-                <div className="w-full bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center">
-                    <VerticalGrid />
+                <div className="w-full bg-white p-3 sm:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center">
+                    <VerticalGrid racers={mockRacers} />
                 </div>
 
-                <FundAllocationView />
+                <div className="w-full mt-6">
+                    <FundAllocationView />
+                </div>
             </main>
 
             {/* Floating Cart Drawer Trigger */}
