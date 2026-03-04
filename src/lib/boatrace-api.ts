@@ -320,7 +320,12 @@ export async function syncTodayResults() {
         console.log(`[API] Fetching all results from ${RESULTS_API_URL}...`);
 
         const res = await fetch(RESULTS_API_URL, { cache: 'no-store' });
-        if (!res.ok) throw new Error("Result API Fetch failed");
+
+        // 2. 【fetchの適切なエラーハンドリング】
+        if (!res.ok) {
+            console.error(`[API Error] Result API Fetch failed with status: ${res.status} ${res.statusText}`);
+            throw new Error(`Result API Fetch failed: ${res.status} ${res.statusText}`);
+        }
 
         const data = await res.json();
         const results = data.results || [];
@@ -332,18 +337,23 @@ export async function syncTodayResults() {
         let syncedCount = 0;
         const processedRaces: { placeName: string; raceNumber: number; raceDate: Date }[] = [];
 
+        // 1. レース結果のパースと事前チェック
+        const parsedRaces: any[] = [];
+        const uniqueRacers = new Map<number, string>();
+
         for (const raceResult of results) {
-            // "race_status" 判定があるとは思いますが、基本的にbots(1-6)とpayoutsがあればレース成立
             const boats = raceResult.boats || [];
-            if (boats.length === 0) continue; // Not finished yet
+            const apiPayouts = raceResult.payouts;
+
+            // 1. 【未確定レースのスキップ】
+            if (!boats || boats.length === 0) continue; // No boats run yet
+            if (!apiPayouts || Object.keys(apiPayouts).length === 0) continue; // Payouts empty (Unconfirmed)
 
             const first = boats.find((b: any) => b.racer_place_number === 1)?.racer_boat_number;
             const second = boats.find((b: any) => b.racer_place_number === 2)?.racer_boat_number;
             const third = boats.find((b: any) => b.racer_place_number === 3)?.racer_boat_number;
 
-            if (!first || !second || !third) {
-                continue; // Match not fully concluded
-            }
+            if (!first || !second || !third) continue; // Match not fully concluded
 
             const stadiumId = raceResult.race_stadium_number.toString().padStart(2, '0');
             const venue = VENUES.find(v => v.id === stadiumId);
@@ -353,8 +363,8 @@ export async function syncTodayResults() {
             const raceNumber = raceResult.race_number;
             const raceDate = new Date(raceResult.race_date);
 
-            // Phase 31 & 33: Save full arrivals (1-6) and upsert Racer / RaceEntry
             const arrivalsData: any[] = [];
+            const entriesData: any[] = [];
 
             for (const b of boats) {
                 const rName = typeof b.racer_name === 'string' ? b.racer_name.trim() : "";
@@ -367,36 +377,9 @@ export async function syncTodayResults() {
                     racerNumber: rNum
                 });
 
-                // Upsert Racer & RaceEntry if valid info is present
-                if (rNum && rName) {
-                    try {
-                        const racer = await prisma.racer.upsert({
-                            where: { racerNumber: rNum },
-                            update: { name: rName },
-                            create: { racerNumber: rNum, name: rName }
-                        });
-
-                        await prisma.raceEntry.upsert({
-                            where: {
-                                placeName_raceNumber_raceDate_boatNumber: {
-                                    placeName,
-                                    raceNumber,
-                                    raceDate,
-                                    boatNumber: b.racer_boat_number
-                                }
-                            },
-                            update: { racerId: racer.id },
-                            create: {
-                                placeName,
-                                raceNumber,
-                                raceDate,
-                                boatNumber: b.racer_boat_number,
-                                racerId: racer.id
-                            }
-                        });
-                    } catch (err) {
-                        console.error(`Failed to upsert Racer ${rNum} / Entry`, err);
-                    }
+                if (rNum && rName && rName !== "undefined undefined") {
+                    uniqueRacers.set(rNum, rName);
+                    entriesData.push({ boatNumber: b.racer_boat_number, racerNumber: rNum });
                 }
             }
 
@@ -406,8 +389,7 @@ export async function syncTodayResults() {
                 return a.place - b.place;
             });
 
-            // Parse payouts
-            const apiPayouts = raceResult.payouts || {};
+            // 払戻金と返還の処理
             const payoutsData: any[] = [];
             const refundedBoats: number[] = [];
 
@@ -419,7 +401,6 @@ export async function syncTodayResults() {
                 });
             }
 
-            // Map payouts
             if (apiPayouts.trifecta && apiPayouts.trifecta.length > 0) {
                 apiPayouts.trifecta.forEach((p: any) => payoutsData.push({ type: "3TR", numbers: p.combination.replace(/-/g, '-'), amount: p.payout }));
             }
@@ -437,39 +418,96 @@ export async function syncTodayResults() {
                 payoutsData.push({ type: "WIN", numbers: win.combination, amount: win.payout });
             }
 
-            await prisma.raceResult.upsert({
-                where: {
-                    placeName_raceNumber_raceDate: {
-                        placeName,
-                        raceNumber,
-                        raceDate
-                    }
-                },
-                update: {
-                    firstPlace: first,
-                    secondPlace: second,
-                    thirdPlace: third,
-                    payouts: payoutsData,
-                    refunds: refundedBoats,
-                    arrivals: arrivals // Phase 31 array
-                },
-                create: {
-                    placeName,
-                    raceNumber,
-                    raceDate,
-                    firstPlace: first,
-                    secondPlace: second,
-                    thirdPlace: third,
-                    payouts: payoutsData,
-                    refunds: refundedBoats,
-                    arrivals: arrivals // Phase 31 array
-                }
+            parsedRaces.push({
+                placeName, raceNumber, raceDate, first, second, third, payoutsData, refundedBoats, arrivals, entriesData
             });
+        }
 
-            processedRaces.push({ placeName, raceNumber, raceDate });
+        // 3. 【DB保存の並列処理化（タイムアウト対策）】
+        // STEP 1: Process Racers efficiently
+        const racerUpsertPromises = Array.from(uniqueRacers.entries()).map(([rNum, rName]) =>
+            prisma.racer.upsert({
+                where: { racerNumber: rNum },
+                update: { name: rName },
+                create: { racerNumber: rNum, name: rName }
+            })
+        );
+        // Execute Racer upserts concurrently
+        const savedRacers = await Promise.all(racerUpsertPromises);
+        const racerIdMap = new Map(savedRacers.map(r => [r.racerNumber, r.id]));
+
+        // STEP 2: Process Race Entries and Results concurrently per race
+        const dbOperations: any[] = [];
+
+        for (const pr of parsedRaces) {
+            // Upsert entries safely
+            for (const entry of pr.entriesData) {
+                const racerId = racerIdMap.get(entry.racerNumber);
+                if (racerId) {
+                    dbOperations.push(
+                        prisma.raceEntry.upsert({
+                            where: {
+                                placeName_raceNumber_raceDate_boatNumber: {
+                                    placeName: pr.placeName,
+                                    raceNumber: pr.raceNumber,
+                                    raceDate: pr.raceDate,
+                                    boatNumber: entry.boatNumber
+                                }
+                            },
+                            update: { racerId },
+                            create: {
+                                placeName: pr.placeName,
+                                raceNumber: pr.raceNumber,
+                                raceDate: pr.raceDate,
+                                boatNumber: entry.boatNumber,
+                                racerId
+                            }
+                        })
+                    );
+                }
+            }
+
+            // Upsert result
+            dbOperations.push(
+                prisma.raceResult.upsert({
+                    where: {
+                        placeName_raceNumber_raceDate: {
+                            placeName: pr.placeName,
+                            raceNumber: pr.raceNumber,
+                            raceDate: pr.raceDate
+                        }
+                    },
+                    update: {
+                        firstPlace: pr.first,
+                        secondPlace: pr.second,
+                        thirdPlace: pr.third,
+                        payouts: pr.payoutsData,
+                        refunds: pr.refundedBoats,
+                        arrivals: pr.arrivals
+                    },
+                    create: {
+                        placeName: pr.placeName,
+                        raceNumber: pr.raceNumber,
+                        raceDate: pr.raceDate,
+                        firstPlace: pr.first,
+                        secondPlace: pr.second,
+                        thirdPlace: pr.third,
+                        payouts: pr.payoutsData,
+                        refunds: pr.refundedBoats,
+                        arrivals: pr.arrivals
+                    }
+                })
+            );
+
+            processedRaces.push({ placeName: pr.placeName, raceNumber: pr.raceNumber, raceDate: pr.raceDate });
             syncedCount++;
         }
 
+        // Use Prisma $transaction to execute all batched upserts in a single optimized unit of work.
+        // If there's too many operations, chunking might be needed, but realistically Vercel RAM/Pool easily handles 1000-2000 PrismaPromises here.
+        await prisma.$transaction(dbOperations);
+
+        console.log(`[API] Successfully synced ${syncedCount} race results concurrently.`);
         return { success: true, count: syncedCount, processedRaces };
     } catch (e: any) {
         console.error("[API Error] Failed to sync bulk results:", e);
