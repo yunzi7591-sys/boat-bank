@@ -2,25 +2,41 @@
 
 import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { DownloadCloud, CheckCircle2 } from "lucide-react";
+import { DownloadCloud, CheckCircle2, Globe } from "lucide-react";
 import { toast } from "sonner";
+import { triggerSyncSchedule, triggerSyncScrape } from "@/actions/admin";
 
 export function ApiActionForms() {
-    const [isPendingSync, startTransitionSync] = useTransition();
+    const [isPendingApiSync, startTransitionApiSync] = useTransition();
+    const [isPendingScrape, startTransitionScrape] = useTransition();
     const [isPendingEval, startTransitionEval] = useTransition();
 
-    const handleScheduleSync = () => {
-        startTransitionSync(async () => {
+    const handleScheduleApiSync = () => {
+        startTransitionApiSync(async () => {
             try {
-                const res = await fetch('/api/sync?secret=' + (process.env.NEXT_PUBLIC_CRON_SECRET || ''));
-                const result = await res.json();
-                if (res.ok && result.success) {
-                    toast.success(`同期完了: スケジュール ${result.schedule?.count || 0}件, スクレイピング ${result.scrape?.count || 0}件`);
+                const result = await triggerSyncSchedule();
+                if (result.success) {
+                    toast.success(`API同期完了: ${result.count || 0}件のレース予定を保存しました`);
                 } else {
-                    toast.error(`同期失敗: ${result.error || "データが取得できませんでした"}`);
+                    toast.error(`API同期失敗: ${result.error || "データが取得できませんでした"}`);
                 }
             } catch (error: any) {
-                toast.error(`同期エラー: ${error.message}`);
+                toast.error(`API同期エラー: ${error.message}`);
+            }
+        });
+    };
+
+    const handleScraping = () => {
+        startTransitionScrape(async () => {
+            try {
+                const result = await triggerSyncScrape();
+                if (result.success) {
+                    toast.success(`スクレイピング完了: ${result.count || 0}件の公式データを補完しました`);
+                } else {
+                    toast.error(`スクレイピング失敗: ${result.error || "データが取得できませんでした"}`);
+                }
+            } catch (error: any) {
+                toast.error(`スクレイピングエラー: ${error.message}`);
             }
         });
     };
@@ -36,26 +52,44 @@ export function ApiActionForms() {
                     toast.error(`結果同期失敗: ${result.message || "データが取得できませんでした"}`);
                 }
             } catch (error: any) {
-                toast.error(`同期エラー: ${error.message}`);
+                toast.error(`結果同期エラー: ${error.message}`);
             }
         });
     };
 
     return (
         <div className="space-y-6">
-            {/* Sync Schedule */}
-            <div>
-                <Button
-                    onClick={handleScheduleSync}
-                    disabled={isPendingSync}
-                    className="w-full h-12 text-sm font-bold bg-blue-600 hover:bg-blue-700 rounded-xl"
-                >
-                    <DownloadCloud className={`w-4 h-4 mr-2 ${isPendingSync ? 'animate-bounce' : ''}`} />
-                    {isPendingSync ? "同期・スクレイピング中..." : "本日のレース予定＆公式データ(グレード等)を同期"}
-                </Button>
-                <p className="text-xs text-slate-500 mt-2">
-                    APIからスケジュールを取得し、同時にboatrace.jpをスクレイピングして「グレード」「何日目か」の正確な情報をDBに保存します。（毎朝7時自動）
-                </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Sync Schedule (API) */}
+                <div className="space-y-2">
+                    <Button
+                        onClick={handleScheduleApiSync}
+                        disabled={isPendingApiSync || isPendingScrape}
+                        className="w-full h-12 text-sm font-bold bg-blue-600 hover:bg-blue-700 rounded-xl"
+                    >
+                        <DownloadCloud className={`w-4 h-4 mr-2 ${isPendingApiSync ? 'animate-bounce' : ''}`} />
+                        {isPendingApiSync ? "API同期中..." : "本日のレース予定を同期 (API)"}
+                    </Button>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                        高速で安定したAPIから本日の全レースプログラムを取得し、データベースに下書き作成します。
+                    </p>
+                </div>
+
+                {/* Scrape Data (Web) */}
+                <div className="space-y-2">
+                    <Button
+                        onClick={handleScraping}
+                        disabled={isPendingScrape || isPendingApiSync}
+                        variant="outline"
+                        className="w-full h-12 text-sm font-bold border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl"
+                    >
+                        <Globe className={`w-4 h-4 mr-2 ${isPendingScrape ? 'animate-pulse' : ''}`} />
+                        {isPendingScrape ? "情報収集中..." : "公式データを補完 (スクレイピング)"}
+                    </Button>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                        boatrace.jp をスクレイピングし、正確な「グレード」「何日目か」の情報を補完します。少し時間がかかります。
+                    </p>
+                </div>
             </div>
 
             <hr className="border-slate-100" />
