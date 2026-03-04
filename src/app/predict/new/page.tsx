@@ -246,7 +246,7 @@ function PredictContent() {
                             </header>
                             <div className="flex-1 overflow-y-auto p-4 pb-32 custom-scrollbar">
                                 <Suspense fallback={<div className="text-center p-8 text-slate-400 font-bold animate-pulse">読み込み中...</div>}>
-                                    <BetListCart />
+                                    <BetListCart deadlineAt={schedule?.deadlineAt ? new Date(schedule.deadlineAt) : null} />
                                 </Suspense>
                             </div>
                         </motion.div>
