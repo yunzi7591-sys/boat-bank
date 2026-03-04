@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
     PieChart, Pie, Legend,
     Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Target, TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
+import { Target, TrendingUp, TrendingDown, Wallet, Activity, ArrowLeft, Loader2, DatabaseZap } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getUserDashboardData } from '@/actions/dashboard';
 
-// --- MOCK DATA GENERATION ---
 const STADIUMS = [
     "桐生", "戸田", "江戸川", "平和島", "多摩川", "浜名湖", "蒲郡", "常滑",
     "津", "三国", "びわこ", "住之江", "尼崎", "鳴門", "丸亀", "児島",
@@ -20,66 +19,42 @@ const STADIUMS = [
 ];
 
 const GRADES = [
-    { num: 1, label: "SG", color: "#fbbf24" },    // amber-400
-    { num: 2, label: "G1", color: "#10b981" },    // emerald-500
-    { num: 3, label: "G2", color: "#1e293b" },    // slate-800
-    { num: 4, label: "G3", color: "#ef4444" },    // red-500
-    { num: 5, label: "一般", color: "#3b82f6" },   // blue-500
+    { num: 1, label: "SG", color: "#fbbf24" },
+    { num: 2, label: "G1", color: "#10b981" },
+    { num: 3, label: "G2", color: "#1e293b" },
+    { num: 4, label: "G3", color: "#ef4444" },
+    { num: 5, label: "一般", color: "#3b82f6" },
 ];
 
-// Generate 500 random bets based on the requested schema logic
-const MOCK_BETS = Array.from({ length: 500 }).map((_, i) => {
-    // Bias towards some stadiums for realistic data curves
-    const stadiumWeights = [2, 1, 1, 3, 2, 1, 4, 1, 1, 1, 2, 5, 3, 1, 2, 1, 1, 1, 1, 3, 2, 4, 1, 2];
-    let stNum = 1;
-    let stRand = Math.random() * stadiumWeights.reduce((a, b) => a + b, 0);
-    for (let j = 0; j < stadiumWeights.length; j++) {
-        stRand -= stadiumWeights[j];
-        if (stRand <= 0) { stNum = j + 1; break; }
-    }
-
-    // Grades (1=SG(rare), 5=Ippan(common))
-    const gradeNum = Math.random() < 0.1 ? 1 : Math.random() < 0.25 ? 2 : Math.random() < 0.35 ? 3 : Math.random() < 0.5 ? 4 : 5;
-
-    // Boat number bias towards inside boats
-    const boatWeights = [40, 25, 15, 10, 6, 4];
-    let boatNum = 1;
-    let boatRand = Math.random() * 100;
-    for (let j = 0; j < boatWeights.length; j++) {
-        boatRand -= boatWeights[j];
-        if (boatRand <= 0) { boatNum = j + 1; break; }
-    }
-
-    // Bet 1,000 ~ 50,000
-    const betAmount = (Math.floor(Math.random() * 50) + 1) * 1000;
-
-    // Hit rate depends on boat number (inside boats hit more often, outside boats pay more)
-    const baseHitRates = [0.45, 0.35, 0.25, 0.20, 0.15, 0.10];
-    const isHit = Math.random() < baseHitRates[boatNum - 1];
-
-    // If hit, refund is between 0.5x and 5.0x of bet (sometimes big hits, mostly small)
-    // Outside boats have higher potential multipliers
-    let refundMultiplier = 0;
-    if (isHit) {
-        const volatility = boatNum; // higher boat = higher volatility
-        refundMultiplier = Math.random() < 0.8 ? (Math.random() * 1.5 + 0.5) : (Math.random() * 10 * (volatility / 2) + 2);
-    }
-    const refundAmount = isHit ? Math.floor(betAmount * refundMultiplier) : 0;
-
-    return {
-        id: `bet_${i}`,
-        race: { stadiumNumber: stNum, gradeNumber: gradeNum },
-        boatNumber: boatNum,
-        betAmount,
-        refundAmount
-    };
-});
-
-// --- DASHBOARD COMPONENT ---
 export default function DashboardPage() {
+    const [summaryData, setSummaryData] = useState<any[] | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        async function load() {
+            try {
+                const res = await getUserDashboardData();
+                if (res?.error) {
+                    setError(res.error);
+                } else if (res?.bets) {
+                    setSummaryData(res.bets);
+                }
+            } catch (err: any) {
+                setError(err.message || "Failed to fetch dashboard data.");
+            } finally {
+                setLoading(false);
+            }
+        }
+        load();
+    }, []);
 
     // Process Data
-    const { summary, stadiumData, gradeData, boatData } = useMemo(() => {
+    const { summary, stadiumData, gradeData, boatData, hasData } = useMemo(() => {
+        if (!summaryData || summaryData.length === 0) {
+            return { summary: null, stadiumData: [], gradeData: [], boatData: [], hasData: false };
+        }
+
         let totalBet = 0;
         let totalRefund = 0;
         let hitCount = 0;
@@ -88,30 +63,36 @@ export default function DashboardPage() {
         const grMap: Record<number, { bet: number, refund: number }> = {};
         const boatMap: Record<number, { bet: number, refund: number }> = {};
 
-        MOCK_BETS.forEach(bet => {
+        summaryData.forEach((bet) => {
             totalBet += bet.betAmount;
             totalRefund += bet.refundAmount;
             if (bet.refundAmount > 0) hitCount++;
 
-            const stCode = bet.race.stadiumNumber;
-            const grCode = bet.race.gradeNumber;
-            const bNum = bet.boatNumber;
+            const stCode = bet.race?.stadiumNumber;
+            const grCode = bet.race?.gradeNumber;
+            const bNum = bet.slotNumber;
 
-            if (!stMap[stCode]) stMap[stCode] = { bet: 0, refund: 0 };
-            stMap[stCode].bet += bet.betAmount;
-            stMap[stCode].refund += bet.refundAmount;
+            if (stCode) {
+                if (!stMap[stCode]) stMap[stCode] = { bet: 0, refund: 0 };
+                stMap[stCode].bet += bet.betAmount;
+                stMap[stCode].refund += bet.refundAmount;
+            }
 
-            if (!grMap[grCode]) grMap[grCode] = { bet: 0, refund: 0 };
-            grMap[grCode].bet += bet.betAmount;
-            grMap[grCode].refund += bet.refundAmount;
+            if (grCode) {
+                if (!grMap[grCode]) grMap[grCode] = { bet: 0, refund: 0 };
+                grMap[grCode].bet += bet.betAmount;
+                grMap[grCode].refund += bet.refundAmount;
+            }
 
-            if (!boatMap[bNum]) boatMap[bNum] = { bet: 0, refund: 0 };
-            boatMap[bNum].bet += bet.betAmount;
-            boatMap[bNum].refund += bet.refundAmount;
+            if (bNum) {
+                if (!boatMap[bNum]) boatMap[bNum] = { bet: 0, refund: 0 };
+                boatMap[bNum].bet += bet.betAmount;
+                boatMap[bNum].refund += bet.refundAmount;
+            }
         });
 
         const overallRecovery = totalBet > 0 ? (totalRefund / totalBet) * 100 : 0;
-        const hitRate = MOCK_BETS.length > 0 ? (hitCount / MOCK_BETS.length) * 100 : 0;
+        const hitRate = summaryData.length > 0 ? (hitCount / summaryData.length) * 100 : 0;
 
         // Prepare Stadium Data (Sort by venue 1-24)
         const stData = Array.from({ length: 24 }).map((_, i) => {
@@ -124,7 +105,7 @@ export default function DashboardPage() {
                 bet: d.bet,
                 refund: d.refund
             };
-        }).filter(d => d.bet > 0); // Only show stadiums with history
+        }).filter(d => d.bet > 0);
 
         // Prepare Grade Data
         const grData = GRADES.map(g => {
@@ -154,12 +135,13 @@ export default function DashboardPage() {
         });
 
         return {
-            summary: { totalBet, totalRefund, overallRecovery, hitRate, totalBets: MOCK_BETS.length },
+            summary: { totalBet, totalRefund, overallRecovery, hitRate, totalBets: summaryData.length },
             stadiumData: stData,
             gradeData: grData,
-            boatData: bData
+            boatData: bData,
+            hasData: true
         };
-    }, []);
+    }, [summaryData]);
 
     // Tooltip for Pie Chart
     const CustomPieTooltip = ({ active, payload }: any) => {
@@ -217,6 +199,30 @@ export default function DashboardPage() {
         return null;
     };
 
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans">
+                <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+                <p className="text-slate-500 font-bold tracking-wider">LOADING DATA...</p>
+            </div>
+        );
+    }
+
+    if (error && !summaryData) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans p-4">
+                <div className="bg-rose-50 text-rose-600 p-6 rounded-xl border border-rose-100 text-center max-w-md w-full">
+                    <DatabaseZap className="w-10 h-10 mx-auto mb-4 opacity-50" />
+                    <h2 className="font-bold mb-2">Error Loading Dashboard</h2>
+                    <p className="text-sm opacity-80 mb-6">{error}</p>
+                    <Link href="/mypage">
+                        <Button className="bg-rose-600 hover:bg-rose-700">マイページへ戻る</Button>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-slate-50 pb-24 font-sans selection:bg-blue-200">
             {/* Header */}
@@ -235,163 +241,185 @@ export default function DashboardPage() {
 
             <div className="max-w-6xl mx-auto p-4 lg:p-6 space-y-6 lg:space-y-8 mt-2">
 
-                {/* 1. Summary Cards */}
-                <div>
-                    <h2 className="text-sm font-extrabold text-slate-500 mb-3 ml-1 tracking-wider uppercase">Overview</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4">
-                        <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
-                            <CardContent className="p-4 lg:p-5 flex flex-col justify-center">
-                                <div className="flex items-center gap-2 text-slate-500 font-bold mb-1">
-                                    <Wallet className="w-4 h-4 text-blue-500" />
-                                    <span className="text-[11px] lg:text-xs">総投資額</span>
-                                </div>
-                                <div className="text-lg lg:text-2xl font-black text-slate-800">
-                                    ¥{summary.totalBet.toLocaleString()}
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
-                            <CardContent className="p-4 lg:p-5 flex flex-col justify-center">
-                                <div className="flex items-center gap-2 text-slate-500 font-bold mb-1">
-                                    <TrendingUp className="w-4 h-4 text-emerald-500" />
-                                    <span className="text-[11px] lg:text-xs">総回収額</span>
-                                </div>
-                                <div className="text-lg lg:text-2xl font-black text-slate-800">
-                                    ¥{summary.totalRefund.toLocaleString()}
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className={`border-none shadow-sm hover:shadow-md transition-shadow ${summary.overallRecovery >= 100 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
-                            <CardContent className="p-4 lg:p-5 flex flex-col justify-center">
-                                <div className={`flex items-center gap-2 font-bold mb-1 ${summary.overallRecovery >= 100 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                    {summary.overallRecovery >= 100 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                                    <span className="text-[11px] lg:text-xs">総回収率</span>
-                                </div>
-                                <div className={`text-lg lg:text-2xl font-black ${summary.overallRecovery >= 100 ? 'text-emerald-900' : 'text-rose-900'}`}>
-                                    {summary.overallRecovery.toFixed(1)}%
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
-                            <CardContent className="p-4 lg:p-5 flex flex-col justify-center">
-                                <div className="flex items-center gap-2 text-slate-500 font-bold mb-1">
-                                    <Target className="w-4 h-4 text-sky-500" />
-                                    <span className="text-[11px] lg:text-xs">的中率 ({summary.totalBets}戦)</span>
-                                </div>
-                                <div className="text-lg lg:text-2xl font-black text-slate-800">
-                                    {summary.hitRate.toFixed(1)}%
-                                </div>
-                            </CardContent>
-                        </Card>
+                {!hasData || summary === null ? (
+                    <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+                        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                            <DatabaseZap className="w-10 h-10 text-slate-300" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-700 mb-2">No Data Available</h2>
+                        <p className="text-slate-500 max-w-sm mx-auto mb-8 font-medium">
+                            まだ投票データがありません。レースに投票して、あなただけのポートフォリオ分析を作成しましょう。
+                        </p>
+                        <Link href="/">
+                            <Button className="bg-blue-600 hover:bg-blue-700 rounded-lg px-8 py-6 font-bold text-base shadow-lg shadow-blue-500/30">
+                                レースを探す
+                            </Button>
+                        </Link>
                     </div>
-                </div>
+                ) : (
+                    <>
+                        {/* 1. Summary Cards */}
+                        <div>
+                            <h2 className="text-sm font-extrabold text-slate-500 mb-3 ml-1 tracking-wider uppercase">Overview</h2>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4">
+                                <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+                                    <CardContent className="p-4 lg:p-5 flex flex-col justify-center">
+                                        <div className="flex items-center gap-2 text-slate-500 font-bold mb-1">
+                                            <Wallet className="w-4 h-4 text-blue-500" />
+                                            <span className="text-[11px] lg:text-xs">総投資額</span>
+                                        </div>
+                                        <div className="text-lg lg:text-2xl font-black text-slate-800">
+                                            ¥{summary.totalBet.toLocaleString()}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+                                    <CardContent className="p-4 lg:p-5 flex flex-col justify-center">
+                                        <div className="flex items-center gap-2 text-slate-500 font-bold mb-1">
+                                            <TrendingUp className="w-4 h-4 text-emerald-500" />
+                                            <span className="text-[11px] lg:text-xs">総回収額</span>
+                                        </div>
+                                        <div className="text-lg lg:text-2xl font-black text-slate-800">
+                                            ¥{summary.totalRefund.toLocaleString()}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Card className={`border-none shadow-sm hover:shadow-md transition-shadow ${summary.overallRecovery >= 100 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                                    <CardContent className="p-4 lg:p-5 flex flex-col justify-center">
+                                        <div className={`flex items-center gap-2 font-bold mb-1 ${summary.overallRecovery >= 100 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                            {summary.overallRecovery >= 100 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                                            <span className="text-[11px] lg:text-xs">総回収率</span>
+                                        </div>
+                                        <div className={`text-lg lg:text-2xl font-black ${summary.overallRecovery >= 100 ? 'text-emerald-900' : 'text-rose-900'}`}>
+                                            {summary.overallRecovery.toFixed(1)}%
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+                                    <CardContent className="p-4 lg:p-5 flex flex-col justify-center">
+                                        <div className="flex items-center gap-2 text-slate-500 font-bold mb-1">
+                                            <Target className="w-4 h-4 text-sky-500" />
+                                            <span className="text-[11px] lg:text-xs">的中率 ({summary.totalBets}戦)</span>
+                                        </div>
+                                        <div className="text-lg lg:text-2xl font-black text-slate-800">
+                                            {summary.hitRate.toFixed(1)}%
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
 
-                {/* Main Charts Layout */}
-                <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
+                        {/* Main Charts Layout */}
+                        <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
 
-                    {/* 2. Stadium Analysis Chart (Main, Top) */}
-                    <Card className="border-none shadow-sm lg:col-span-3 flex flex-col">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-[15px] font-black tracking-wider text-slate-800">競艇場別 回収率分析</CardTitle>
-                            <CardDescription className="text-xs font-bold text-slate-400">水面ごとの得意・不得意が一目でわかります</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-1 min-h-[300px] pt-4">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={stadiumData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                    <XAxis
-                                        dataKey="name"
-                                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }}
-                                        axisLine={false}
-                                        tickLine={false}
-                                        interval={0}
-                                        angle={-45}
-                                        textAnchor="end"
-                                    />
-                                    <YAxis
-                                        tick={{ fill: '#64748b', fontSize: 11, fontWeight: 'bold' }}
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tickFormatter={(val) => `${val}%`}
-                                        domain={[0, 'auto']}
-                                    />
-                                    <RechartsTooltip content={<CustomBarTooltip />} cursor={{ fill: '#f1f5f9' }} />
-                                    {/* Line to indicate 100% threshold */}
-                                    <Bar dataKey="recovery" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                                        {stadiumData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.recovery >= 100 ? '#10b981' : '#f43f5e'} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
+                            {/* 2. Stadium Analysis Chart (Main, Top) */}
+                            {stadiumData.length > 0 && (
+                                <Card className="border-none shadow-sm lg:col-span-3 flex flex-col">
+                                    <CardHeader className="pb-2">
+                                        <CardTitle className="text-[15px] font-black tracking-wider text-slate-800">競艇場別 回収率分析</CardTitle>
+                                        <CardDescription className="text-xs font-bold text-slate-400">水面ごとの得意・不得意が一目でわかります</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 h-[300px] pt-4">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={stadiumData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                                <XAxis
+                                                    dataKey="name"
+                                                    tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    interval={0}
+                                                    angle={-45}
+                                                    textAnchor="end"
+                                                />
+                                                <YAxis
+                                                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 'bold' }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    tickFormatter={(val) => `${val}%`}
+                                                    domain={[0, 'auto']}
+                                                />
+                                                <RechartsTooltip content={<CustomBarTooltip />} cursor={{ fill: '#f1f5f9' }} />
+                                                <Bar dataKey="recovery" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                                                    {stadiumData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.recovery >= 100 ? '#10b981' : '#f43f5e'} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </CardContent>
+                                </Card>
+                            )}
 
-                    {/* 3. Grade Analysis Chart (Sub L) */}
-                    <Card className="border-none shadow-sm lg:col-span-1 flex flex-col">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-[15px] font-black tracking-wider text-slate-800">グレード別 投資比率</CardTitle>
-                            <CardDescription className="text-xs font-bold text-slate-400">大穴狙いか堅実派かのポートフォリオ</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-1 min-h-[300px] flex items-center justify-center pt-0">
-                            <ResponsiveContainer width="100%" height={300}>
-                                <PieChart>
-                                    <Pie
-                                        data={gradeData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={90}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                        stroke="none"
-                                    >
-                                        {gradeData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                                        ))}
-                                    </Pie>
-                                    <RechartsTooltip content={<CustomPieTooltip />} />
-                                    <Legend
-                                        verticalAlign="bottom"
-                                        height={36}
-                                        iconType="circle"
-                                        formatter={(value, entry) => <span className="text-xs font-bold text-slate-600">{value}</span>}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
+                            {/* 3. Grade Analysis Chart (Sub L) */}
+                            {gradeData.length > 0 && (
+                                <Card className="border-none shadow-sm lg:col-span-1 flex flex-col">
+                                    <CardHeader className="pb-2">
+                                        <CardTitle className="text-[15px] font-black tracking-wider text-slate-800">グレード別 投資比率</CardTitle>
+                                        <CardDescription className="text-xs font-bold text-slate-400">大穴狙いか堅実派かのポートフォリオ</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 h-[300px] flex items-center justify-center pt-0">
+                                        <ResponsiveContainer width="100%" height={300}>
+                                            <PieChart>
+                                                <Pie
+                                                    data={gradeData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={60}
+                                                    outerRadius={90}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                    stroke="none"
+                                                >
+                                                    {gradeData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                    ))}
+                                                </Pie>
+                                                <RechartsTooltip content={<CustomPieTooltip />} />
+                                                <Legend
+                                                    verticalAlign="bottom"
+                                                    height={36}
+                                                    iconType="circle"
+                                                    formatter={(value, entry) => <span className="text-xs font-bold text-slate-600">{value}</span>}
+                                                />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </CardContent>
+                                </Card>
+                            )}
 
-                    {/* 4. Boat Number Radar Chart (Sub R) */}
-                    <Card className="border-none shadow-sm lg:col-span-2 flex flex-col">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-[15px] font-black tracking-wider text-slate-800">枠番別 傾向分析</CardTitle>
-                            <CardDescription className="text-xs font-bold text-slate-400">自分自身のイン狙い・アウト狙いの実力値と投資割合</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-1 min-h-[300px] flex items-center pt-0">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={boatData}>
-                                    <PolarGrid stroke="#e2e8f0" />
-                                    <PolarAngleAxis dataKey="name" tick={{ fill: '#475569', fontSize: 11, fontWeight: 'bold' }} />
-                                    <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
+                            {/* 4. Boat Number Radar Chart (Sub R) */}
+                            {boatData.length > 0 && (
+                                <Card className="border-none shadow-sm lg:col-span-2 flex flex-col">
+                                    <CardHeader className="pb-2">
+                                        <CardTitle className="text-[15px] font-black tracking-wider text-slate-800">枠番別 傾向分析</CardTitle>
+                                        <CardDescription className="text-xs font-bold text-slate-400">自分自身のイン狙い・アウト狙いの実力値と投資割合</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 min-h-[300px] flex items-center pt-0">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <RadarChart cx="50%" cy="50%" outerRadius="75%" data={boatData}>
+                                                <PolarGrid stroke="#e2e8f0" />
+                                                <PolarAngleAxis dataKey="name" tick={{ fill: '#475569', fontSize: 11, fontWeight: 'bold' }} />
+                                                <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
 
-                                    <Radar name="投資割合 (%)" dataKey="betRatio" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
-                                    <Radar name="回収率 (%)" dataKey="recovery" stroke="#10b981" fill="#10b981" fillOpacity={0.5} />
+                                                <Radar name="投資割合 (%)" dataKey="betRatio" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                                                <Radar name="回収率 (%)" dataKey="recovery" stroke="#10b981" fill="#10b981" fillOpacity={0.5} />
 
-                                    <RechartsTooltip content={<CustomRadarTooltip />} />
-                                    <Legend
-                                        verticalAlign="bottom"
-                                        height={36}
-                                        iconType="circle"
-                                        formatter={(value) => <span className="text-xs font-bold text-slate-600">{value}</span>}
-                                    />
-                                </RadarChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
-
-                </div>
-
+                                                <RechartsTooltip content={<CustomRadarTooltip />} />
+                                                <Legend
+                                                    verticalAlign="bottom"
+                                                    height={36}
+                                                    iconType="circle"
+                                                    formatter={(value) => <span className="text-xs font-bold text-slate-600">{value}</span>}
+                                                />
+                                            </RadarChart>
+                                        </ResponsiveContainer>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
