@@ -509,17 +509,25 @@ export async function syncTodayResults() {
         }
 
         // 3. 【DB保存の並列処理化（タイムアウト対策）】
-        // STEP 1: Process Racers efficiently
-        const racerUpsertPromises = Array.from(uniqueRacers.entries()).map(([rNum, rName]) =>
-            prisma.racer.upsert({
-                where: { racerNumber: rNum },
-                update: { name: rName },
-                create: { racerNumber: rNum, name: rName }
-            })
-        );
-        // Execute Racer upserts concurrently
-        const savedRacers = await Promise.all(racerUpsertPromises);
-        const racerIdMap = new Map(savedRacers.map(r => [r.racerNumber, r.id]));
+        // STEP 1: Process Racers efficiently (Bulk Insert)
+        const racerDataArray = Array.from(uniqueRacers.entries()).map(([rNum, rName]) => ({
+            racerNumber: rNum,
+            name: rName
+        }));
+
+        if (racerDataArray.length > 0) {
+            await prisma.racer.createMany({
+                data: racerDataArray,
+                skipDuplicates: true
+            });
+        }
+
+        const racerIds = Array.from(uniqueRacers.keys());
+        const allRacersInDb = await prisma.racer.findMany({
+            where: { racerNumber: { in: racerIds } },
+            select: { id: true, racerNumber: true }
+        });
+        const racerIdMap = new Map(allRacersInDb.map(r => [r.racerNumber, r.id]));
 
         // STEP 2: Process Race Entries and Results concurrently per race
         const dbOperations: any[] = [];
@@ -588,11 +596,16 @@ export async function syncTodayResults() {
             syncedCount++;
         }
 
-        // Use Prisma $transaction to execute all batched upserts in a single optimized unit of work.
-        // If there's too many operations, chunking might be needed, but realistically Vercel RAM/Pool easily handles 1000-2000 PrismaPromises here.
-        await prisma.$transaction(dbOperations);
+        // Use Prisma $transaction with Chunking to avoid connection pool limit: 1 starvation
+        const CHUNK_SIZE = 100;
+        for (let i = 0; i < dbOperations.length; i += CHUNK_SIZE) {
+            const chunk = dbOperations.slice(i, i + CHUNK_SIZE);
+            if (chunk.length > 0) {
+                await prisma.$transaction(chunk);
+            }
+        }
 
-        console.log(`[API] Successfully synced ${syncedCount} race results concurrently.`);
+        console.log(`[API] Successfully synced ${syncedCount} race results sequentially by chunk.`);
         return { success: true, count: syncedCount, processedRaces };
     } catch (e: any) {
         console.error("[API Error] Failed to sync bulk results:", e);
