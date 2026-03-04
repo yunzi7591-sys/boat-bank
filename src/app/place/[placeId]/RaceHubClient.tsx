@@ -155,8 +155,8 @@ export function RaceHubClient({
                                             <div key={idx} className="flex items-center gap-3">
                                                 <div className="w-8 flex items-center justify-center shrink-0">
                                                     <span className={`text-[11px] font-black ${arrival.place === 1 ? 'text-yellow-600' :
-                                                            arrival.place === 2 ? 'text-slate-400' :
-                                                                'text-orange-400'
+                                                        arrival.place === 2 ? 'text-slate-400' :
+                                                            'text-orange-400'
                                                         }`}>
                                                         {arrival.place}着
                                                     </span>
@@ -165,7 +165,7 @@ export function RaceHubClient({
                                                     {arrival.boatNumber}
                                                 </div>
                                                 <div className="text-sm font-bold text-slate-800 tracking-wider">
-                                                    {arrival.racerName}
+                                                    {arrival.racerName && arrival.racerName !== 'undefined undefined' && arrival.racerName.trim() !== '' ? arrival.racerName : `選手情報なし`}
                                                 </div>
                                             </div>
                                         );

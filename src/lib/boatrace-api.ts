@@ -353,13 +353,54 @@ export async function syncTodayResults() {
             const raceNumber = raceResult.race_number;
             const raceDate = new Date(raceResult.race_date);
 
-            // Phase 31: Save full arrivals (1-6)
-            const arrivals = boats.map((b: any) => ({
-                place: b.racer_place_number,
-                boatNumber: b.racer_boat_number,
-                racerName: `${b.racer_last_name} ${b.racer_first_name}`.trim()
-            })).sort((a: any, b: any) => {
-                // Return valid places first, then missing/unplaced at the end
+            // Phase 31 & 33: Save full arrivals (1-6) and upsert Racer / RaceEntry
+            const arrivalsData: any[] = [];
+
+            for (const b of boats) {
+                const rName = typeof b.racer_name === 'string' ? b.racer_name.trim() : "";
+                const rNum = typeof b.racer_number === 'number' ? b.racer_number : null;
+
+                arrivalsData.push({
+                    place: b.racer_place_number,
+                    boatNumber: b.racer_boat_number,
+                    racerName: rName || "選手情報なし",
+                    racerNumber: rNum
+                });
+
+                // Upsert Racer & RaceEntry if valid info is present
+                if (rNum && rName) {
+                    try {
+                        const racer = await prisma.racer.upsert({
+                            where: { racerNumber: rNum },
+                            update: { name: rName },
+                            create: { racerNumber: rNum, name: rName }
+                        });
+
+                        await prisma.raceEntry.upsert({
+                            where: {
+                                placeName_raceNumber_raceDate_boatNumber: {
+                                    placeName,
+                                    raceNumber,
+                                    raceDate,
+                                    boatNumber: b.racer_boat_number
+                                }
+                            },
+                            update: { racerId: racer.id },
+                            create: {
+                                placeName,
+                                raceNumber,
+                                raceDate,
+                                boatNumber: b.racer_boat_number,
+                                racerId: racer.id
+                            }
+                        });
+                    } catch (err) {
+                        console.error(`Failed to upsert Racer ${rNum} / Entry`, err);
+                    }
+                }
+            }
+
+            const arrivals = arrivalsData.sort((a, b) => {
                 if (!a.place) return 1;
                 if (!b.place) return -1;
                 return a.place - b.place;
