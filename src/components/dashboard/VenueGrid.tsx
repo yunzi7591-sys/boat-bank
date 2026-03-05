@@ -2,6 +2,7 @@ import { VENUES } from "@/lib/constants/venues";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Map } from "lucide-react";
+import { RefreshButton } from "./RefreshButton";
 
 const getGradeColor = (grade: string) => {
     switch (grade) {
@@ -34,8 +35,10 @@ export async function VenueGrid() {
     return (
         <div className="mt-8 px-4">
             <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[13px] font-extrabold text-slate-800 tracking-wider flex items-center gap-1.5">
-                    <Map className="w-4 h-4 text-blue-600" /> 24 BOAT RACE VENUES
+                <h2 className="text-[13px] font-extrabold text-slate-800 tracking-wider flex items-center gap-1.5 align-middle">
+                    <Map className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>24 BOAT RACE VENUES</span>
+                    <RefreshButton />
                 </h2>
                 <span className="text-[10px] text-slate-400 font-bold bg-slate-200/50 px-2 py-0.5 rounded-sm">
                     全国24場
