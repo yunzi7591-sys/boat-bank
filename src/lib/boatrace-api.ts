@@ -454,8 +454,8 @@ export async function syncTodayResults() {
                 deadlineAt: { lt: tenMinutesAgo },
                 resultSynced: false,
             },
-            orderBy: [{ raceDate: 'asc' }, { placeName: 'asc' }, { raceNumber: 'asc' }],
-            take: 5, // Limit to 5 races per execution to avoid Vercel timeouts
+            orderBy: [{ deadlineAt: 'asc' }, { placeName: 'asc' }, { raceNumber: 'asc' }],
+            take: 15, // Increased batch size to handle more races within the 120s limit
         });
 
         if (targetRaces.length === 0) {
@@ -486,7 +486,10 @@ export async function syncTodayResults() {
 
             try {
                 console.log(`[SCRAPE] Fetching ${schedule.placeName} R${schedule.raceNumber}: ${url}`);
-                const res = await fetch(url, { cache: 'no-store' });
+                const res = await fetch(url, {
+                    cache: 'no-store',
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+                });
                 if (!res.ok) {
                     console.warn(`[SCRAPE] HTTP ${res.status} for ${schedule.placeName} R${schedule.raceNumber}, skipping.`);
                     continue;
@@ -497,11 +500,11 @@ export async function syncTodayResults() {
 
                 // --- STEP 3: Parse Arrivals ---
                 const arrivalsData: { place: number; boatNumber: number; racerName: string; racerNumber: number | null }[] = [];
-                const resultTableBody = $('table.is-w495 tbody, table.is-w748 tbody').first();
+                const resultTable = $('table.is-w495, table.is-w748').first();
 
                 // Each row in the result table has boat number in td.is-boatColorN
                 let placeIndex = 0;
-                $('tbody tr').each((_, row) => {
+                resultTable.find('tbody tr').each((_, row) => {
                     const boatCell = $(row).find('td[class*="is-boatColor"]');
                     if (boatCell.length === 0) return;
 
