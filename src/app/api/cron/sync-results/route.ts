@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // 120 seconds for scraping multiple pages
 
 export async function GET(request: Request) {
+    console.log("[CRON] /api/cron/sync-results endpoint invoked.");
     try {
         // Validate Cron Secret
         const authHeader = request.headers.get('authorization');
@@ -14,7 +15,8 @@ export async function GET(request: Request) {
         // Allowed in dev mode for easy testing, but requires secretion in prod.
         if (process.env.NODE_ENV === 'production') {
             if (authHeader !== expectedAuth) {
-                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+                console.error(`[CRON] Unauthorized access attempt.`);
+                return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
             }
         }
 
@@ -23,8 +25,8 @@ export async function GET(request: Request) {
         // 1. Scrape and save RaceResults from boatrace.jp official site
         const syncRes = await syncTodayResults();
         if (!syncRes.success) {
-            console.warn("[CRON] Result Sync skipped or failed:", syncRes.error);
-            return NextResponse.json({ status: 'Skipped', message: syncRes.error });
+            console.error(`[CRON] Result Sync failed from syncTodayResults:`, syncRes.error);
+            return NextResponse.json({ success: false, status: 'Skipped/Failed', error: syncRes.error });
         }
 
         const processedRaces = syncRes.processedRaces || [];
@@ -38,14 +40,17 @@ export async function GET(request: Request) {
             settlementCount++;
         }
 
+        console.log(`[CRON] Execution final summary: ${syncRes.count} synced, ${settlementCount} evaluated.`);
         return NextResponse.json({
+            success: true,
             status: 'Success',
             syncedCount: syncRes.count,
             settlementProcessedCount: settlementCount,
             races: processedRaces.map(r => `${r.placeName} R${r.raceNumber} `).join(', ')
         });
     } catch (e: any) {
-        console.error('[CRON RESULT SYNC ERROR]', e);
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        console.error('[CRON RESULT SYNC ERROR] Unhandled Exception:', e.message, e.stack);
+        return NextResponse.json({ success: false, error: e.message }, { status: 500 });
     }
 }
+

@@ -461,7 +461,10 @@ export async function syncTodayResults() {
             return { success: true, count: 0, processedRaces: [] };
         }
 
-        console.log(`[SCRAPE] Found ${targetRaces.length} races to scrape.`);
+        console.log(`[SCRAPE] Found ${targetRaces.length} overdue races. Limiting to 5 races per batch to prevent execution timeout.`);
+
+        // Vercel Hobby plan limit mitigation: only process up to 5 races per invocation
+        const batchedRaces = targetRaces.slice(0, 5);
 
         let syncedCount = 0;
         const processedRaces: { placeName: string; raceNumber: number; raceDate: Date }[] = [];
@@ -621,16 +624,18 @@ export async function syncTodayResults() {
                 syncedScheduleIds.push(schedule.id);
                 syncedCount++;
 
-                console.log(`[SCRAPE] ✅ ${schedule.placeName} R${schedule.raceNumber}: ${arrivalsData.length} arrivals, ${payoutsData.length} payouts parsed.`);
+                console.log(`[SCRAPE] ✅ SUCCESS ${schedule.placeName} R${schedule.raceNumber}: DB upsert queued (Arrivals: ${arrivalsData.length}, Payouts: ${payoutsData.length}).`);
 
             } catch (scrapeErr: any) {
-                console.error(`[SCRAPE] Error scraping ${schedule.placeName} R${schedule.raceNumber}:`, scrapeErr.message);
+                console.error(`[SCRAPE] ❌ Error scraping ${schedule.placeName} R${schedule.raceNumber}:`, scrapeErr.message);
                 continue; // Skip this race and continue with others
             }
 
             // Rate limiting: 500ms delay between requests
             await new Promise(resolve => setTimeout(resolve, 500));
         }
+
+        console.log(`[SCRAPE] Parsing completed. Proceeding to DB transactions for ${dbOperations.length} races...`);
 
         // --- STEP 6: Bulk save Racers ---
         const racerDataArray = Array.from(uniqueRacers.entries()).map(([rNum, rName]) => ({
