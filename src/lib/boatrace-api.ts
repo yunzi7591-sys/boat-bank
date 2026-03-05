@@ -447,13 +447,15 @@ export async function syncTodayResults() {
         const todayStart = new Date(todayStr + 'T00:00:00.000Z');
         const todayEnd = new Date(todayStr + 'T23:59:59.999Z');
 
+        console.log(`[SCRAPE] Starting syncTodayResults (Max 5 races per batch)...`);
         const targetRaces = await prisma.raceSchedule.findMany({
             where: {
                 raceDate: { gte: todayStart, lte: todayEnd },
-                deadlineAt: { lt: tenMinutesAgo }, // Deadline passed 10+ minutes ago
-                resultSynced: false, // Not yet synced
+                deadlineAt: { lt: tenMinutesAgo },
+                resultSynced: false,
             },
-            orderBy: [{ placeName: 'asc' }, { raceNumber: 'asc' }],
+            orderBy: [{ raceDate: 'asc' }, { placeName: 'asc' }, { raceNumber: 'asc' }],
+            take: 5, // Limit to 5 races per execution to avoid Vercel timeouts
         });
 
         if (targetRaces.length === 0) {
@@ -461,10 +463,7 @@ export async function syncTodayResults() {
             return { success: true, count: 0, processedRaces: [] };
         }
 
-        console.log(`[SCRAPE] Found ${targetRaces.length} overdue races. Limiting to 5 races per batch to prevent execution timeout.`);
-
-        // Vercel Hobby plan limit mitigation: only process up to 5 races per invocation
-        const batchedRaces = targetRaces.slice(0, 5);
+        console.log(`[SCRAPE] Found ${targetRaces.length} races to scrape.`);
 
         let syncedCount = 0;
         const processedRaces: { placeName: string; raceNumber: number; raceDate: Date }[] = [];
@@ -474,6 +473,7 @@ export async function syncTodayResults() {
 
         // --- STEP 2: Scrape each race from boatrace.jp ---
         for (const schedule of targetRaces) {
+            console.log(`[SCRAPE] Processing: ${schedule.placeName} R${schedule.raceNumber} (${schedule.raceDate.toISOString()})`);
             const venue = VENUES.find(v => v.name === schedule.placeName);
             if (!venue) {
                 console.warn(`[SCRAPE] Unknown venue: ${schedule.placeName}, skipping.`);
@@ -624,18 +624,16 @@ export async function syncTodayResults() {
                 syncedScheduleIds.push(schedule.id);
                 syncedCount++;
 
-                console.log(`[SCRAPE] ✅ SUCCESS ${schedule.placeName} R${schedule.raceNumber}: DB upsert queued (Arrivals: ${arrivalsData.length}, Payouts: ${payoutsData.length}).`);
+                console.log(`[SCRAPE] ✅ ${schedule.placeName} R${schedule.raceNumber}: ${arrivalsData.length} arrivals, ${payoutsData.length} payouts parsed.`);
 
             } catch (scrapeErr: any) {
-                console.error(`[SCRAPE] ❌ Error scraping ${schedule.placeName} R${schedule.raceNumber}:`, scrapeErr.message);
+                console.error(`[SCRAPE] Error scraping ${schedule.placeName} R${schedule.raceNumber}:`, scrapeErr.message);
                 continue; // Skip this race and continue with others
             }
 
             // Rate limiting: 500ms delay between requests
             await new Promise(resolve => setTimeout(resolve, 500));
         }
-
-        console.log(`[SCRAPE] Parsing completed. Proceeding to DB transactions for ${dbOperations.length} races...`);
 
         // --- STEP 6: Bulk save Racers ---
         const racerDataArray = Array.from(uniqueRacers.entries()).map(([rNum, rName]) => ({
@@ -667,10 +665,10 @@ export async function syncTodayResults() {
             });
         }
 
-        console.log(`[SCRAPE] Successfully synced ${syncedCount} race results via scraping.`);
+        console.log(`[SCRAPE] Batch complete. Synced: ${syncedCount}, Total DB operations: ${dbOperations.length}`);
         return { success: true, count: syncedCount, processedRaces };
     } catch (e: any) {
-        console.error("[SCRAPE Error] Failed to sync results:", e);
+        console.error("[SCRAPE Error] syncTodayResults failed with error:", e);
         return { success: false, error: e.message };
     }
 }
