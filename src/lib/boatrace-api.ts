@@ -408,117 +408,207 @@ export async function fetchAndSaveRaceResult(placeName: string, raceNumber: numb
     }
 }
 
-// Phase 31: Bulk Sync Today's Results from API
+// Phase 51: Scraping-based Result Sync from boatrace.jp official site
 export async function syncTodayResults() {
     try {
-        console.log(`[API] Fetching all results from ${RESULTS_API_URL}...`);
+        console.log(`[SCRAPE] Starting scraping-based result sync...`);
 
-        const res = await fetch(RESULTS_API_URL, { cache: 'no-store' });
+        // --- STEP 1: Discover target races from DB ---
+        const now = new Date();
+        const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
 
-        // 2. 【fetchの適切なエラーハンドリング】
-        if (!res.ok) {
-            console.error(`[API Error] Result API Fetch failed with status: ${res.status} ${res.statusText}`);
-            throw new Error(`Result API Fetch failed: ${res.status} ${res.statusText}`);
+        // Get today's date in JST for DB query
+        const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+        const todayStr = jstNow.toISOString().split('T')[0];
+        const todayStart = new Date(todayStr + 'T00:00:00.000Z');
+        const todayEnd = new Date(todayStr + 'T23:59:59.999Z');
+
+        const targetRaces = await prisma.raceSchedule.findMany({
+            where: {
+                raceDate: { gte: todayStart, lte: todayEnd },
+                deadlineAt: { lt: tenMinutesAgo }, // Deadline passed 10+ minutes ago
+                resultSynced: false, // Not yet synced
+            },
+            orderBy: [{ placeName: 'asc' }, { raceNumber: 'asc' }],
+        });
+
+        if (targetRaces.length === 0) {
+            console.log(`[SCRAPE] No unsycned completed races found.`);
+            return { success: true, count: 0, processedRaces: [] };
         }
 
-        const data = await res.json();
-        const results = data.results || [];
-
-        if (results.length === 0) {
-            return { success: false, error: "No results today." };
-        }
+        console.log(`[SCRAPE] Found ${targetRaces.length} races to scrape.`);
 
         let syncedCount = 0;
         const processedRaces: { placeName: string; raceNumber: number; raceDate: Date }[] = [];
-
-        // 1. レース結果のパースと事前チェック
-        const parsedRaces: any[] = [];
+        const dbOperations: any[] = [];
+        const syncedScheduleIds: string[] = [];
         const uniqueRacers = new Map<number, string>();
 
-        for (const raceResult of results) {
-            const boats = raceResult.boats || [];
-            const apiPayouts = raceResult.payouts;
-
-            // 1. 【未確定レースのスキップ】
-            if (!boats || boats.length === 0) continue; // No boats run yet
-            if (!apiPayouts || Object.keys(apiPayouts).length === 0) continue; // Payouts empty (Unconfirmed)
-
-            const first = boats.find((b: any) => b.racer_place_number === 1)?.racer_boat_number;
-            const second = boats.find((b: any) => b.racer_place_number === 2)?.racer_boat_number;
-            const third = boats.find((b: any) => b.racer_place_number === 3)?.racer_boat_number;
-
-            if (!first || !second || !third) continue; // Match not fully concluded
-
-            const stadiumId = raceResult.race_stadium_number.toString().padStart(2, '0');
-            const venue = VENUES.find(v => v.id === stadiumId);
-            if (!venue) continue; // Unknown venue
-
-            const placeName = venue.name;
-            const raceNumber = raceResult.race_number;
-            const raceDate = new Date(raceResult.race_date);
-
-            const arrivalsData: any[] = [];
-            const entriesData: any[] = [];
-
-            for (const b of boats) {
-                const rName = typeof b.racer_name === 'string' ? b.racer_name.trim() : "";
-                const rNum = typeof b.racer_number === 'number' ? b.racer_number : null;
-
-                arrivalsData.push({
-                    place: b.racer_place_number,
-                    boatNumber: b.racer_boat_number,
-                    racerName: rName || "選手情報なし",
-                    racerNumber: rNum
-                });
-
-                if (rNum && rName && rName !== "undefined undefined") {
-                    uniqueRacers.set(rNum, rName);
-                    entriesData.push({ boatNumber: b.racer_boat_number, racerNumber: rNum });
-                }
+        // --- STEP 2: Scrape each race from boatrace.jp ---
+        for (const schedule of targetRaces) {
+            const venue = VENUES.find(v => v.name === schedule.placeName);
+            if (!venue) {
+                console.warn(`[SCRAPE] Unknown venue: ${schedule.placeName}, skipping.`);
+                continue;
             }
 
-            const arrivals = arrivalsData.sort((a, b) => {
-                if (!a.place) return 1;
-                if (!b.place) return -1;
-                return a.place - b.place;
-            });
+            const jstRaceDate = new Date(schedule.raceDate.getTime() + 9 * 60 * 60 * 1000);
+            const hdParam = jstRaceDate.toISOString().split('T')[0].replace(/-/g, '');
+            const url = `https://www.boatrace.jp/owpc/pc/race/raceresult?rno=${schedule.raceNumber}&jcd=${venue.id}&hd=${hdParam}`;
 
-            // 払戻金と返還の処理
-            const payoutsData: any[] = [];
-            const refundedBoats: number[] = [];
+            try {
+                console.log(`[SCRAPE] Fetching ${schedule.placeName} R${schedule.raceNumber}: ${url}`);
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) {
+                    console.warn(`[SCRAPE] HTTP ${res.status} for ${schedule.placeName} R${schedule.raceNumber}, skipping.`);
+                    continue;
+                }
 
-            if (raceResult.returns && Array.isArray(raceResult.returns)) {
-                raceResult.returns.forEach((r: any) => {
-                    if (r && typeof r.racer_boat_number === 'number') {
-                        refundedBoats.push(r.racer_boat_number);
+                const html = await res.text();
+                const $ = cheerio.load(html);
+
+                // --- STEP 3: Parse Arrivals ---
+                const arrivalsData: { place: number; boatNumber: number; racerName: string; racerNumber: number | null }[] = [];
+                const resultTableBody = $('table.is-w495 tbody, table.is-w748 tbody').first();
+
+                // Each row in the result table has boat number in td.is-boatColorN
+                let placeIndex = 0;
+                $('tbody tr').each((_, row) => {
+                    const boatCell = $(row).find('td[class*="is-boatColor"]');
+                    if (boatCell.length === 0) return;
+
+                    placeIndex++;
+                    const boatNumber = parseInt(boatCell.text().trim(), 10);
+                    if (isNaN(boatNumber)) return;
+
+                    const nameSpan = $(row).find('span.is-fs18.is-fBold').first();
+                    const racerName = nameSpan.text().trim().replace(/\s+/g, '　') || '選手情報なし';
+                    const numberSpan = $(row).find('span.is-fs12').first();
+                    const racerNumber = numberSpan.length > 0 ? parseInt(numberSpan.text().trim(), 10) : null;
+
+                    arrivalsData.push({
+                        place: placeIndex,
+                        boatNumber,
+                        racerName,
+                        racerNumber: isNaN(racerNumber as number) ? null : racerNumber,
+                    });
+
+                    if (racerNumber && !isNaN(racerNumber) && racerName && racerName !== '選手情報なし') {
+                        uniqueRacers.set(racerNumber, racerName.replace(/　/g, ' ').trim());
                     }
                 });
+
+                if (arrivalsData.length < 3) {
+                    console.warn(`[SCRAPE] ${schedule.placeName} R${schedule.raceNumber}: Less than 3 arrivals found (${arrivalsData.length}), race may not be concluded. Skipping.`);
+                    continue;
+                }
+
+                const first = arrivalsData[0]?.boatNumber;
+                const second = arrivalsData[1]?.boatNumber;
+                const third = arrivalsData[2]?.boatNumber;
+                if (!first || !second || !third) continue;
+
+                // --- STEP 4: Parse Payouts ---
+                const payoutsData: { type: string; numbers: string; amount: number }[] = [];
+
+                const betTypeMap: Record<string, string> = {
+                    '3連単': '3TR',
+                    '3連複': '3PL',
+                    '2連単': '2TR',
+                    '2連複': '2PL',
+                    '拡連複': 'WIDE',
+                    '単勝': 'WIN',
+                    '複勝': 'PLACE',
+                };
+
+                // Each tbody in the payout table has a td[rowspan] labeling the bet type
+                $('div.grid_unit tbody').each((_, tbody) => {
+                    const labelCell = $(tbody).find('td[rowspan]').first();
+                    if (labelCell.length === 0) return;
+
+                    const jaLabel = labelCell.text().trim();
+                    const betType = betTypeMap[jaLabel];
+                    if (!betType) return;
+
+                    $(tbody).find('tr.is-p3-0').each((_, row) => {
+                        const numberSpans = $(row).find('span.numberSet1_number');
+                        if (numberSpans.length === 0) return; // Empty row (nbsp)
+
+                        const combination = numberSpans.map((_, s) => $(s).text().trim()).get().join('-');
+                        if (!combination || combination === '') return;
+
+                        const payoutSpan = $(row).find('span.is-payout1').first();
+                        const payoutText = payoutSpan.text().trim();
+                        if (!payoutText || payoutText === '\u00a0' || payoutText === '') return;
+
+                        const amount = parseInt(payoutText.replace(/[¥,\s]/g, ''), 10);
+                        if (isNaN(amount) || amount === 0) return;
+
+                        payoutsData.push({ type: betType, numbers: combination, amount });
+                    });
+                });
+
+                if (payoutsData.length === 0) {
+                    console.warn(`[SCRAPE] ${schedule.placeName} R${schedule.raceNumber}: No payouts found, race may not be settled. Skipping.`);
+                    continue;
+                }
+
+                // --- STEP 5: Build DB Operations ---
+                const raceDate = schedule.raceDate;
+
+                // Upsert RaceResult
+                dbOperations.push(
+                    prisma.raceResult.upsert({
+                        where: {
+                            placeName_raceNumber_raceDate: {
+                                placeName: schedule.placeName,
+                                raceNumber: schedule.raceNumber,
+                                raceDate
+                            }
+                        },
+                        update: {
+                            firstPlace: first,
+                            secondPlace: second,
+                            thirdPlace: third,
+                            payouts: payoutsData,
+                            arrivals: arrivalsData,
+                            refunds: []
+                        },
+                        create: {
+                            placeName: schedule.placeName,
+                            raceNumber: schedule.raceNumber,
+                            raceDate,
+                            firstPlace: first,
+                            secondPlace: second,
+                            thirdPlace: third,
+                            payouts: payoutsData,
+                            arrivals: arrivalsData,
+                            refunds: []
+                        }
+                    })
+                );
+
+                processedRaces.push({
+                    placeName: schedule.placeName,
+                    raceNumber: schedule.raceNumber,
+                    raceDate
+                });
+                syncedScheduleIds.push(schedule.id);
+                syncedCount++;
+
+                console.log(`[SCRAPE] ✅ ${schedule.placeName} R${schedule.raceNumber}: ${arrivalsData.length} arrivals, ${payoutsData.length} payouts parsed.`);
+
+            } catch (scrapeErr: any) {
+                console.error(`[SCRAPE] Error scraping ${schedule.placeName} R${schedule.raceNumber}:`, scrapeErr.message);
+                continue; // Skip this race and continue with others
             }
 
-            if (apiPayouts.trifecta && apiPayouts.trifecta.length > 0) {
-                apiPayouts.trifecta.forEach((p: any) => payoutsData.push({ type: "3TR", numbers: p.combination.replace(/-/g, '-'), amount: p.payout }));
-            }
-            if (apiPayouts.trio && apiPayouts.trio.length > 0) {
-                apiPayouts.trio.forEach((p: any) => payoutsData.push({ type: "3PL", numbers: p.combination.replace(/=/g, '-'), amount: p.payout }));
-            }
-            if (apiPayouts.exacta && apiPayouts.exacta.length > 0) {
-                apiPayouts.exacta.forEach((p: any) => payoutsData.push({ type: "2TR", numbers: p.combination.replace(/-/g, '-'), amount: p.payout }));
-            }
-            if (apiPayouts.quinella && apiPayouts.quinella.length > 0) {
-                apiPayouts.quinella.forEach((p: any) => payoutsData.push({ type: "2PL", numbers: p.combination.replace(/=/g, '-'), amount: p.payout }));
-            }
-            const win = apiPayouts.win && apiPayouts.win[0];
-            if (win) {
-                payoutsData.push({ type: "WIN", numbers: win.combination, amount: win.payout });
-            }
-
-            parsedRaces.push({
-                placeName, raceNumber, raceDate, first, second, third, payoutsData, refundedBoats, arrivals, entriesData
-            });
+            // Rate limiting: 500ms delay between requests
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
 
-        // 3. 【DB保存の並列処理化（タイムアウト対策）】
-        // STEP 1: Process Racers efficiently (Bulk Insert)
+        // --- STEP 6: Bulk save Racers ---
         const racerDataArray = Array.from(uniqueRacers.entries()).map(([rNum, rName]) => ({
             racerNumber: rNum,
             name: rName
@@ -531,81 +621,7 @@ export async function syncTodayResults() {
             });
         }
 
-        const racerIds = Array.from(uniqueRacers.keys());
-        const allRacersInDb = await prisma.racer.findMany({
-            where: { racerNumber: { in: racerIds } },
-            select: { id: true, racerNumber: true }
-        });
-        const racerIdMap = new Map(allRacersInDb.map(r => [r.racerNumber, r.id]));
-
-        // STEP 2: Process Race Entries and Results concurrently per race
-        const dbOperations: any[] = [];
-
-        for (const pr of parsedRaces) {
-            // Upsert entries safely
-            for (const entry of pr.entriesData) {
-                const racerId = racerIdMap.get(entry.racerNumber);
-                if (racerId) {
-                    dbOperations.push(
-                        prisma.raceEntry.upsert({
-                            where: {
-                                placeName_raceNumber_raceDate_boatNumber: {
-                                    placeName: pr.placeName,
-                                    raceNumber: pr.raceNumber,
-                                    raceDate: pr.raceDate,
-                                    boatNumber: entry.boatNumber
-                                }
-                            },
-                            update: { racerId },
-                            create: {
-                                placeName: pr.placeName,
-                                raceNumber: pr.raceNumber,
-                                raceDate: pr.raceDate,
-                                boatNumber: entry.boatNumber,
-                                racerId
-                            }
-                        })
-                    );
-                }
-            }
-
-            // Upsert result
-            dbOperations.push(
-                prisma.raceResult.upsert({
-                    where: {
-                        placeName_raceNumber_raceDate: {
-                            placeName: pr.placeName,
-                            raceNumber: pr.raceNumber,
-                            raceDate: pr.raceDate
-                        }
-                    },
-                    update: {
-                        firstPlace: pr.first,
-                        secondPlace: pr.second,
-                        thirdPlace: pr.third,
-                        payouts: pr.payoutsData,
-                        refunds: pr.refundedBoats,
-                        arrivals: pr.arrivals
-                    },
-                    create: {
-                        placeName: pr.placeName,
-                        raceNumber: pr.raceNumber,
-                        raceDate: pr.raceDate,
-                        firstPlace: pr.first,
-                        secondPlace: pr.second,
-                        thirdPlace: pr.third,
-                        payouts: pr.payoutsData,
-                        refunds: pr.refundedBoats,
-                        arrivals: pr.arrivals
-                    }
-                })
-            );
-
-            processedRaces.push({ placeName: pr.placeName, raceNumber: pr.raceNumber, raceDate: pr.raceDate });
-            syncedCount++;
-        }
-
-        // Use Prisma $transaction with Chunking to avoid connection pool limit: 1 starvation
+        // --- STEP 7: Execute DB operations in chunks ---
         const CHUNK_SIZE = 100;
         for (let i = 0; i < dbOperations.length; i += CHUNK_SIZE) {
             const chunk = dbOperations.slice(i, i + CHUNK_SIZE);
@@ -614,10 +630,19 @@ export async function syncTodayResults() {
             }
         }
 
-        console.log(`[API] Successfully synced ${syncedCount} race results sequentially by chunk.`);
+        // --- STEP 8: Mark synced schedules ---
+        if (syncedScheduleIds.length > 0) {
+            await prisma.raceSchedule.updateMany({
+                where: { id: { in: syncedScheduleIds } },
+                data: { resultSynced: true }
+            });
+        }
+
+        console.log(`[SCRAPE] Successfully synced ${syncedCount} race results via scraping.`);
         return { success: true, count: syncedCount, processedRaces };
     } catch (e: any) {
-        console.error("[API Error] Failed to sync bulk results:", e);
+        console.error("[SCRAPE Error] Failed to sync results:", e);
         return { success: false, error: e.message };
     }
 }
+

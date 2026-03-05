@@ -186,6 +186,8 @@ model RaceSchedule {
   grade        String?
   day          String?
   
+  // Phase 51: 結果同期完了フラグ
+  resultSynced Boolean  @default(false)
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
