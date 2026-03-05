@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { syncTodayResults } from '@/lib/boatrace-api';
 import { settleRacePredictions } from '@/lib/evaluate';
 
-// This API route evaluates all pending predictions that are past their deadline.
+// Phase 53: This route now scrapes results from boatrace.jp, then evaluates pending predictions.
 export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization');
     const secret = process.env.CRON_SECRET || 'dev-cron-secret';
@@ -12,48 +12,33 @@ export async function GET(request: Request) {
     }
 
     try {
-        console.log("[Cron] Starting background evaluation batch...");
+        console.log("[Cron] Starting scraping-based result sync + evaluation batch...");
 
-        // 1. Find all distinct races that have unsettled predictions past deadline
-        const pendingPredictions = await prisma.prediction.findMany({
-            where: {
-                isSettled: false,
-                deadlineAt: {
-                    lt: new Date()
-                }
-            },
-            select: {
-                placeName: true,
-                raceNumber: true,
-                raceDate: true
-            },
-            distinct: ['placeName', 'raceNumber', 'raceDate'],
-        });
+        // 1. Scrape results from boatrace.jp official site
+        const syncRes = await syncTodayResults();
+        const processedRaces = syncRes.processedRaces || [];
 
-        let totalSettled = 0;
-
-        // 2. Try to settle each pending race.
-        for (const race of pendingPredictions) {
-            // settleRacePredictions attempts to find matching RaceResult and sum refunds/hits
-            // If RaceResult isn't there, it handles gracefully.
+        // 2. Settle predictions for newly synced races
+        let settlementCount = 0;
+        for (const race of processedRaces) {
             try {
                 const stats = await settleRacePredictions(race.placeName, race.raceNumber, race.raceDate);
                 if (stats.success) {
-                    totalSettled += stats.settledCount;
+                    settlementCount += stats.settledCount;
                 }
             } catch (e) {
-                // If race result is not found, we just skip it for now and it will be evaluated later
+                // If settlement fails for one race, continue with others
             }
         }
 
-        console.log(`[Cron] Batch evaluated ${pendingPredictions.length} pending races. Settled ${totalSettled} predictions.`);
+        console.log(`[Cron] Batch: scraped ${processedRaces.length} races, settled ${settlementCount} predictions.`);
 
         return NextResponse.json({
             success: true,
             message: `Batch completed`,
             stats: {
-                racesConsidered: pendingPredictions.length,
-                predictionsSettled: totalSettled
+                racesScraped: processedRaces.length,
+                predictionsSettled: settlementCount
             }
         });
     } catch (error: any) {
@@ -61,3 +46,4 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+

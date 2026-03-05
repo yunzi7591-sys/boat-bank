@@ -3,7 +3,7 @@ import { syncTodayResults } from '@/lib/boatrace-api';
 import { settleRacePredictions } from '@/lib/evaluate';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // 60 seconds
+export const maxDuration = 120; // 120 seconds for scraping multiple pages
 
 export async function GET(request: Request) {
     try {
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
         console.log("[CRON] Starting today's bulk result sync...");
 
-        // 1. Fetch, parse, and Upsert RaceResults from the API
+        // 1. Scrape and save RaceResults from boatrace.jp official site
         const syncRes = await syncTodayResults();
         if (!syncRes.success) {
             console.warn("[CRON] Result Sync skipped or failed:", syncRes.error);

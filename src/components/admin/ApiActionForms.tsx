@@ -101,10 +101,10 @@ export function ApiActionForms() {
                     className="w-full h-12 text-sm font-bold bg-slate-800 hover:bg-slate-900 rounded-xl text-blue-50"
                 >
                     <CheckCircle2 className={`w-4 h-4 mr-2 text-blue-400 ${isPendingEval ? 'animate-spin' : ''}`} />
-                    {isPendingEval ? "取得＆精算中..." : "最新のレース結果をAPIから一括同期して精算"}
+                    {isPendingEval ? "スクレイピング＆精算中..." : "最新のレース結果を公式からスクレイピングして精算"}
                 </Button>
                 <p className="text-xs text-slate-500 mt-2">
-                    本日のレースのうち、終了したものを一括で取得し全ユーザーの成績を再評価します。(通常は5分おきに自動実行されます)
+                    本日のレースのうち、締切から10分以上経過したレースを公式サイトから直接スクレイピングし、全ユーザーの成績を再評価します。(15分おきに自動実行されます)
                 </p>
             </div>
         </div>

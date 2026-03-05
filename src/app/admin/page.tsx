@@ -38,7 +38,7 @@ export default async function AdminDashboard() {
                     <CardHeader className="bg-blue-50 border-b border-blue-100 pb-4">
                         <CardTitle className="text-lg font-black text-blue-900 flex items-center gap-2">
                             <Database className="w-5 h-5 text-blue-500" />
-                            APIデータ一括連携 (API Integration)
+                            APIデータ連携 & スクレイピング
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-6">
@@ -55,7 +55,7 @@ export default async function AdminDashboard() {
                     </CardHeader>
                     <CardContent className="p-6">
                         <p className="text-[10px] text-slate-400 mt-3 text-center">
-                            API Route <code className="bg-slate-100 px-1 rounded text-slate-500">/api/cron/evaluate</code> is active for automated execution.
+                            API Route <code className="bg-slate-100 px-1 rounded text-slate-500">/api/cron/sync-results</code> is active for automated scraping execution.
                         </p>
                     </CardContent>
                 </Card>
