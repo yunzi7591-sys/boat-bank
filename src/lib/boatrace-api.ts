@@ -33,6 +33,16 @@ function extractDay(subtitle: string): string {
     return "開催中";
 }
 
+function extractRacerClass(classNumber: number): string {
+    switch (classNumber) {
+        case 1: return 'A1';
+        case 2: return 'A2';
+        case 3: return 'B1';
+        case 4: return 'B2';
+        default: return 'B1';
+    }
+}
+
 export async function syncTodaySchedule() {
     try {
         console.log(`[API] Fetching schedule from ${SCHEDULE_API_URL}...`);
@@ -49,10 +59,7 @@ export async function syncTodaySchedule() {
             where: { raceDate: searchDate }
         });
 
-        if (existingCount > 100) {
-            console.log(`[API] Today's schedule already synced (${existingCount} races found). Skipping full API fetch to save DB load.`);
-            return { success: true, count: existingCount, skipped: true };
-        }
+        const schedulesAlreadySynced = existingCount > 100;
 
         const res = await fetch(SCHEDULE_API_URL, { cache: 'no-store' });
         if (!res.ok) {
@@ -71,7 +78,7 @@ export async function syncTodaySchedule() {
 
         // 2. レース番組表パースと事前チェック
         const parsedPrograms: any[] = [];
-        const uniqueRacers = new Map<number, string>(); // Use map to guarantee unique values by ID
+        const uniqueRacers = new Map<number, { name: string; grade: string }>(); // racerNumber -> {name, grade}
 
         for (const prog of programs) {
             const stadiumId = prog.race_stadium_number.toString().padStart(2, '0');
@@ -94,9 +101,10 @@ export async function syncTodaySchedule() {
             for (const b of boats) {
                 const rName = typeof b.racer_name === 'string' ? b.racer_name.trim() : "";
                 const rNum = typeof b.racer_number === 'number' ? b.racer_number : null;
+                const rGrade = extractRacerClass(b.racer_class_number);
 
                 if (rNum && rName && rName !== "undefined undefined") {
-                    uniqueRacers.set(rNum, rName);
+                    uniqueRacers.set(rNum, { name: rName, grade: rGrade });
                     entriesData.push({ boatNumber: b.racer_boat_number, racerNumber: rNum });
                 }
             }
@@ -106,17 +114,27 @@ export async function syncTodaySchedule() {
             });
         }
 
-        // 3. 選手(Racer)データを一括でバルクINSERT（重複スキップ）
-        const racerDataArray = Array.from(uniqueRacers.entries()).map(([rNum, rName]) => ({
+        // 3. 選手(Racer)データをバルクUpsert（新規は作成、既存はname/gradeを更新）
+        const racerDataArray = Array.from(uniqueRacers.entries()).map(([rNum, info]) => ({
             racerNumber: rNum,
-            name: rName
+            name: info.name,
+            grade: info.grade
         }));
 
         if (racerDataArray.length > 0) {
-            await prisma.racer.createMany({
-                data: racerDataArray,
-                skipDuplicates: true
-            });
+            // Chunked upsert to avoid connection pool exhaustion
+            const RACER_CHUNK = 50;
+            for (let i = 0; i < racerDataArray.length; i += RACER_CHUNK) {
+                const chunk = racerDataArray.slice(i, i + RACER_CHUNK);
+                const upsertOps = chunk.map(r =>
+                    prisma.racer.upsert({
+                        where: { racerNumber: r.racerNumber },
+                        update: { name: r.name, grade: r.grade },
+                        create: { racerNumber: r.racerNumber, name: r.name, grade: r.grade }
+                    })
+                );
+                await prisma.$transaction(upsertOps);
+            }
         }
 
         // 紐付けのために、先ほどUpsertした(または既に存在していた)Racersの完全なリストをDBから再取得
@@ -126,6 +144,12 @@ export async function syncTodaySchedule() {
             select: { id: true, racerNumber: true }
         });
         const racerIdMap = new Map(allRacersInDb.map(r => [r.racerNumber, r.id]));
+
+        // 4, 5: Skip schedule/entry inserts if already synced (but racers above were still updated)
+        if (schedulesAlreadySynced) {
+            console.log(`[API] Schedules already synced (${existingCount} races). Racer grades updated. Skipping schedule/entry inserts.`);
+            return { success: true, count: existingCount, skipped: true };
+        }
 
         // 4. RaceSchedule のバルクINSERTデータ作成
         const scheduleDataArray = parsedPrograms.map(pr => ({
