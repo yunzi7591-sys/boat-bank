@@ -74,7 +74,7 @@ export async function triggerResultSyncBulk() {
         const session = await auth();
         if ((session?.user as any)?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
 
-        const syncRes = await syncTodayResults();
+        const syncRes = await syncTodayResults({}); // Unlimited manual sync
         if (!syncRes.success) {
             return { success: false, error: syncRes.error };
         }

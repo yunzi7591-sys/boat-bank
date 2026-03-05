@@ -21,7 +21,7 @@ export async function GET(request: Request) {
         console.log("[CRON] Starting today's bulk result sync...");
 
         // 1. Scrape and save RaceResults from boatrace.jp official site
-        const syncRes = await syncTodayResults();
+        const syncRes = await syncTodayResults({ limit: 15 });
         if (!syncRes.success) {
             console.warn("[CRON] Result Sync failed:", syncRes.error);
             return NextResponse.json({ success: false, error: syncRes.error }, { status: 500 });

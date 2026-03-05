@@ -433,11 +433,12 @@ export async function fetchAndSaveRaceResult(placeName: string, raceNumber: numb
 }
 
 // Phase 51: Scraping-based Result Sync from boatrace.jp official site
-export async function syncTodayResults() {
+/**
+ * Scrapes today's race results from boatrace.jp and saves them to the database.
+ * Processes races one by one and saves results immediately to survive timeouts.
+ */
+export async function syncTodayResults(options: { limit?: number } = {}) {
     try {
-        console.log(`[SCRAPE] Starting scraping-based result sync...`);
-
-        // --- STEP 1: Discover target races from DB ---
         const now = new Date();
         const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
 
@@ -447,7 +448,9 @@ export async function syncTodayResults() {
         const todayStart = new Date(todayStr + 'T00:00:00.000Z');
         const todayEnd = new Date(todayStr + 'T23:59:59.999Z');
 
-        console.log(`[SCRAPE] Starting syncTodayResults (Max 5 races per batch)...`);
+        const modeStr = options.limit ? `Batch limit: ${options.limit}` : "UNLIMITED (Manual)";
+        console.log(`[SCRAPE] Starting syncTodayResults (${modeStr})...`);
+
         const targetRaces = await prisma.raceSchedule.findMany({
             where: {
                 raceDate: { gte: todayStart, lte: todayEnd },
@@ -455,7 +458,7 @@ export async function syncTodayResults() {
                 resultSynced: false,
             },
             orderBy: [{ deadlineAt: 'asc' }, { placeName: 'asc' }, { raceNumber: 'asc' }],
-            take: 15, // Increased batch size to handle more races within the 120s limit
+            take: options.limit, // Apply limit if provided (for cron), otherwise no limit (for manual)
         });
 
         if (targetRaces.length === 0) {
@@ -463,20 +466,21 @@ export async function syncTodayResults() {
             return { success: true, count: 0, processedRaces: [] };
         }
 
-        console.log(`[SCRAPE] Found ${targetRaces.length} races to scrape.`);
+        console.log(`[SCRAPE] Found ${targetRaces.length} races to process.`);
 
         let syncedCount = 0;
         const processedRaces: { placeName: string; raceNumber: number; raceDate: Date }[] = [];
-        const dbOperations: any[] = [];
-        const syncedScheduleIds: string[] = [];
-        const uniqueRacers = new Map<number, string>();
 
-        // --- STEP 2: Scrape each race from boatrace.jp ---
-        for (const schedule of targetRaces) {
-            console.log(`[SCRAPE] Processing: ${schedule.placeName} R${schedule.raceNumber} (${schedule.raceDate.toISOString()})`);
+        // --- SCRAPE & SAVE LOOP ---
+        for (let i = 0; i < targetRaces.length; i++) {
+            const schedule = targetRaces[i];
+            const progress = `[${i + 1}/${targetRaces.length}]`;
+
+            console.log(`${progress} ${schedule.placeName} R${schedule.raceNumber}: 取得開始...`);
+
             const venue = VENUES.find(v => v.name === schedule.placeName);
             if (!venue) {
-                console.warn(`[SCRAPE] Unknown venue: ${schedule.placeName}, skipping.`);
+                console.warn(`${progress} ❌ エラー: 会場名不明 (${schedule.placeName})`);
                 continue;
             }
 
@@ -485,24 +489,23 @@ export async function syncTodayResults() {
             const url = `https://www.boatrace.jp/owpc/pc/race/raceresult?rno=${schedule.raceNumber}&jcd=${venue.id}&hd=${hdParam}`;
 
             try {
-                console.log(`[SCRAPE] Fetching ${schedule.placeName} R${schedule.raceNumber}: ${url}`);
                 const res = await fetch(url, {
                     cache: 'no-store',
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
                 });
+
                 if (!res.ok) {
-                    console.warn(`[SCRAPE] HTTP ${res.status} for ${schedule.placeName} R${schedule.raceNumber}, skipping.`);
+                    console.warn(`${progress} ❌ エラー: HTTP ${res.status}`);
                     continue;
                 }
 
                 const html = await res.text();
                 const $ = cheerio.load(html);
 
-                // --- STEP 3: Parse Arrivals ---
+                // --- Parse Arrivals ---
                 const arrivalsData: { place: number; boatNumber: number; racerName: string; racerNumber: number | null }[] = [];
                 const resultTable = $('table.is-w495, table.is-w748').first();
 
-                // Each row in the result table has boat number in td.is-boatColorN
                 let placeIndex = 0;
                 resultTable.find('tbody tr').each((_, row) => {
                     const boatCell = $(row).find('td[class*="is-boatColor"]');
@@ -515,81 +518,69 @@ export async function syncTodayResults() {
                     const nameSpan = $(row).find('span.is-fs18.is-fBold').first();
                     const racerName = nameSpan.text().trim().replace(/\s+/g, '　') || '選手情報なし';
                     const numberSpan = $(row).find('span.is-fs12').first();
-                    const racerNumber = numberSpan.length > 0 ? parseInt(numberSpan.text().trim(), 10) : null;
+                    const racerNumberStr = numberSpan.text().trim();
+                    const racerNumber = racerNumberStr ? parseInt(racerNumberStr, 10) : null;
 
                     arrivalsData.push({
                         place: placeIndex,
                         boatNumber,
                         racerName,
-                        racerNumber: isNaN(racerNumber as number) ? null : racerNumber,
+                        racerNumber: (racerNumber && !isNaN(racerNumber)) ? racerNumber : null,
                     });
-
-                    if (racerNumber && !isNaN(racerNumber) && racerName && racerName !== '選手情報なし') {
-                        uniqueRacers.set(racerNumber, racerName.replace(/　/g, ' ').trim());
-                    }
                 });
 
                 if (arrivalsData.length < 3) {
-                    console.warn(`[SCRAPE] ${schedule.placeName} R${schedule.raceNumber}: Less than 3 arrivals found (${arrivalsData.length}), race may not be concluded. Skipping.`);
+                    console.warn(`${progress} ⏩ スキップ: 着順データ不足 (確定前?)`);
                     continue;
                 }
 
                 const first = arrivalsData[0]?.boatNumber;
                 const second = arrivalsData[1]?.boatNumber;
                 const third = arrivalsData[2]?.boatNumber;
-                if (!first || !second || !third) continue;
 
-                // --- STEP 4: Parse Payouts ---
+                // --- Parse Payouts ---
                 const payoutsData: { type: string; numbers: string; amount: number }[] = [];
-
                 const betTypeMap: Record<string, string> = {
-                    '3連単': '3TR',
-                    '3連複': '3PL',
-                    '2連単': '2TR',
-                    '2連複': '2PL',
-                    '拡連複': 'WIDE',
-                    '単勝': 'WIN',
-                    '複勝': 'PLACE',
+                    '3連単': '3TR', '3連複': '3PL', '2連単': '2TR', '2連複': '2PL',
+                    '拡連複': 'WIDE', '単勝': 'WIN', '複勝': 'PLACE',
                 };
 
-                // Each tbody in the payout table has a td[rowspan] labeling the bet type
                 $('div.grid_unit tbody').each((_, tbody) => {
                     const labelCell = $(tbody).find('td[rowspan]').first();
-                    if (labelCell.length === 0) return;
-
                     const jaLabel = labelCell.text().trim();
                     const betType = betTypeMap[jaLabel];
                     if (!betType) return;
 
                     $(tbody).find('tr.is-p3-0').each((_, row) => {
                         const numberSpans = $(row).find('span.numberSet1_number');
-                        if (numberSpans.length === 0) return; // Empty row (nbsp)
+                        if (numberSpans.length === 0) return;
 
                         const combination = numberSpans.map((_, s) => $(s).text().trim()).get().join('-');
-                        if (!combination || combination === '') return;
+                        if (!combination) return;
 
                         const payoutSpan = $(row).find('span.is-payout1').first();
                         const payoutText = payoutSpan.text().trim();
-                        if (!payoutText || payoutText === '\u00a0' || payoutText === '') return;
+                        if (!payoutText || payoutText === '\u00a0') return;
 
                         const amount = parseInt(payoutText.replace(/[¥,\s]/g, ''), 10);
-                        if (isNaN(amount) || amount === 0) return;
-
-                        payoutsData.push({ type: betType, numbers: combination, amount });
+                        if (!isNaN(amount) && amount > 0) {
+                            payoutsData.push({ type: betType, numbers: combination, amount });
+                        }
                     });
                 });
 
                 if (payoutsData.length === 0) {
-                    console.warn(`[SCRAPE] ${schedule.placeName} R${schedule.raceNumber}: No payouts found, race may not be settled. Skipping.`);
+                    console.warn(`${progress} ⏩ スキップ: 払戻データなし`);
                     continue;
                 }
 
-                // --- STEP 5: Build DB Operations ---
+                // --- IMMEDIATE PERSISTENCE (ONE BY ONE) ---
                 const raceDate = schedule.raceDate;
 
-                // Upsert RaceResult
-                dbOperations.push(
-                    prisma.raceResult.upsert({
+                // 1. Transaction to ensure result and schedule status are atomic
+                await prisma.$transaction(async (tx) => {
+                    // Update Payouts table
+                    await tx.raceResult.upsert({
                         where: {
                             placeName_raceNumber_raceDate: {
                                 placeName: schedule.placeName,
@@ -603,7 +594,6 @@ export async function syncTodayResults() {
                             thirdPlace: third,
                             payouts: payoutsData,
                             arrivals: arrivalsData,
-                            refunds: []
                         },
                         create: {
                             placeName: schedule.placeName,
@@ -614,65 +604,55 @@ export async function syncTodayResults() {
                             thirdPlace: third,
                             payouts: payoutsData,
                             arrivals: arrivalsData,
-                            refunds: []
                         }
-                    })
-                );
+                    });
+
+                    // Update schedule status
+                    await tx.raceSchedule.update({
+                        where: { id: schedule.id },
+                        data: { resultSynced: true }
+                    });
+
+                    // 2. Upsert racers found in this race
+                    for (const a of arrivalsData) {
+                        if (a.racerNumber && a.racerName && a.racerName !== '選手情報なし') {
+                            await tx.racer.upsert({
+                                where: { racerNumber: a.racerNumber },
+                                update: { name: a.racerName.replace(/　/g, ' ').trim() },
+                                create: {
+                                    racerNumber: a.racerNumber,
+                                    name: a.racerName.replace(/　/g, ' ').trim(),
+                                    grade: 'B1' // Default if new
+                                }
+                            });
+                        }
+                    }
+                });
+
+                const trifectaPayout = payoutsData.find(p => p.type === '3TR')?.amount || 0;
+                console.log(`${progress} ✅ ${schedule.placeName} R${schedule.raceNumber}: 保存成功 (3連単: ${trifectaPayout.toLocaleString()}円)`);
 
                 processedRaces.push({
                     placeName: schedule.placeName,
                     raceNumber: schedule.raceNumber,
                     raceDate
                 });
-                syncedScheduleIds.push(schedule.id);
                 syncedCount++;
 
-                console.log(`[SCRAPE] ✅ ${schedule.placeName} R${schedule.raceNumber}: ${arrivalsData.length} arrivals, ${payoutsData.length} payouts parsed.`);
-
             } catch (scrapeErr: any) {
-                console.error(`[SCRAPE] Error scraping ${schedule.placeName} R${schedule.raceNumber}:`, scrapeErr.message);
-                continue; // Skip this race and continue with others
+                console.error(`${progress} ❌ エラー (${schedule.placeName} R${schedule.raceNumber}):`, scrapeErr.message);
             }
 
-            // Rate limiting: 500ms delay between requests
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
-        // --- STEP 6: Bulk save Racers ---
-        const racerDataArray = Array.from(uniqueRacers.entries()).map(([rNum, rName]) => ({
-            racerNumber: rNum,
-            name: rName
-        }));
-
-        if (racerDataArray.length > 0) {
-            await prisma.racer.createMany({
-                data: racerDataArray,
-                skipDuplicates: true
-            });
-        }
-
-        // --- STEP 7: Execute DB operations in chunks ---
-        const CHUNK_SIZE = 100;
-        for (let i = 0; i < dbOperations.length; i += CHUNK_SIZE) {
-            const chunk = dbOperations.slice(i, i + CHUNK_SIZE);
-            if (chunk.length > 0) {
-                await prisma.$transaction(chunk);
+            // Rate limiting: 500ms delay between requests to be polite
+            if (i < targetRaces.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
 
-        // --- STEP 8: Mark synced schedules ---
-        if (syncedScheduleIds.length > 0) {
-            await prisma.raceSchedule.updateMany({
-                where: { id: { in: syncedScheduleIds } },
-                data: { resultSynced: true }
-            });
-        }
-
-        console.log(`[SCRAPE] Batch complete. Synced: ${syncedCount}, Total DB operations: ${dbOperations.length}`);
+        console.log(`[SCRAPE] 処理完了。同期数: ${syncedCount}/${targetRaces.length}`);
         return { success: true, count: syncedCount, processedRaces };
     } catch (e: any) {
-        console.error("[SCRAPE Error] syncTodayResults failed with error:", e);
+        console.error("[SCRAPE Error] syncTodayResults failed:", e);
         return { success: false, error: e.message };
     }
 }
-
