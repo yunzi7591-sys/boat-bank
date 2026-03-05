@@ -6,7 +6,7 @@
         },
         {
             "path": "/api/cron/sync-results",
-            "schedule": "*/15 23,0-14 * * *"
+            "schedule": "0 15 * * *"
         }
     ]
 }
