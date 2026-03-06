@@ -1,0 +1,16 @@
+name: Daily Schedule Sync Cron
+
+on:
+  schedule:
+    # Runs at 23:00 UTC every day, which is 08:00 JST
+    - cron: '0 23 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Daily Schedule Sync API
+        run: |
+          curl -s -X GET "https://boat-bank.vercel.app/api/sync" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
