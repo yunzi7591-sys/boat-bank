@@ -10,7 +10,11 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Daily Schedule Sync API
+      - name: Step 1: Trigger Daily Schedule Sync
         run: |
-          curl -s -X GET "https://boat-bank.vercel.app/api/sync" \
+          curl -s --fail -X GET "https://boat-bank.vercel.app/api/cron/schedule" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+      - name: Step 2: Trigger Schedule Data Supplementation
+        run: |
+          curl -s --fail -X GET "https://boat-bank.vercel.app/api/cron/supplement-schedule" \
           -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

@@ -22,13 +22,14 @@ export async function GET(request: Request) {
 
         if (!result.success) {
             console.warn("[CRON] Schedule sync skipped or failed:", result.error);
-            return NextResponse.json({ status: 'Skipped', message: result.error });
+            return NextResponse.json({ success: false, status: 'Skipped', message: result.error });
         }
 
         // Check if it was an early-skip (already synced today)
         if ((result as any).skipped) {
             console.log(`[CRON] Schedule already synced today (${result.count} races). No-op.`);
             return NextResponse.json({
+                success: true,
                 status: 'AlreadySynced',
                 count: result.count
             });
@@ -36,12 +37,14 @@ export async function GET(request: Request) {
 
         console.log(`[CRON] Successfully synced ${result.count} schedules and ${(result as any).entries || 0} entries.`);
         return NextResponse.json({
+            success: true,
             status: 'Success',
+            count: result.count,
             syncedSchedules: result.count,
             syncedEntries: (result as any).entries || 0
         });
     } catch (e: any) {
         console.error('[CRON SCHEDULE SYNC ERROR]', e);
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ success: false, error: e.message }, { status: 500 });
     }
 }
