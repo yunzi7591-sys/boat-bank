@@ -592,7 +592,7 @@ export async function syncAndSaveSingleResult(placeName: string, raceNumber: num
  */
 export async function getUnsyncedRaces(limit?: number) {
     const now = new Date();
-    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
     // JST基準で当日の範囲を取得
     const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
@@ -603,7 +603,7 @@ export async function getUnsyncedRaces(limit?: number) {
     return prisma.raceSchedule.findMany({
         where: {
             raceDate: { gte: todayStart, lte: todayEnd },
-            deadlineAt: { lt: tenMinutesAgo },
+            deadlineAt: { lt: fiveMinutesAgo },
             resultSynced: false,
         },
         orderBy: [{ deadlineAt: 'asc' }, { placeName: 'asc' }, { raceNumber: 'asc' }],
