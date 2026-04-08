@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { Receiver } from '@upstash/qstash';
 import { syncAndSaveSingleResult } from '@/lib/boatrace-api';
 import { settleRacePredictions } from '@/lib/evaluate';
 
@@ -8,30 +7,18 @@ export const maxDuration = 30;
 
 export async function POST(request: Request) {
     try {
-        const body = await request.text();
-        const signature = request.headers.get('upstash-signature');
-
-        // 認証: QStash署名があればQStash検証、なければBearerトークン
-        if (signature && process.env.QSTASH_CURRENT_SIGNING_KEY) {
-            const receiver = new Receiver({
-                currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
-                nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
-            });
-
-            try {
-                await receiver.verify({ signature, body });
-            } catch {
-                return NextResponse.json({ error: 'Invalid QStash signature' }, { status: 401 });
-            }
-        } else if (process.env.NODE_ENV === 'production') {
-            // QStash署名なし → Bearerトークンで認証
+        // 認証: x-cron-secret ヘッダー（QStash経由）または Authorization ヘッダー（手動）
+        if (process.env.NODE_ENV === 'production') {
+            const cronSecret = request.headers.get('x-cron-secret');
             const authHeader = request.headers.get('authorization');
-            if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            const expected = process.env.CRON_SECRET;
+
+            if (cronSecret !== expected && authHeader !== `Bearer ${expected}`) {
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
             }
         }
 
-        const data = JSON.parse(body);
+        const data = await request.json();
         return await processRace(data);
     } catch (e: any) {
         console.error('[QUEUE WORKER ERROR]', e);
