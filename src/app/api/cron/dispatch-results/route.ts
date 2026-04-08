@@ -46,8 +46,9 @@ export async function GET(request: Request) {
                 });
 
                 await client.publishJSON({
-                    url: `${baseUrl}/api/queue/sync-single-result?${params.toString()}`,
+                    url: `${baseUrl}/api/queue/sync-single-result`,
                     body: { placeName: race.placeName, raceNumber: race.raceNumber, raceDate: race.raceDate.toISOString() },
+                    headers: { 'x-cron-secret': process.env.CRON_SECRET || '' },
                     retries: 2,
                     delay: dispatched * 2, // 2秒間隔でスタガー
                 });
