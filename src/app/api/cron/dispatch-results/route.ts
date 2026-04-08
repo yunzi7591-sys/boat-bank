@@ -31,7 +31,10 @@ export async function GET(request: Request) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL;
 
         if (qstashToken && appUrl) {
-            const client = new Client({ token: qstashToken });
+            const client = new Client({
+                token: qstashToken,
+                baseUrl: process.env.QSTASH_URL || "https://qstash.upstash.io",
+            });
             const baseUrl = appUrl.startsWith('http') ? appUrl : `https://${appUrl}`;
 
             let dispatched = 0;
