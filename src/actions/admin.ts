@@ -3,7 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { settleRacePredictions } from "@/lib/evaluate";
-import { syncTodaySchedule, fetchAndSaveRaceResult, syncOfficialGradeAndDay, syncTodayResults } from "@/lib/boatrace-api";
+import { syncTodaySchedule, syncOfficialGradeAndDay, syncTodayResults, syncAndSaveSingleResult } from "@/lib/boatrace-api";
 import { revalidatePath } from "next/cache";
 
 // Function removed
@@ -42,13 +42,7 @@ export async function triggerApiEvaluation(formData: FormData) {
         const placeName = formData.get("placeName") as string;
         const raceNumber = parseInt(formData.get("raceNumber") as string);
 
-        // 1. Fetch from API and save to RaceResult
-        const apiRes = await fetchAndSaveRaceResult(placeName, raceNumber);
-        if (!apiRes.success) {
-            return { success: false, error: apiRes.error || "Failed to fetch from API" };
-        }
-
-        // 2. Evaluate
+        // 1. Fetch and save race result (scraping + API fallback)
         const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
         const currentDate = new Date(todayStr);
         const yyyy = currentDate.getFullYear();
@@ -56,6 +50,9 @@ export async function triggerApiEvaluation(formData: FormData) {
         const dd = String(currentDate.getDate()).padStart(2, '0');
         const raceDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
 
+        await syncAndSaveSingleResult(placeName, raceNumber, raceDate);
+
+        // 2. Evaluate
         await settleRacePredictions(placeName, raceNumber, raceDate);
 
         revalidatePath('/admin');
