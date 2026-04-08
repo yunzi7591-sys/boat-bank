@@ -8,38 +8,30 @@ export const maxDuration = 30;
 
 export async function POST(request: Request) {
     try {
-        // QStash 署名検証（本番のみ）
-        if (process.env.NODE_ENV === 'production' && process.env.QSTASH_CURRENT_SIGNING_KEY) {
+        const body = await request.text();
+        const signature = request.headers.get('upstash-signature');
+
+        // 認証: QStash署名があればQStash検証、なければBearerトークン
+        if (signature && process.env.QSTASH_CURRENT_SIGNING_KEY) {
             const receiver = new Receiver({
                 currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
                 nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
             });
 
-            const body = await request.text();
-            const signature = request.headers.get('upstash-signature') || '';
-
-            const isValid = await receiver.verify({
-                signature,
-                body,
-                url: request.url,
-            });
-
-            if (!isValid) {
-                return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+            try {
+                await receiver.verify({ signature, body });
+            } catch {
+                return NextResponse.json({ error: 'Invalid QStash signature' }, { status: 401 });
             }
-
-            // body を再パース
-            const data = JSON.parse(body);
-            return await processRace(data);
+        } else if (process.env.NODE_ENV === 'production') {
+            // QStash署名なし → Bearerトークンで認証
+            const authHeader = request.headers.get('authorization');
+            if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            }
         }
 
-        // 開発環境: Bearer トークンまたは直接アクセス
-        const authHeader = request.headers.get('authorization');
-        if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const data = await request.json();
+        const data = JSON.parse(body);
         return await processRace(data);
     } catch (e: any) {
         console.error('[QUEUE WORKER ERROR]', e);
