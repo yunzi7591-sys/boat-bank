@@ -25,31 +25,31 @@ export async function Header() {
     }) : [];
 
     return (
-        <header className="bg-slate-950 text-white sticky top-0 z-50 border-b border-white/[0.06]">
+        <header className="bg-white text-[#061b31] sticky top-0 z-50 border-b border-[#e5edf5]">
             <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
 
                 {/* Logo / Home Link */}
                 <Link href="/" className="flex items-center gap-1.5 group">
-                    <span className="bg-emerald-400 text-slate-950 font-black text-[13px] px-2 py-0.5 rounded-md tracking-tight group-hover:bg-emerald-300 transition-colors">
+                    <span className="bg-[#533afd] text-white font-black text-[13px] px-2 py-0.5 rounded-md tracking-tight group-hover:bg-[#4434d4] transition-colors">
                         BOAT
                     </span>
-                    <span className="font-extrabold text-lg tracking-wide">BANK</span>
+                    <span className="font-extrabold text-lg tracking-wide text-[#061b31]">BANK</span>
                 </Link>
 
                 {/* Auth / Nav Actions */}
                 <div className="flex items-center gap-3">
                     {session?.user ? (
                         <>
-                            <div className="hidden md:flex items-center gap-1.5 bg-white/[0.08] px-3 py-1.5 rounded-lg">
-                                <Coins className="w-3.5 h-3.5 text-emerald-400" />
-                                <span className="font-bold text-sm text-emerald-400">{userPoints.toLocaleString()}</span>
-                                <span className="text-[10px] text-slate-400 font-medium">pt</span>
+                            <div className="hidden md:flex items-center gap-1.5 bg-[#f6f8fa] border border-[#e5edf5] px-3 py-1.5 rounded-lg">
+                                <Coins className="w-3.5 h-3.5 text-[#533afd]" />
+                                <span className="font-bold text-sm text-[#533afd]">{userPoints.toLocaleString()}</span>
+                                <span className="text-[10px] text-[#64748d] font-medium">pt</span>
                             </div>
 
                             <HeaderNotifications notifications={notifications} />
 
                             <Link href="/mypage">
-                                <Button variant="ghost" className="text-slate-300 hover:bg-white/10 hover:text-white font-semibold text-sm h-9 px-3">
+                                <Button variant="ghost" className="text-[#64748d] hover:bg-[#f6f8fa] hover:text-[#533afd] font-semibold text-sm h-9 px-3">
                                     マイページ
                                 </Button>
                             </Link>
@@ -59,7 +59,7 @@ export async function Header() {
                                     await signOut();
                                 }}
                             >
-                                <Button type="submit" variant="ghost" className="text-slate-500 hover:bg-white/10 hover:text-slate-300 text-xs h-8 px-2.5">
+                                <Button type="submit" variant="ghost" className="text-[#64748d] hover:bg-[#f6f8fa] hover:text-[#533afd] text-xs h-8 px-2.5">
                                     ログアウト
                                 </Button>
                             </form>
@@ -67,12 +67,12 @@ export async function Header() {
                     ) : (
                         <div className="flex items-center gap-2">
                             <Link href="/login">
-                                <Button variant="ghost" className="text-slate-300 hover:bg-white/10 hover:text-white font-semibold text-sm h-9 px-3">
+                                <Button variant="ghost" className="text-[#64748d] hover:bg-[#f6f8fa] hover:text-[#533afd] font-semibold text-sm h-9 px-3">
                                     ログイン
                                 </Button>
                             </Link>
                             <Link href="/register">
-                                <Button className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm h-9 px-4 rounded-lg">
+                                <Button className="bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm h-9 px-4 rounded-lg">
                                     新規登録
                                 </Button>
                             </Link>

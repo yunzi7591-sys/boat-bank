@@ -30,11 +30,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#020617",
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
 };
 
@@ -46,10 +45,10 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-slate-50 text-slate-900 pb-16`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-white text-[#061b31] pb-16`}
       >
         <Header />
-        <main className="flex-1 w-full relative max-w-md mx-auto bg-white shadow-xl shadow-slate-200/50 min-h-[100dvh]">
+        <main className="flex-1 w-full relative max-w-md mx-auto bg-white min-h-[100dvh]" style={{boxShadow: 'rgba(50,50,93,0.25) 0px 30px 45px -30px, rgba(0,0,0,0.1) 0px 18px 36px -18px'}}>
           {children}
         </main>
         <BottomNav />

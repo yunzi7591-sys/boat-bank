@@ -56,12 +56,12 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
         let totalWinAmount = 0;    // 的中によるポイントバック額
 
         for (const formation of formations) {
-            const officialPayoutForType = payoutsList.find(p => p.type === formation.betType);
+            const officialPayoutsForType = payoutsList.filter(p => p.type === formation.betType);
 
             for (const comb of formation.combinations) {
                 // 1. 返還チェック (REFUND)
-                // 買い目（"1-2-3"等）の中に、返還艇（[1, 2]等）が含まれているか確認
-                const betNumbers = comb.id.split('-').map(n => parseInt(n, 10));
+                // 買い目（"1-2-3"や"1=2=3"等）の中に、返還艇（[1, 2]等）が含まれているか確認
+                const betNumbers = comb.id.split(/[-=]/).map(n => parseInt(n, 10));
                 const containsRefundedBoat = betNumbers.some(n => refundedBoats.includes(n));
 
                 if (containsRefundedBoat) {
@@ -70,12 +70,14 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
                     continue; // 返還された買い目は的中の判定を行わない
                 }
 
-                // 2. 的中チェック (WIN)
-                if (officialPayoutForType && comb.id === officialPayoutForType.numbers) {
-                    isHit = true;
-                    // 例: 払戻金1540円(100円あたり)で 500pt 賭けていたら -> (1540 / 100) * 500 = 7700pt
-                    const winPayout = Math.floor((officialPayoutForType.amount / 100) * comb.amount);
-                    totalWinAmount += winPayout;
+                // 2. 的中チェック (WIN) - WIDEなど複数的中がある券種に対応
+                for (const officialPayout of officialPayoutsForType) {
+                    if (comb.id === officialPayout.numbers) {
+                        isHit = true;
+                        // 例: 払戻金1540円(100円あたり)で 500pt 賭けていたら -> (1540 / 100) * 500 = 7700pt
+                        const winPayout = Math.floor((officialPayout.amount / 100) * comb.amount);
+                        totalWinAmount += winPayout;
+                    }
                 }
             }
         }

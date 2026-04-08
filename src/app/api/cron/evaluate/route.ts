@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { syncTodayResults } from '@/lib/boatrace-api';
 import { settleRacePredictions } from '@/lib/evaluate';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
+
 // Phase 53: This route now scrapes results from boatrace.jp, then evaluates pending predictions.
 export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization');
