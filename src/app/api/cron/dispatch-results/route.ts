@@ -5,7 +5,7 @@ import { getUnsyncedRaces } from '@/lib/boatrace-api';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 10;
 
-const BATCH_LIMIT = 10;
+const BATCH_LIMIT = 20;
 
 export async function GET(request: Request) {
     try {
