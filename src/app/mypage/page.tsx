@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getUserStats } from "@/lib/stats";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 
 export default async function MyPage() {
     const session = await auth();
-    if (!session?.user?.id) notFound();
+    if (!session?.user?.id) redirect("/login");
 
     const userId = session.user.id;
 
@@ -50,24 +50,24 @@ export default async function MyPage() {
     const isPositiveReturn = stats.recoveryRate >= 100;
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-24">
+        <div className="min-h-screen bg-white font-sans pb-24">
 
             {/* Header Profile */}
-            <div className="bg-slate-900 text-white p-6 pb-12 rounded-b-3xl shadow-lg relative overflow-hidden">
+            <div className="bg-[#1c1e54] text-white p-6 pb-12 rounded-b-lg shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] relative overflow-hidden">
                 <div className="max-w-4xl mx-auto">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-4 border border-slate-700/50 p-2 pr-6 rounded-full bg-slate-800/50 backdrop-blur-sm">
-                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-slate-900 font-bold text-xl shadow-inner border-2 border-slate-200">
+                        <div className="flex items-center gap-4 border border-white/[0.1] p-2 pr-6 rounded-lg bg-white/[0.08] backdrop-blur-sm">
+                            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-[#061b31] font-bold text-xl shadow-inner border-2 border-[#e5edf5]">
                                 {user.name?.charAt(0) || "U"}
                             </div>
                             <div className="flex flex-col">
-                                <h1 className="text-lg font-extrabold tracking-tight">{user.name}</h1>
+                                <h1 className="text-lg font-light tracking-tight">{user.name}</h1>
                                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{user.role}</span>
                             </div>
                         </div>
                         <div className="text-right">
                             <p className="text-slate-400 text-[10px] font-bold tracking-widest mb-0.5 uppercase">Available Balance</p>
-                            <p className="text-3xl font-black tracking-tight">{user.points.toLocaleString()} <span className="text-sm font-bold text-slate-400">pt</span></p>
+                            <p className="text-3xl font-light tracking-tight">{user.points.toLocaleString()} <span className="text-sm font-bold text-slate-400">pt</span></p>
                         </div>
                     </div>
 
@@ -80,7 +80,7 @@ export default async function MyPage() {
                     <div className="flex items-center gap-3">
                         <ProfileEditModal initialName={user.name || ""} initialBio={user.bio || ""} />
                         <Link href={`/users/${userId}`}>
-                            <Button variant="ghost" size="sm" className="h-8 text-xs font-bold rounded-full text-slate-300 hover:bg-slate-800 hover:text-white">
+                            <Button variant="ghost" size="sm" className="h-8 text-xs font-bold rounded-lg text-slate-300 hover:bg-white/[0.08] hover:text-white">
                                 公開プロフィールを確認
                             </Button>
                         </Link>
@@ -91,35 +91,35 @@ export default async function MyPage() {
             {/* Stats Cards */}
             <div className="max-w-4xl mx-auto px-4 -mt-8 mb-8 z-10 relative">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className={`shadow-lg border-2 ${isPositiveReturn ? 'border-red-500 bg-red-50' : 'border-neutral-200'}`}>
+                    <Card className={`shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] border-2 ${isPositiveReturn ? 'border-[#533afd] bg-[#533afd]/5' : 'border-[#e5edf5]'}`}>
                         <CardHeader className="py-3 px-4 pb-2">
-                            <CardTitle className="text-sm text-neutral-500 font-bold">通算回収率</CardTitle>
+                            <CardTitle className="text-sm text-[#64748d] font-bold">通算回収率</CardTitle>
                         </CardHeader>
                         <CardContent className="px-4 pb-4">
-                            <p className={`text-4xl font-extrabold ${isPositiveReturn ? 'text-red-600' : 'text-neutral-800'}`}>
+                            <p className={`text-4xl font-light ${isPositiveReturn ? 'text-[#533afd]' : 'text-[#061b31]'}`}>
                                 {stats.recoveryRate.toFixed(1)}<span className="text-xl">%</span>
                             </p>
-                            {isPositiveReturn && <p className="text-xs text-red-500 font-bold mt-1">Excellent!</p>}
+                            {isPositiveReturn && <p className="text-xs text-[#533afd] font-bold mt-1">Excellent!</p>}
                         </CardContent>
                     </Card>
 
-                    <Card className="shadow-md">
+                    <Card className="shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] border border-[#e5edf5]">
                         <CardHeader className="py-3 px-4 pb-2">
-                            <CardTitle className="text-sm text-neutral-500 font-bold">総回収額</CardTitle>
+                            <CardTitle className="text-sm text-[#64748d] font-bold">総回収額</CardTitle>
                         </CardHeader>
                         <CardContent className="px-4 pb-4">
-                            <p className="text-2xl font-bold">{stats.totalRefund.toLocaleString()} <span className="text-sm text-neutral-500">pt</span></p>
-                            <p className="text-xs text-neutral-500 mt-1">的中: {stats.hitCount}R</p>
+                            <p className="text-2xl font-bold text-[#061b31]">{stats.totalRefund.toLocaleString()} <span className="text-sm text-[#64748d]">pt</span></p>
+                            <p className="text-xs text-[#64748d] mt-1">的中: {stats.hitCount}R</p>
                         </CardContent>
                     </Card>
 
-                    <Card className="shadow-md">
+                    <Card className="shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] border border-[#e5edf5]">
                         <CardHeader className="py-3 px-4 pb-2">
-                            <CardTitle className="text-sm text-neutral-500 font-bold">総投資額 (販売分)</CardTitle>
+                            <CardTitle className="text-sm text-[#64748d] font-bold">総投資額 (販売分)</CardTitle>
                         </CardHeader>
                         <CardContent className="px-4 pb-4">
-                            <p className="text-2xl font-bold">{stats.totalInvestment.toLocaleString()} <span className="text-sm text-neutral-500">pt</span></p>
-                            <p className="text-xs text-neutral-500 mt-1">予想提供: {stats.totalPredictions}R</p>
+                            <p className="text-2xl font-bold text-[#061b31]">{stats.totalInvestment.toLocaleString()} <span className="text-sm text-[#64748d]">pt</span></p>
+                            <p className="text-xs text-[#64748d] mt-1">予想提供: {stats.totalPredictions}R</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -140,11 +140,11 @@ export default async function MyPage() {
                             ) : (
                                 publishedPredictions.map(pred => (
                                     <Link href={`/predictions/${pred.id}`} key={pred.id}>
-                                        <Card className="hover:border-blue-300 transition-colors cursor-pointer shadow-sm relative overflow-hidden">
-                                            <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-blue-500"></div>
+                                        <Card className="hover:border-[#b9b9f9] transition-colors cursor-pointer shadow-sm relative overflow-hidden rounded-lg">
+                                            <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#533afd]"></div>
                                             <CardContent className="p-4 pl-6 flex justify-between items-center">
                                                 <div>
-                                                    <p className="text-sm text-blue-600 font-bold mb-1">{pred.placeName} {pred.raceNumber}R</p>
+                                                    <p className="text-sm text-[#533afd] font-bold mb-1">{pred.placeName} {pred.raceNumber}R</p>
                                                     <p className="font-bold text-lg">{pred.title}</p>
                                                     <p className="text-xs text-neutral-400 mt-2">{new Date(pred.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</p>
                                                 </div>
@@ -153,14 +153,14 @@ export default async function MyPage() {
 
                                                     {/* Result Badge */}
                                                     {!pred.isSettled ? (
-                                                        <Badge variant="outline" className="text-neutral-500 border-neutral-300 bg-neutral-50">🕒 結果待ち</Badge>
+                                                        <Badge variant="outline" className="text-[#64748d] border-[#e5edf5] bg-[#f6f8fa]">🕒 結果待ち</Badge>
                                                     ) : pred.isHit ? (
-                                                        <Badge className="bg-red-500 text-white border-red-600 shadow-sm animate-pulse">
+                                                        <Badge className="bg-[#15be53] text-white border-[#15be53] shadow-sm animate-pulse">
                                                             🎯 的中 (+{pred.hitAmount || pred.refundAmount} pt)
                                                         </Badge>
                                                     ) : pred.hitAmount && pred.hitAmount > 0 ? (
                                                         // Point gain without hit means full refund
-                                                        <Badge className="bg-yellow-500 text-white border-yellow-600 shadow-sm">
+                                                        <Badge className="bg-[#9b6829] text-white border-[#9b6829] shadow-sm">
                                                             ↩️ 返還 (+{pred.hitAmount} pt)
                                                         </Badge>
                                                     ) : (
@@ -182,23 +182,23 @@ export default async function MyPage() {
                             ) : (
                                 purchasedPredictions.map(pred => (
                                     <Link href={`/predictions/${pred.id}`} key={pred.id}>
-                                        <Card className="hover:border-yellow-300 transition-colors cursor-pointer shadow-sm relative overflow-hidden">
-                                            <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-yellow-500"></div>
+                                        <Card className="hover:border-[#b9b9f9] transition-colors cursor-pointer shadow-sm relative overflow-hidden rounded-lg">
+                                            <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#9b6829]"></div>
                                             <CardContent className="p-4 pl-6 flex justify-between items-center">
                                                 <div>
-                                                    <p className="text-sm text-blue-600 font-bold mb-1">{pred.placeName} {pred.raceNumber}R</p>
+                                                    <p className="text-sm text-[#533afd] font-bold mb-1">{pred.placeName} {pred.raceNumber}R</p>
                                                     <p className="font-bold text-lg">{pred.title}</p>
-                                                    <p className="text-xs text-neutral-500 mt-1">著者: {pred.author?.name || 'Unknown'}</p>
+                                                    <p className="text-xs text-[#64748d] mt-1">著者: {pred.author?.name || 'Unknown'}</p>
                                                 </div>
                                                 <div className="text-right flex flex-col items-end gap-2">
-                                                    <span className="text-sm font-bold text-yellow-600">購入済み</span>
+                                                    <span className="text-sm font-bold text-[#9b6829]">購入済み</span>
                                                     {/* Result Badge for Buyer */}
                                                     {!pred.isSettled ? (
                                                         null // Wait
                                                     ) : pred.isHit ? (
-                                                        <Badge className="bg-red-500 text-white">🎯 的中</Badge>
+                                                        <Badge className="bg-[#15be53] text-white">🎯 的中</Badge>
                                                     ) : pred.hitAmount && pred.hitAmount > 0 ? (
-                                                        <Badge className="bg-yellow-500 text-white">↩️ 返還</Badge>
+                                                        <Badge className="bg-[#9b6829] text-white">↩️ 返還</Badge>
                                                     ) : (
                                                         <Badge variant="secondary">❌ 不的中</Badge>
                                                     )}

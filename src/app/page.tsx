@@ -46,59 +46,59 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-full pb-8">
       {/* 1. Asset Summary */}
-      <div className="bg-gradient-to-b from-slate-950 to-slate-900 text-white px-5 pt-7 pb-10 relative overflow-hidden">
+      <div className="bg-[#1c1e54] text-white px-5 pt-7 pb-10 relative overflow-hidden">
         {/* Subtle grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px]" />
-        <div className="absolute top-20 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:32px_32px]" />
+        <div className="absolute top-20 -right-10 w-40 h-40 bg-[#533afd]/10 rounded-full blur-3xl" />
 
         <div className="relative z-10">
-          <p className="text-slate-500 text-[11px] font-semibold tracking-widest mb-1 uppercase">
+          <p className="text-white/50 text-[11px] font-semibold tracking-widest mb-1 uppercase">
             Total Assets
           </p>
           <div className="flex items-baseline gap-2 mb-6">
-            <h1 className="text-5xl font-black tracking-tighter leading-none tabular-nums">{points.toLocaleString()}</h1>
-            <span className="text-slate-500 font-bold text-sm">pt</span>
+            <h1 className="text-5xl font-light tracking-tighter leading-none tabular-nums">{points.toLocaleString()}</h1>
+            <span className="text-white/50 font-light text-sm">pt</span>
           </div>
 
           {/* Stats Row */}
           <div className="grid grid-cols-3 gap-3">
             {/* Recovery Rate */}
-            <div className="bg-white/[0.06] backdrop-blur rounded-2xl p-3.5 border border-white/[0.06]">
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 ${isProfit && stats.totalInvestment > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/15 text-red-400'}`}>
+            <div className="bg-white/[0.06] backdrop-blur rounded-lg p-3.5 border border-white/[0.06]">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${isProfit && stats.totalInvestment > 0 ? 'bg-[#533afd]/20 text-[#b9b9f9]' : 'bg-red-500/15 text-red-400'}`}>
                 {isProfit ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
               </div>
-              <p className="text-[10px] text-slate-500 font-medium mb-0.5">回収率</p>
-              <p className={`text-xl font-black tracking-tight ${isProfit && stats.totalInvestment > 0 ? 'text-emerald-400' : 'text-slate-200'}`}>
-                {stats.totalInvestment === 0 ? "0.0" : stats.recoveryRate.toFixed(1)}<span className="text-xs font-bold opacity-40 ml-0.5">%</span>
+              <p className="text-[10px] text-white/50 font-medium mb-0.5">回収率</p>
+              <p className={`text-xl font-light tracking-tight ${isProfit && stats.totalInvestment > 0 ? 'text-[#b9b9f9]' : 'text-slate-200'}`}>
+                {stats.totalInvestment === 0 ? "0.0" : stats.recoveryRate.toFixed(1)}<span className="text-xs font-light opacity-40 ml-0.5">%</span>
               </p>
             </div>
 
             {/* Hit Rate */}
-            <div className="bg-white/[0.06] backdrop-blur rounded-2xl p-3.5 border border-white/[0.06]">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-2 bg-blue-500/20 text-blue-400">
+            <div className="bg-white/[0.06] backdrop-blur rounded-lg p-3.5 border border-white/[0.06]">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 bg-blue-500/20 text-blue-400">
                 <Target className="w-4 h-4" />
               </div>
-              <p className="text-[10px] text-slate-500 font-medium mb-0.5">的中率</p>
-              <p className="text-xl font-black tracking-tight text-slate-200">
-                {hitRate.toFixed(1)}<span className="text-xs font-bold opacity-40 ml-0.5">%</span>
+              <p className="text-[10px] text-white/50 font-medium mb-0.5">的中率</p>
+              <p className="text-xl font-light tracking-tight text-slate-200">
+                {hitRate.toFixed(1)}<span className="text-xs font-light opacity-40 ml-0.5">%</span>
               </p>
             </div>
 
             {/* Total Bet */}
-            <div className="bg-white/[0.06] backdrop-blur rounded-2xl p-3.5 border border-white/[0.06]">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-2 bg-violet-500/20 text-violet-400">
+            <div className="bg-white/[0.06] backdrop-blur rounded-lg p-3.5 border border-white/[0.06]">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 bg-[#533afd]/20 text-[#b9b9f9]">
                 <TrendingUp className="w-4 h-4" />
               </div>
-              <p className="text-[10px] text-slate-500 font-medium mb-0.5">投資額</p>
-              <p className="text-xl font-black tracking-tight text-slate-200">
+              <p className="text-[10px] text-white/50 font-medium mb-0.5">投資額</p>
+              <p className="text-xl font-light tracking-tight text-slate-200">
                 {stats.totalInvestment > 9999 ? `${(stats.totalInvestment / 1000).toFixed(0)}k` : stats.totalInvestment.toLocaleString()}
-                <span className="text-xs font-bold opacity-40 ml-0.5">pt</span>
+                <span className="text-xs font-light opacity-40 ml-0.5">pt</span>
               </p>
             </div>
           </div>
 
           {/* Record Badge */}
-          <div className="mt-3 flex items-center gap-2 text-[11px] text-slate-500">
+          <div className="mt-3 flex items-center gap-2 text-[11px] text-white/50">
             <span className="bg-white/[0.06] px-2.5 py-1 rounded-full font-semibold">
               {stats.hitCount}/{stats.totalPredictions} 的中
             </span>
@@ -108,35 +108,35 @@ export default async function DashboardPage() {
 
       {/* 2. Welcome / Empty State */}
       {!session?.user ? (
-        <div className="mx-4 -mt-4 relative z-10 bg-white border border-slate-200/80 p-5 rounded-2xl shadow-lg shadow-slate-900/5">
+        <div className="mx-4 -mt-4 relative z-10 bg-white border border-slate-200/80 p-5 rounded-lg shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)]">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center shrink-0">
-              <Wallet className="w-6 h-6 text-emerald-600" />
+            <div className="w-12 h-12 bg-[#533afd]/5 rounded-lg flex items-center justify-center shrink-0">
+              <Wallet className="w-6 h-6 text-[#533afd]" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-[15px] font-bold text-slate-900">BOAT BANKへようこそ</h3>
+              <h3 className="text-[15px] font-light text-[#061b31]">BOAT BANKへようこそ</h3>
               <p className="text-xs text-slate-500 mt-0.5">アカウントを作成して収支管理を始めよう</p>
             </div>
           </div>
           <Link href="/login" className="mt-4 block">
-            <Button className="w-full rounded-xl h-11 font-bold text-sm bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98] transition-all">
+            <Button className="w-full rounded h-11 font-light text-sm bg-[#533afd] text-white hover:bg-[#4434d4] active:scale-[0.98] transition-all">
               ログイン / 新規登録
             </Button>
           </Link>
         </div>
       ) : stats.totalPredictions === 0 ? (
-        <div className="mx-4 -mt-4 relative z-10 bg-white border border-slate-200/80 p-5 rounded-2xl shadow-lg shadow-slate-900/5">
+        <div className="mx-4 -mt-4 relative z-10 bg-white border border-slate-200/80 p-5 rounded-lg shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)]">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0">
-              <Ship className="w-6 h-6 text-blue-600" />
+            <div className="w-12 h-12 bg-[#533afd]/5 rounded-lg flex items-center justify-center shrink-0">
+              <Ship className="w-6 h-6 text-[#533afd]" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-[15px] font-bold text-slate-900">まだ予想がありません</h3>
+              <h3 className="text-[15px] font-light text-[#061b31]">まだ予想がありません</h3>
               <p className="text-xs text-slate-500 mt-0.5">最初の勝負を始めてポートフォリオを構築しよう</p>
             </div>
           </div>
           <Link href="/predict/new" className="mt-4 block">
-            <Button className="w-full rounded-xl h-11 font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white active:scale-[0.98] transition-all">
+            <Button className="w-full rounded h-11 font-light text-sm bg-[#533afd] text-white hover:bg-[#4434d4] active:scale-[0.98] transition-all">
               最初の予想を作成する
             </Button>
           </Link>
@@ -151,7 +151,7 @@ export default async function DashboardPage() {
       {/* 4. Latest Results */}
       <div className="mt-8 px-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-sm font-light text-[#061b31] flex items-center gap-2">
             <Trophy className="w-4 h-4 text-amber-500" />
             最新レース結果
           </h2>
@@ -159,10 +159,10 @@ export default async function DashboardPage() {
         </div>
         <div className="flex flex-col gap-2.5">
           {latestResults.map((res, i) => (
-            <div key={i} className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center justify-between hover:border-slate-200 transition-colors">
+            <div key={i} className="bg-white border border-[#e5edf5] rounded-lg p-4 flex items-center justify-between hover:border-slate-200 transition-colors">
               <div>
                 <p className="text-[11px] font-semibold text-slate-400 mb-0.5">{res.place} {res.race}R</p>
-                <p className="font-black text-lg text-slate-900 tracking-tight tabular-nums">
+                <p className="font-light text-lg text-[#061b31] tracking-tight tabular-nums">
                   ¥{res.payout.toLocaleString()}
                 </p>
               </div>

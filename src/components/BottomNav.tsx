@@ -18,7 +18,7 @@ export function BottomNav() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-2xl border-t border-slate-200/60"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#e5edf5]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <nav className="max-w-md mx-auto flex h-[64px] items-center justify-around px-2 relative">
@@ -30,15 +30,16 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              aria-label={item.name}
               className={cn(
                 "relative flex flex-col items-center justify-center w-16 h-full transition-colors",
-                isActive ? "text-slate-900" : "text-slate-400"
+                isActive ? "text-[#533afd]" : "text-[#64748d]"
               )}
             >
               {isActive && (
                 <motion.div
                   layoutId="bottomNavIndicator"
-                  className="absolute top-0 w-8 h-0.5 bg-slate-900 rounded-full"
+                  className="absolute top-0 w-8 h-0.5 bg-[#533afd] rounded-full"
                   initial={false}
                   transition={{ type: "spring", stiffness: 500, damping: 35 }}
                 />
@@ -50,13 +51,13 @@ export function BottomNav() {
                 <Icon
                   className={cn(
                     "w-[21px] h-[21px] mb-1",
-                    isActive ? "stroke-slate-900" : "stroke-current"
+                    isActive ? "stroke-[#533afd]" : "stroke-current"
                   )}
                   strokeWidth={isActive ? 2.5 : 1.8}
                 />
                 <span className={cn(
                   "text-[10px]",
-                  isActive ? "font-bold text-slate-900" : "font-medium"
+                  isActive ? "font-bold text-[#533afd]" : "font-medium"
                 )}>
                   {item.name}
                 </span>

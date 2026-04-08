@@ -1,3 +1,5 @@
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import { VENUES } from "@/lib/constants/venues";
 import { prisma } from "@/lib/prisma";
 import PredictClient from "./PredictClient";
@@ -6,6 +8,9 @@ import { MockRacer } from "@/components/betting/VerticalGrid";
 export default async function PredictPage(props: {
     searchParams: Promise<{ placeId?: string; raceNumber?: string }>;
 }) {
+    const session = await auth();
+    if (!session?.user?.id) redirect("/login");
+
     const searchParams = await props.searchParams;
     const placeId = searchParams.placeId;
     const raceNumber = searchParams.raceNumber ? parseInt(searchParams.raceNumber, 10) : 1;
