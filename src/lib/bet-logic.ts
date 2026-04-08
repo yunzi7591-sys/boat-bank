@@ -26,17 +26,18 @@ export interface Formation {
 // Unroll selections into valid combinations (removing duplicates like 1-1-2)
 export function unrollCombinations(betType: BetType, selections: BoatSelection): Combination[] {
     const result: Combination[] = [];
-
     const { first, second, third } = selections;
 
-    if (betType === '3TR') { // 3连单: exact order, no duplicates
+    // Helper to check if a combination of numbers has duplicates
+    const hasDuplicates = (nums: number[]) => new Set(nums).size !== nums.length;
+
+    if (betType === '3TR') { // 3連単: exact order, no duplicates
         for (const f of first) {
             for (const s of second) {
-                if (f === s) continue;
                 for (const t of third) {
-                    if (f === t || s === t) continue;
-
                     const nums = [f, s, t];
+                    if (hasDuplicates(nums)) continue;
+
                     result.push({
                         id: nums.join('-'),
                         numbers: nums,
@@ -45,31 +46,29 @@ export function unrollCombinations(betType: BetType, selections: BoatSelection):
                 }
             }
         }
-    } else if (betType === '3PL') { // 3连复: any order, no duplicates, order doesn't matter for id so we sort
+    } else if (betType === '3PL') { // 3連複: any order, no duplicates
         const seen = new Set<string>();
-        // Wait, 3PL just needs 3 unique numbers from a pool usually, but if selected via 1st, 2nd, 3rd columns...
-        // Actually, in teleboat, 3PL is selected usually by picking 3 or more boats in a single column or across.
-        // If they use the standard 1st, 2nd, 3rd column:
         for (const f of first) {
             for (const s of second) {
-                if (f === s) continue;
                 for (const t of third) {
-                    if (f === t || s === t) continue;
+                    const nums = [f, s, t];
+                    if (hasDuplicates(nums)) continue;
 
-                    const nums = [f, s, t].sort((a, b) => a - b);
-                    const id = nums.join('=');
+                    const sortedNums = [...nums].sort((a, b) => a - b);
+                    const id = sortedNums.join('=');
                     if (!seen.has(id)) {
                         seen.add(id);
-                        result.push({ id, numbers: nums, amount: 0 });
+                        result.push({ id, numbers: sortedNums, amount: 0 });
                     }
                 }
             }
         }
-    } else if (betType === '2TR') { // 2连单
+    } else if (betType === '2TR') { // 2連単
         for (const f of first) {
             for (const s of second) {
-                if (f === s) continue;
                 const nums = [f, s];
+                if (hasDuplicates(nums)) continue;
+
                 result.push({
                     id: nums.join('-'),
                     numbers: nums,
@@ -77,20 +76,22 @@ export function unrollCombinations(betType: BetType, selections: BoatSelection):
                 });
             }
         }
-    } else if (betType === '2PL') { // 2连复
+    } else if (betType === '2PL') { // 2連複
         const seen = new Set<string>();
         for (const f of first) {
             for (const s of second) {
-                if (f === s) continue;
-                const nums = [f, s].sort((a, b) => a - b);
-                const id = nums.join('=');
+                const nums = [f, s];
+                if (hasDuplicates(nums)) continue;
+
+                const sortedNums = [...nums].sort((a, b) => a - b);
+                const id = sortedNums.join('=');
                 if (!seen.has(id)) {
                     seen.add(id);
-                    result.push({ id, numbers: nums, amount: 0 });
+                    result.push({ id, numbers: sortedNums, amount: 0 });
                 }
             }
         }
-    } else if (betType === 'WIN') { // 单胜
+    } else if (betType === 'WIN') { // 単勝
         for (const f of first) {
             result.push({
                 id: String(f),
@@ -102,6 +103,7 @@ export function unrollCombinations(betType: BetType, selections: BoatSelection):
 
     return result;
 }
+
 
 export const BOAT_COLORS = [
     { no: 1, colorCls: 'bg-white text-black border-neutral-300' },

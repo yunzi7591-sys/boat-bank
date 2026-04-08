@@ -14,21 +14,18 @@ interface RankUser {
     hitRate: number;
 }
 
-export const revalidate = 60; // Cache for 60 seconds
+export const revalidate = 60;
 
 export default async function RankingPage() {
-    // 1. Fetch all users
     const users = await prisma.user.findMany({
         select: { id: true, name: true }
     });
 
-    // 2. Fetch all checked predictions
     const predictions = await prisma.prediction.findMany({
         where: { resultChecked: true },
         select: { authorId: true, predictedNumbers: true, isHit: true, refundAmount: true }
     });
 
-    // 3. Aggregate stats per user
     const userStatsMap = new Map<string, { totalInvestment: number, totalRefund: number, hits: number, count: number }>();
 
     for (const pred of predictions) {
@@ -53,7 +50,6 @@ export default async function RankingPage() {
         }
     }
 
-    // 4. Calculate Final Metrics & Apply Threshold (>= 5 predictions)
     const rankedUsers: RankUser[] = [];
 
     for (const user of users) {
@@ -72,27 +68,29 @@ export default async function RankingPage() {
         }
     }
 
-    // 5. Sort lists
     const recoveryRanking = [...rankedUsers].sort((a, b) => b.recoveryRate - a.recoveryRate);
     const hitRateRanking = [...rankedUsers].sort((a, b) => b.hitRate - a.hitRate);
 
     const renderRankingList = (list: RankUser[], type: 'recovery' | 'hit') => {
         if (list.length === 0) {
             return (
-                <div className="text-center py-12 px-4 bg-white rounded-xl shadow-sm border border-slate-100">
-                    <Trophy className="w-12 h-12 mx-auto text-slate-200 mb-3" />
-                    <p className="text-slate-500 font-bold mb-1">ランキング集計中</p>
-                    <p className="text-xs text-slate-400">判定済みの予想が5レース以上あるユーザーが表示されます。</p>
+                <div className="text-center py-16 px-4">
+                    <Trophy className="w-10 h-10 mx-auto text-slate-200 mb-3" />
+                    <p className="text-slate-500 font-semibold mb-1">ランキング集計中</p>
+                    <p className="text-xs text-slate-400">判定済みの予想が5レース以上あるユーザーが表示されます</p>
                 </div>
             );
         }
 
         return (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
                 {list.map((user, index) => {
-                    const isTop3 = index < 3;
-                    const medalColors = ["text-yellow-400 bg-yellow-50", "text-slate-400 bg-slate-100", "text-amber-600 bg-amber-50"];
-                    const medalColor = index < 3 ? medalColors[index] : "text-slate-500 bg-slate-50";
+                    const medalColors = [
+                        "bg-amber-50 text-amber-600 ring-1 ring-amber-200",
+                        "bg-slate-100 text-slate-500 ring-1 ring-slate-200",
+                        "bg-orange-50 text-orange-500 ring-1 ring-orange-200",
+                    ];
+                    const medalColor = index < 3 ? medalColors[index] : "bg-slate-50 text-slate-400";
 
                     const valueStr = type === 'recovery'
                         ? `${user.recoveryRate.toFixed(1)}%`
@@ -100,30 +98,22 @@ export default async function RankingPage() {
 
                     return (
                         <Link href={`/users/${user.id}`} key={user.id}>
-                            <Card className={`relative overflow-hidden transition-all hover:scale-[1.02] border-0 shadow-sm ${index === 0 ? 'ring-2 ring-yellow-400 shadow-yellow-100' : 'bg-white'}`}>
-                                <CardContent className="p-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black shadow-sm ${medalColor}`}>
-                                            {index + 1}
-                                        </div>
-                                        <div>
-                                            <p className="font-extrabold text-slate-800">{user.name}</p>
-                                            <p className="text-xs text-slate-400 font-semibold">{user.totalPredictions} Races Evaluated</p>
-                                        </div>
+                            <div className={`bg-white border rounded-2xl p-4 flex items-center justify-between transition-colors hover:border-slate-300 ${index === 0 ? 'border-amber-200 shadow-sm' : 'border-slate-100'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm ${medalColor}`}>
+                                        {index + 1}
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] uppercase font-black tracking-wider text-slate-400 mb-0.5">
-                                            {type === 'recovery' ? 'Recovery' : 'Hit Rate'}
-                                        </p>
-                                        <p className={`text-xl font-black ${type === 'recovery' && user.recoveryRate >= 100 ? 'text-red-500' : 'text-slate-700'}`}>
-                                            {valueStr}
-                                        </p>
+                                    <div>
+                                        <p className="font-bold text-slate-800 text-[15px]">{user.name}</p>
+                                        <p className="text-[11px] text-slate-400 font-medium">{user.totalPredictions}R 判定済み</p>
                                     </div>
-                                </CardContent>
-                                {index === 0 && (
-                                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-yellow-300 to-yellow-500 opacity-10 rotate-45 transform translate-x-8 -translate-y-8" />
-                                )}
-                            </Card>
+                                </div>
+                                <div className="text-right">
+                                    <p className={`text-lg font-black tabular-nums ${type === 'recovery' && user.recoveryRate >= 100 ? 'text-emerald-600' : 'text-slate-800'}`}>
+                                        {valueStr}
+                                    </p>
+                                </div>
+                            </div>
                         </Link>
                     );
                 })}
@@ -132,30 +122,28 @@ export default async function RankingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-24">
-            {/* Header section */}
-            <div className="bg-slate-900 text-white p-6 pb-12 rounded-b-3xl shadow-lg">
-                <div className="max-w-md mx-auto pt-2">
-                    <h1 className="text-2xl font-black tracking-tight mb-2 flex items-center gap-2">
-                        <Trophy className="w-6 h-6 text-yellow-500" />
-                        Top Investors Ranking
-                    </h1>
-                    <p className="text-sm text-slate-400 font-medium">
-                        BOAT BANK で最も結果を出している予想家ランキング。実績（5R以上）のある猛者のみが名を連ねます。
-                    </p>
-                </div>
+        <div className="min-h-screen pb-24">
+            {/* Header */}
+            <div className="bg-gradient-to-b from-slate-950 to-slate-900 text-white px-5 pt-7 pb-10">
+                <h1 className="text-xl font-bold mb-1 flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-amber-400" />
+                    ランキング
+                </h1>
+                <p className="text-sm text-slate-400">
+                    実績5R以上の予想家ランキング
+                </p>
             </div>
 
-            <div className="max-w-md mx-auto px-4 -mt-6 relative z-10">
+            <div className="px-4 -mt-4 relative z-10">
                 <Tabs defaultValue="recovery" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-white shadow-sm border border-slate-100 rounded-xl">
-                        <TabsTrigger value="recovery" className="font-bold text-xs data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg transition-all">
+                    <TabsList className="grid w-full grid-cols-2 mb-4 h-11 bg-white shadow-sm border border-slate-100 rounded-xl p-1">
+                        <TabsTrigger value="recovery" className="font-semibold text-sm data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg transition-all">
                             <TrendingUp className="w-3.5 h-3.5 mr-1.5" />
-                            回収率ランキング
+                            回収率
                         </TabsTrigger>
-                        <TabsTrigger value="hit" className="font-bold text-xs data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg transition-all">
+                        <TabsTrigger value="hit" className="font-semibold text-sm data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg transition-all">
                             <Target className="w-3.5 h-3.5 mr-1.5" />
-                            的中率ランキング
+                            的中率
                         </TabsTrigger>
                     </TabsList>
 

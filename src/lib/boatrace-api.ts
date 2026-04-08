@@ -323,27 +323,10 @@ export async function syncOfficialGradeAndDay() {
 /**
  * results/v3 API から結果を取得して保存する（フォールバック用）
  */
-export async function fetchResultFromAPI(placeName: string, raceNumber: number, raceDate: Date) {
-    console.log(`[API Fallback] Fetching result for ${placeName} R${raceNumber} from results/v3...`);
-
-    const res = await fetch(RESULTS_API_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`Result API Fetch failed: ${res.status}`);
-
-    const data = await res.json();
-    const results = data.results || [];
-
-    const venue = VENUES.find(v => v.name === placeName);
-    if (!venue) throw new Error("Invalid place name");
-
-    const stadiumNumber = parseInt(venue.id, 10);
-    // v3 field names: stadium_number, number, date
-    const raceResult = results.find((r: any) => r.stadium_number === stadiumNumber && r.number === raceNumber);
-
-    if (!raceResult) {
-        throw new Error("Result not found in API yet.");
-    }
-
-    // Parse boats for arrivals and place numbers
+/**
+ * 事前取得済みのAPI結果配列から1レース分をパースする
+ */
+function parseResultFromAPIData(raceResult: any) {
     const boats = raceResult.boats || [];
     const arrivalsData = boats
         .filter((b: any) => b.racer_place_number > 0)
@@ -363,12 +346,10 @@ export async function fetchResultFromAPI(placeName: string, raceNumber: number, 
         throw new Error("Match not fully concluded (Missing place numbers).");
     }
 
-    // 返還艇: racer_place_number が 0 or missing の艇
     const refundedBoats: number[] = boats
         .filter((b: any) => !b.racer_place_number || b.racer_place_number === 0)
         .map((b: any) => b.racer_boat_number);
 
-    // Parse payouts (v3: amount field)
     const apiPayouts = raceResult.payouts || {};
     const payoutsData: { type: string; numbers: string; amount: number }[] = [];
 
@@ -393,6 +374,28 @@ export async function fetchResultFromAPI(placeName: string, raceNumber: number, 
     }
 
     return { first, second, third, payoutsData, arrivalsData, refundedBoats, raceDate: new Date(raceResult.date) };
+}
+
+export async function fetchResultFromAPI(placeName: string, raceNumber: number, raceDate: Date) {
+    console.log(`[API Fallback] Fetching result for ${placeName} R${raceNumber} from results/v3...`);
+
+    const res = await fetch(RESULTS_API_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Result API Fetch failed: ${res.status}`);
+
+    const data = await res.json();
+    const results = data.results || [];
+
+    const venue = VENUES.find(v => v.name === placeName);
+    if (!venue) throw new Error("Invalid place name");
+
+    const stadiumNumber = parseInt(venue.id, 10);
+    const raceResult = results.find((r: any) => r.stadium_number === stadiumNumber && r.number === raceNumber);
+
+    if (!raceResult) {
+        throw new Error("Result not found in API yet.");
+    }
+
+    return parseResultFromAPIData(raceResult);
 }
 
 /**
@@ -506,33 +509,17 @@ export async function scrapeSingleRaceResult(placeName: string, raceNumber: numb
 }
 
 /**
- * 1レースの結果を取得して保存する（スクレイピング優先 + API フォールバック）
- * QStash のワーカーから呼ばれる想定
+ * レース結果をDBに保存する共通処理
  */
-export async function syncAndSaveSingleResult(placeName: string, raceNumber: number, raceDate: Date) {
-    let resultData: {
+async function saveRaceResult(
+    placeName: string, raceNumber: number, raceDate: Date,
+    resultData: {
         first: number; second: number; third: number;
         payoutsData: { type: string; numbers: string; amount: number }[];
         arrivalsData?: any[];
         refundedBoats: number[];
-    };
-
-    // 1. スクレイピングを試行
-    try {
-        resultData = await scrapeSingleRaceResult(placeName, raceNumber, raceDate);
-        console.log(`[SYNC] ${placeName} R${raceNumber}: スクレイピング成功`);
-    } catch (scrapeErr: any) {
-        console.warn(`[SYNC] ${placeName} R${raceNumber}: スクレイピング失敗 (${scrapeErr.message}), APIフォールバック実行...`);
-        // 2. フォールバック: results/v3 API
-        try {
-            resultData = await fetchResultFromAPI(placeName, raceNumber, raceDate);
-            console.log(`[SYNC] ${placeName} R${raceNumber}: APIフォールバック成功`);
-        } catch (apiErr: any) {
-            throw new Error(`スクレイピング・API両方失敗: scrape=${scrapeErr.message}, api=${apiErr.message}`);
-        }
     }
-
-    // 3. DB保存（トランザクション）
+) {
     await prisma.$transaction(async (tx) => {
         await tx.raceResult.upsert({
             where: {
@@ -562,7 +549,6 @@ export async function syncAndSaveSingleResult(placeName: string, raceNumber: num
             data: { resultSynced: true }
         });
 
-        // Racer upsert
         if (resultData.arrivalsData) {
             for (const a of resultData.arrivalsData) {
                 if (a.racerNumber && a.racerName && a.racerName !== '選手情報なし') {
@@ -583,6 +569,37 @@ export async function syncAndSaveSingleResult(placeName: string, raceNumber: num
     const trifectaPayout = resultData.payoutsData.find(p => p.type === '3TR')?.amount || 0;
     const refundMsg = resultData.refundedBoats.length > 0 ? ` (返還: ${resultData.refundedBoats.join(',')})` : '';
     console.log(`[SYNC] ✅ ${placeName} R${raceNumber}: 保存成功 (3連単: ${trifectaPayout.toLocaleString()}円)${refundMsg}`);
+}
+
+/**
+ * 1レースの結果を取得して保存する（スクレイピング優先 + API フォールバック）
+ * QStash のワーカーから呼ばれる想定
+ */
+export async function syncAndSaveSingleResult(placeName: string, raceNumber: number, raceDate: Date) {
+    let resultData: {
+        first: number; second: number; third: number;
+        payoutsData: { type: string; numbers: string; amount: number }[];
+        arrivalsData?: any[];
+        refundedBoats: number[];
+    };
+
+    // 1. スクレイピングを試行
+    try {
+        resultData = await scrapeSingleRaceResult(placeName, raceNumber, raceDate);
+        console.log(`[SYNC] ${placeName} R${raceNumber}: スクレイピング成功`);
+    } catch (scrapeErr: any) {
+        console.warn(`[SYNC] ${placeName} R${raceNumber}: スクレイピング失敗 (${scrapeErr.message}), APIフォールバック実行...`);
+        // 2. フォールバック: results/v3 API
+        try {
+            resultData = await fetchResultFromAPI(placeName, raceNumber, raceDate);
+            console.log(`[SYNC] ${placeName} R${raceNumber}: APIフォールバック成功`);
+        } catch (apiErr: any) {
+            throw new Error(`スクレイピング・API両方失敗: scrape=${scrapeErr.message}, api=${apiErr.message}`);
+        }
+    }
+
+    // 3. DB保存（共通処理）
+    await saveRaceResult(placeName, raceNumber, raceDate, resultData);
 
     return { success: true, placeName, raceNumber, raceDate };
 }
@@ -612,8 +629,8 @@ export async function getUnsyncedRaces(limit?: number) {
 }
 
 /**
- * レガシー: バッチで結果を同期する（syncAndSaveSingleResult を使用）
- * QStash 未導入時のフォールバック / 手動実行用
+ * バッチで結果を同期する（API一括取得優先 + 残りを並列スクレイピング）
+ * 手動実行 / cron 用
  */
 export async function syncTodayResults(options: { limit?: number } = {}) {
     try {
@@ -629,28 +646,87 @@ export async function syncTodayResults(options: { limit?: number } = {}) {
 
         console.log(`[SYNC] Found ${targetRaces.length} races to process.`);
 
+        // Phase 1: API一括取得（1リクエストで全レース分）
+        let apiResultsMap = new Map<string, any>(); // "placeName-raceNumber" → raceResult
+        try {
+            const res = await fetch(RESULTS_API_URL, { cache: 'no-store' });
+            if (res.ok) {
+                const data = await res.json();
+                const results = data.results || [];
+                for (const r of results) {
+                    const stadiumId = r.stadium_number.toString().padStart(2, '0');
+                    const venue = VENUES.find(v => v.id === stadiumId);
+                    if (venue) {
+                        apiResultsMap.set(`${venue.name}-${r.number}`, r);
+                    }
+                }
+                console.log(`[SYNC] API一括取得成功: ${apiResultsMap.size}件の結果を取得`);
+            } else {
+                console.warn(`[SYNC] API一括取得失敗 (${res.status}), 全件スクレイピングにフォールバック`);
+            }
+        } catch (apiErr: any) {
+            console.warn(`[SYNC] API一括取得エラー: ${apiErr.message}, 全件スクレイピングにフォールバック`);
+        }
+
         let syncedCount = 0;
         const processedRaces: { placeName: string; raceNumber: number; raceDate: Date }[] = [];
+        const scrapeTargets: typeof targetRaces = [];
 
-        for (let i = 0; i < targetRaces.length; i++) {
-            const schedule = targetRaces[i];
-            const progress = `[${i + 1}/${targetRaces.length}]`;
+        // Phase 2: APIデータがあるレースを一括処理
+        for (const schedule of targetRaces) {
+            const key = `${schedule.placeName}-${schedule.raceNumber}`;
+            const apiResult = apiResultsMap.get(key);
 
-            try {
-                console.log(`${progress} ${schedule.placeName} R${schedule.raceNumber}: 取得開始...`);
-                await syncAndSaveSingleResult(schedule.placeName, schedule.raceNumber, schedule.raceDate);
-                processedRaces.push({
-                    placeName: schedule.placeName,
-                    raceNumber: schedule.raceNumber,
-                    raceDate: schedule.raceDate
-                });
-                syncedCount++;
-            } catch (err: any) {
-                console.error(`${progress} ${schedule.placeName} R${schedule.raceNumber}: ${err.message}`);
+            if (apiResult) {
+                try {
+                    const resultData = parseResultFromAPIData(apiResult);
+                    await saveRaceResult(schedule.placeName, schedule.raceNumber, schedule.raceDate, resultData);
+                    processedRaces.push({
+                        placeName: schedule.placeName,
+                        raceNumber: schedule.raceNumber,
+                        raceDate: schedule.raceDate
+                    });
+                    syncedCount++;
+                } catch (err: any) {
+                    console.warn(`[SYNC] ${schedule.placeName} R${schedule.raceNumber}: APIパース失敗 (${err.message}), スクレイピング対象に追加`);
+                    scrapeTargets.push(schedule);
+                }
+            } else {
+                scrapeTargets.push(schedule);
+            }
+        }
+
+        console.log(`[SYNC] API処理: ${syncedCount}件完了, スクレイピング残: ${scrapeTargets.length}件`);
+
+        // Phase 3: 残りを並列スクレイピング（同時最大5件）
+        const CONCURRENCY = 5;
+        for (let i = 0; i < scrapeTargets.length; i += CONCURRENCY) {
+            const batch = scrapeTargets.slice(i, i + CONCURRENCY);
+            const results = await Promise.allSettled(
+                batch.map(async (schedule) => {
+                    let resultData;
+                    try {
+                        resultData = await scrapeSingleRaceResult(schedule.placeName, schedule.raceNumber, schedule.raceDate);
+                    } catch (scrapeErr: any) {
+                        console.warn(`[SYNC] ${schedule.placeName} R${schedule.raceNumber}: スクレイピング失敗 (${scrapeErr.message}), APIフォールバック...`);
+                        resultData = await fetchResultFromAPI(schedule.placeName, schedule.raceNumber, schedule.raceDate);
+                    }
+                    await saveRaceResult(schedule.placeName, schedule.raceNumber, schedule.raceDate, resultData);
+                    return { placeName: schedule.placeName, raceNumber: schedule.raceNumber, raceDate: schedule.raceDate };
+                })
+            );
+
+            for (const r of results) {
+                if (r.status === 'fulfilled') {
+                    processedRaces.push(r.value);
+                    syncedCount++;
+                } else {
+                    console.error(`[SYNC] スクレイピング失敗: ${r.reason?.message || r.reason}`);
+                }
             }
 
-            // Rate limiting: 500ms delay between requests
-            if (i < targetRaces.length - 1) {
+            // バッチ間の待機（boatrace.jp負荷軽減）
+            if (i + CONCURRENCY < scrapeTargets.length) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
