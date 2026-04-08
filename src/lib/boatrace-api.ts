@@ -2,36 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { VENUES } from "@/lib/constants/venues";
 import * as cheerio from "cheerio";
 
-const SCHEDULE_API_URL = "https://boatraceopenapi.github.io/programs/v2/today.json";
-const RESULTS_API_URL = "https://boatraceopenapi.github.io/results/v2/today.json";
-
-function extractGrade(gradeNumber: number): string {
-    switch (gradeNumber) {
-        case 1: return "SG";
-        case 2: return "G1";
-        case 3: return "G2";
-        case 4: return "G3";
-        case 5: return "一般";
-        default: return "一般";
-    }
-}
-
-function extractDay(subtitle: string): string {
-    if (!subtitle) return "開催中";
-    // Special keywords first
-    if (subtitle.includes("優勝戦") && !subtitle.includes("準")) return "最終日";
-    if (subtitle.includes("準優勝戦")) return "5日目";
-    if (subtitle.includes("ドリーム")) return "初日";
-    // Parse numeric day: "2日目", "3日目" ... "7日目"
-    const dayMatch = subtitle.match(/(\d+)日目/);
-    if (dayMatch) return `${dayMatch[1]}日目`;
-    // Parse "初日" explicitly
-    if (subtitle.includes("初日")) return "初日";
-    // Parse "Xday" / English-style day markers
-    const edayMatch = subtitle.match(/(\d+)\s*day/i);
-    if (edayMatch) return `${edayMatch[1]}日目`;
-    return "開催中";
-}
+// v3 API endpoints
+const SCHEDULE_API_URL = "https://boatraceopenapi.github.io/programs/v3/today.json";
+const RESULTS_API_URL = "https://boatraceopenapi.github.io/results/v3/today.json";
 
 function extractRacerClass(classNumber: number): string {
     switch (classNumber) {
@@ -41,6 +14,25 @@ function extractRacerClass(classNumber: number): string {
         case 4: return 'B2';
         default: return 'B1';
     }
+}
+
+// v3 grade_label → 内部グレード文字列のマッピング
+function normalizeGradeLabel(label: string | undefined): string {
+    if (!label) return "一般";
+    if (label.includes("SG")) return "SG";
+    if (label.includes("G1") || label.includes("GⅠ")) return "G1";
+    if (label.includes("G2") || label.includes("GⅡ")) return "G2";
+    if (label.includes("G3") || label.includes("GⅢ")) return "G3";
+    return "一般";
+}
+
+// v3 day_label → 内部日目文字列のマッピング
+function normalizeDayLabel(label: string | undefined): string {
+    if (!label) return "開催中";
+    // day_label は "初日", "2日目", "最終日" などがそのまま入っている
+    const validDays = ["初日", "2日目", "3日目", "4日目", "5日目", "6日目", "7日目", "最終日"];
+    if (validDays.includes(label)) return label;
+    return "開催中";
 }
 
 export async function syncTodaySchedule() {
@@ -81,19 +73,21 @@ export async function syncTodaySchedule() {
         const uniqueRacers = new Map<number, { name: string; grade: string }>(); // racerNumber -> {name, grade}
 
         for (const prog of programs) {
-            const stadiumId = prog.race_stadium_number.toString().padStart(2, '0');
+            // v3 field names: stadium_number, number, date, closed_at, grade_label, day_label
+            const stadiumId = prog.stadium_number.toString().padStart(2, '0');
             const venue = VENUES.find(v => v.id === stadiumId);
 
             if (!venue) continue; // Unknown venue
 
             const placeName = venue.name;
-            const raceNumber = prog.race_number;
-            const raceDate = new Date(prog.race_date); // "2026-02-28" resulting in UTC 00:00
-            // "race_closed_at": "2026-02-28 15:48:00"
-            const deadlineAt = new Date(`${prog.race_closed_at.replace(' ', 'T')}+09:00`);
+            const raceNumber = prog.number;
+            const raceDate = new Date(prog.date); // "2026-02-28" resulting in UTC 00:00
+            // "closed_at": "2026-02-28 15:48:00"
+            const deadlineAt = new Date(`${prog.closed_at.replace(' ', 'T')}+09:00`);
 
-            const grade = extractGrade(prog.race_grade_number);
-            const day = extractDay(prog.race_subtitle);
+            // v3: grade_label/day_label から直接取得（スクレイピング不要）
+            const grade = normalizeGradeLabel(prog.grade_label);
+            const day = normalizeDayLabel(prog.day_label);
 
             const entriesData: any[] = [];
             const boats = prog.boats || [];
@@ -257,20 +251,27 @@ export async function syncOfficialGradeAndDay() {
             let broke = false;
             $(el).find('td, th').each((_, cell) => {
                 if (broke) return;
-                const cls = $(cell).attr('class') || '';
-                if (cls.includes('is-sg')) { grade = "SG"; broke = true; }
-                else if (cls.includes('is-g1')) { grade = "G1"; broke = true; }
-                else if (cls.includes('is-g2')) { grade = "G2"; broke = true; }
-                else if (cls.includes('is-g3')) { grade = "G3"; broke = true; }
-                else if (cls.includes('is-ippan')) { grade = "一般"; broke = true; }
+                const $cell = $(cell);
 
-                $(cell).find('img').each((_, img) => {
-                    const imgSrc = $(img).attr('src') || '';
-                    if (imgSrc.includes('text_sg')) grade = "SG";
-                    else if (imgSrc.includes('text_g1')) grade = "G1";
-                    else if (imgSrc.includes('text_g2')) grade = "G2";
-                    else if (imgSrc.includes('text_g3')) grade = "G3";
-                });
+                // Use .hasClass() for robust multiple-class support
+                // Also check for case-insensitive variations seen in logs (is-G1b, etc.)
+                const classAttr = $cell.attr('class') || '';
+
+                if (classAttr.toLowerCase().includes('is-sg')) { grade = "SG"; broke = true; }
+                else if (classAttr.toLowerCase().includes('is-g1')) { grade = "G1"; broke = true; }
+                else if (classAttr.toLowerCase().includes('is-g2')) { grade = "G2"; broke = true; }
+                else if (classAttr.toLowerCase().includes('is-g3')) { grade = "G3"; broke = true; }
+                else if (classAttr.toLowerCase().includes('is-ippan')) { grade = "一般"; broke = true; }
+
+                if (!broke) {
+                    $cell.find('img').each((_, img) => {
+                        const imgSrc = $(img).attr('src') || '';
+                        if (imgSrc.includes('text_sg')) { grade = "SG"; broke = true; }
+                        else if (imgSrc.includes('text_g1')) { grade = "G1"; broke = true; }
+                        else if (imgSrc.includes('text_g2')) { grade = "G2"; broke = true; }
+                        else if (imgSrc.includes('text_g3')) { grade = "G3"; broke = true; }
+                    });
+                }
             });
 
             // Determine today's date in JST
@@ -319,340 +320,345 @@ export async function syncOfficialGradeAndDay() {
     }
 }
 
-export async function fetchAndSaveRaceResult(placeName: string, raceNumber: number) {
+/**
+ * results/v3 API から結果を取得して保存する（フォールバック用）
+ */
+export async function fetchResultFromAPI(placeName: string, raceNumber: number, raceDate: Date) {
+    console.log(`[API Fallback] Fetching result for ${placeName} R${raceNumber} from results/v3...`);
+
+    const res = await fetch(RESULTS_API_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Result API Fetch failed: ${res.status}`);
+
+    const data = await res.json();
+    const results = data.results || [];
+
+    const venue = VENUES.find(v => v.name === placeName);
+    if (!venue) throw new Error("Invalid place name");
+
+    const stadiumNumber = parseInt(venue.id, 10);
+    // v3 field names: stadium_number, number, date
+    const raceResult = results.find((r: any) => r.stadium_number === stadiumNumber && r.number === raceNumber);
+
+    if (!raceResult) {
+        throw new Error("Result not found in API yet.");
+    }
+
+    // Parse boats for arrivals and place numbers
+    const boats = raceResult.boats || [];
+    const arrivalsData = boats
+        .filter((b: any) => b.racer_place_number > 0)
+        .map((b: any) => ({
+            place: b.racer_place_number,
+            boatNumber: b.racer_boat_number,
+            racerName: b.racer_name || '選手情報なし',
+            racerNumber: b.racer_number || null,
+        }))
+        .sort((a: any, b: any) => a.place - b.place);
+
+    const first = arrivalsData.find((a: any) => a.place === 1)?.boatNumber;
+    const second = arrivalsData.find((a: any) => a.place === 2)?.boatNumber;
+    const third = arrivalsData.find((a: any) => a.place === 3)?.boatNumber;
+
+    if (!first || !second || !third) {
+        throw new Error("Match not fully concluded (Missing place numbers).");
+    }
+
+    // 返還艇: racer_place_number が 0 or missing の艇
+    const refundedBoats: number[] = boats
+        .filter((b: any) => !b.racer_place_number || b.racer_place_number === 0)
+        .map((b: any) => b.racer_boat_number);
+
+    // Parse payouts (v3: amount field)
+    const apiPayouts = raceResult.payouts || {};
+    const payoutsData: { type: string; numbers: string; amount: number }[] = [];
+
+    const payoutMapping: [string, string, string][] = [
+        ['trifecta', '3TR', '-'],
+        ['trio', '3PL', '-'],
+        ['exacta', '2TR', '-'],
+        ['quinella', '2PL', '-'],
+        ['quinella_place', 'WIDE', '-'],
+        ['win', 'WIN', ''],
+        ['place', 'PLACE', ''],
+    ];
+
+    for (const [apiKey, betType, _sep] of payoutMapping) {
+        const entries = apiPayouts[apiKey];
+        if (entries && Array.isArray(entries)) {
+            for (const p of entries) {
+                const numbers = p.combination.replace(/[=]/g, '-');
+                payoutsData.push({ type: betType, numbers, amount: p.amount });
+            }
+        }
+    }
+
+    return { first, second, third, payoutsData, arrivalsData, refundedBoats, raceDate: new Date(raceResult.date) };
+}
+
+/**
+ * 1レースの結果をスクレイピングで取得する（メイン処理）
+ */
+export async function scrapeSingleRaceResult(placeName: string, raceNumber: number, raceDate: Date) {
+    const venue = VENUES.find(v => v.name === placeName);
+    if (!venue) throw new Error(`会場名不明: ${placeName}`);
+
+    const jstRaceDate = new Date(raceDate.getTime() + 9 * 60 * 60 * 1000);
+    const hdParam = jstRaceDate.toISOString().split('T')[0].replace(/-/g, '');
+    const url = `https://www.boatrace.jp/owpc/pc/race/raceresult?rno=${raceNumber}&jcd=${venue.id}&hd=${hdParam}`;
+
+    const res = await fetch(url, {
+        cache: 'no-store',
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const html = await res.text();
+    const $ = cheerio.load(html);
+
+    // --- Parse Arrivals ---
+    const arrivalsData: { place: number; boatNumber: number; racerName: string; racerNumber: number | null }[] = [];
+    const resultTable = $('table.is-w495, table.is-w748').first();
+
+    resultTable.find('tbody tr').each((_, row) => {
+        const boatCell = $(row).find('td[class*="is-boatColor"]');
+        if (boatCell.length === 0) return;
+
+        const boatNumber = parseInt(boatCell.text().trim(), 10);
+        if (isNaN(boatNumber)) return;
+
+        const rankText = $(row).find('td').first().text().trim();
+        const rankNum = parseInt(rankText.replace(/[１-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0)), 10);
+        const place = !isNaN(rankNum) ? rankNum : 99;
+
+        const nameSpan = $(row).find('span.is-fs18.is-fBold').first();
+        const racerName = nameSpan.text().trim().replace(/\s+/g, '　') || '選手情報なし';
+        const numberSpan = $(row).find('span.is-fs12').first();
+        const racerNumberStr = numberSpan.text().trim();
+        const racerNumber = racerNumberStr ? parseInt(racerNumberStr, 10) : null;
+
+        arrivalsData.push({
+            place,
+            boatNumber,
+            racerName,
+            racerNumber: (racerNumber && !isNaN(racerNumber)) ? racerNumber : null,
+        });
+    });
+
+    if (arrivalsData.length < 3) {
+        throw new Error(`着順データ不足 (${arrivalsData.length}艇のみ)`);
+    }
+
+    const first = arrivalsData.find(a => a.place === 1)?.boatNumber || arrivalsData[0].boatNumber;
+    const second = arrivalsData.find(a => a.place === 2)?.boatNumber || arrivalsData[1].boatNumber;
+    const third = arrivalsData.find(a => a.place === 3)?.boatNumber || arrivalsData[2].boatNumber;
+
+    // --- Parse Refunds ---
+    const refunds: number[] = [];
+    $('div.grid_unit tbody tr').each((_, tr) => {
+        if ($(tr).text().includes('返還')) {
+            $(tr).find('span.numberSet1_number').each((_, span) => {
+                const num = parseInt($(span).text().trim(), 10);
+                if (!isNaN(num) && !refunds.includes(num)) {
+                    refunds.push(num);
+                }
+            });
+        }
+    });
+
+    // --- Parse Payouts ---
+    const payoutsData: { type: string; numbers: string; amount: number }[] = [];
+    const betTypeMap: Record<string, string> = {
+        '3連単': '3TR', '3連複': '3PL', '2連単': '2TR', '2連複': '2PL',
+        '拡連複': 'WIDE', '単勝': 'WIN', '複勝': 'PLACE',
+    };
+
+    $('div.grid_unit tbody').each((_, tbody) => {
+        const labelCell = $(tbody).find('td[rowspan]').first();
+        const jaLabel = labelCell.text().trim();
+        const matchedKey = Object.keys(betTypeMap).find(k => jaLabel.includes(k));
+        if (!matchedKey) return;
+        const betType = betTypeMap[matchedKey];
+
+        $(tbody).find('tr').each((_, row) => {
+            const numberSpans = $(row).find('span.numberSet1_number');
+            if (numberSpans.length === 0) return;
+
+            const combination = numberSpans.map((_, s) => $(s).text().trim()).get().join('-');
+            if (!combination) return;
+
+            const payoutSpan = $(row).find('span.is-payout1').first();
+            const payoutText = payoutSpan.text().trim();
+            if (!payoutText || payoutText.includes('返還')) return;
+
+            const amount = parseInt(payoutText.replace(/[¥,\s]/g, ''), 10);
+            if (!isNaN(amount) && amount > 0) {
+                payoutsData.push({ type: betType, numbers: combination, amount });
+            }
+        });
+    });
+
+    if (payoutsData.length === 0 && refunds.length === 0) {
+        throw new Error('払戻・返還データなし');
+    }
+
+    return { first, second, third, payoutsData, arrivalsData, refundedBoats: refunds };
+}
+
+/**
+ * 1レースの結果を取得して保存する（スクレイピング優先 + API フォールバック）
+ * QStash のワーカーから呼ばれる想定
+ */
+export async function syncAndSaveSingleResult(placeName: string, raceNumber: number, raceDate: Date) {
+    let resultData: {
+        first: number; second: number; third: number;
+        payoutsData: { type: string; numbers: string; amount: number }[];
+        arrivalsData?: any[];
+        refundedBoats: number[];
+    };
+
+    // 1. スクレイピングを試行
     try {
-        console.log(`[API] Fetching result for ${placeName} R${raceNumber} from ${RESULTS_API_URL}...`);
-
-        const res = await fetch(RESULTS_API_URL, { cache: 'no-store' });
-        if (!res.ok) throw new Error("Result API Fetch failed");
-
-        const data = await res.json();
-        const results = data.results || [];
-
-        // Find stadiumId
-        const venue = VENUES.find(v => v.name === placeName);
-        if (!venue) throw new Error("Invalid place name");
-
-        const stadiumNumber = parseInt(venue.id, 10);
-        const raceResult = results.find((r: any) => r.race_stadium_number === stadiumNumber && r.race_number === raceNumber);
-
-        if (!raceResult) {
-            throw new Error("Result not found for this race yet.");
+        resultData = await scrapeSingleRaceResult(placeName, raceNumber, raceDate);
+        console.log(`[SYNC] ${placeName} R${raceNumber}: スクレイピング成功`);
+    } catch (scrapeErr: any) {
+        console.warn(`[SYNC] ${placeName} R${raceNumber}: スクレイピング失敗 (${scrapeErr.message}), APIフォールバック実行...`);
+        // 2. フォールバック: results/v3 API
+        try {
+            resultData = await fetchResultFromAPI(placeName, raceNumber, raceDate);
+            console.log(`[SYNC] ${placeName} R${raceNumber}: APIフォールバック成功`);
+        } catch (apiErr: any) {
+            throw new Error(`スクレイピング・API両方失敗: scrape=${scrapeErr.message}, api=${apiErr.message}`);
         }
+    }
 
-        const raceDate = new Date(raceResult.race_date);
-
-        // Parse boats to find 1st, 2nd, 3rd places
-        const boats = raceResult.boats || [];
-        const first = boats.find((b: any) => b.racer_place_number === 1)?.racer_boat_number;
-        const second = boats.find((b: any) => b.racer_place_number === 2)?.racer_boat_number;
-        const third = boats.find((b: any) => b.racer_place_number === 3)?.racer_boat_number;
-
-        if (!first || !second || !third) {
-            throw new Error("Match not fully concluded (Missing place numbers).");
-        }
-
-        // Parse payouts (refunds in our old terminology, now payouts)
-        const apiPayouts = raceResult.payouts || {};
-        const payoutsData: any[] = [];
-        const refundedBoats: number[] = []; // 返還艇の番号
-
-        // Extract Returns/Refunds from API
-        // refunds are usually in raceResult.returns or similar, we check "returns" array
-        if (raceResult.returns && Array.isArray(raceResult.returns)) {
-            raceResult.returns.forEach((r: any) => {
-                if (r && typeof r.racer_boat_number === 'number') {
-                    refundedBoats.push(r.racer_boat_number);
-                }
-            });
-        }
-
-        // Map payouts to our format
-        // trifecta -> 3TR (3連単)
-        if (apiPayouts.trifecta && apiPayouts.trifecta.length > 0) {
-            apiPayouts.trifecta.forEach((p: any) => {
-                payoutsData.push({ type: "3TR", numbers: p.combination.replace(/-/g, '-'), amount: p.payout });
-            });
-        }
-        // trio -> 3PL (3連複)
-        if (apiPayouts.trio && apiPayouts.trio.length > 0) {
-            apiPayouts.trio.forEach((p: any) => {
-                payoutsData.push({ type: "3PL", numbers: p.combination.replace(/=/g, '-'), amount: p.payout });
-            });
-        }
-        // exacta -> 2TR (2連単)
-        if (apiPayouts.exacta && apiPayouts.exacta.length > 0) {
-            apiPayouts.exacta.forEach((p: any) => {
-                payoutsData.push({ type: "2TR", numbers: p.combination.replace(/-/g, '-'), amount: p.payout });
-            });
-        }
-        // quinella -> 2PL (2連複)
-        if (apiPayouts.quinella && apiPayouts.quinella.length > 0) {
-            apiPayouts.quinella.forEach((p: any) => {
-                payoutsData.push({ type: "2PL", numbers: p.combination.replace(/=/g, '-'), amount: p.payout });
-            });
-        }
-        // win -> WIN (単勝)
-        const win = apiPayouts.win && apiPayouts.win[0];
-        if (win) {
-            payoutsData.push({ type: "WIN", numbers: win.combination, amount: win.payout });
-        }
-
-        const savedResult = await prisma.raceResult.upsert({
+    // 3. DB保存（トランザクション）
+    await prisma.$transaction(async (tx) => {
+        await tx.raceResult.upsert({
             where: {
-                placeName_raceNumber_raceDate: {
-                    placeName,
-                    raceNumber,
-                    raceDate
-                }
+                placeName_raceNumber_raceDate: { placeName, raceNumber, raceDate }
             },
             update: {
-                firstPlace: first,
-                secondPlace: second,
-                thirdPlace: third,
-                payouts: payoutsData,
-                refunds: refundedBoats
+                firstPlace: resultData.first,
+                secondPlace: resultData.second,
+                thirdPlace: resultData.third,
+                payouts: resultData.payoutsData,
+                arrivals: resultData.arrivalsData || [],
+                refunds: resultData.refundedBoats,
             },
             create: {
-                placeName,
-                raceNumber,
-                raceDate,
-                firstPlace: first,
-                secondPlace: second,
-                thirdPlace: third,
-                payouts: payoutsData,
-                refunds: refundedBoats
+                placeName, raceNumber, raceDate,
+                firstPlace: resultData.first,
+                secondPlace: resultData.second,
+                thirdPlace: resultData.third,
+                payouts: resultData.payoutsData,
+                arrivals: resultData.arrivalsData || [],
+                refunds: resultData.refundedBoats,
             }
         });
 
-        return { success: true, result: savedResult };
-    } catch (e: any) {
-        console.error("[API Error] Failed to fetch and save result:", e);
-        return { success: false, error: e.message };
-    }
+        await tx.raceSchedule.updateMany({
+            where: { placeName, raceNumber, raceDate },
+            data: { resultSynced: true }
+        });
+
+        // Racer upsert
+        if (resultData.arrivalsData) {
+            for (const a of resultData.arrivalsData) {
+                if (a.racerNumber && a.racerName && a.racerName !== '選手情報なし') {
+                    await tx.racer.upsert({
+                        where: { racerNumber: a.racerNumber },
+                        update: { name: a.racerName.replace(/　/g, ' ').trim() },
+                        create: {
+                            racerNumber: a.racerNumber,
+                            name: a.racerName.replace(/　/g, ' ').trim(),
+                            grade: 'B1'
+                        }
+                    });
+                }
+            }
+        }
+    });
+
+    const trifectaPayout = resultData.payoutsData.find(p => p.type === '3TR')?.amount || 0;
+    const refundMsg = resultData.refundedBoats.length > 0 ? ` (返還: ${resultData.refundedBoats.join(',')})` : '';
+    console.log(`[SYNC] ✅ ${placeName} R${raceNumber}: 保存成功 (3連単: ${trifectaPayout.toLocaleString()}円)${refundMsg}`);
+
+    return { success: true, placeName, raceNumber, raceDate };
 }
 
-// Phase 51: Scraping-based Result Sync from boatrace.jp official site
 /**
- * Scrapes today's race results from boatrace.jp and saves them to the database.
- * Processes races one by one and saves results immediately to survive timeouts.
+ * 未同期の完了レース一覧を取得する（ディスパッチャー用）
+ */
+export async function getUnsyncedRaces(limit?: number) {
+    const now = new Date();
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+
+    // JST基準で当日の範囲を取得
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const todayStr = jstNow.toISOString().split('T')[0];
+    const todayStart = new Date(todayStr + 'T00:00:00.000Z');
+    const todayEnd = new Date(todayStr + 'T23:59:59.999Z');
+
+    return prisma.raceSchedule.findMany({
+        where: {
+            raceDate: { gte: todayStart, lte: todayEnd },
+            deadlineAt: { lt: tenMinutesAgo },
+            resultSynced: false,
+        },
+        orderBy: [{ deadlineAt: 'asc' }, { placeName: 'asc' }, { raceNumber: 'asc' }],
+        take: limit,
+    });
+}
+
+/**
+ * レガシー: バッチで結果を同期する（syncAndSaveSingleResult を使用）
+ * QStash 未導入時のフォールバック / 手動実行用
  */
 export async function syncTodayResults(options: { limit?: number } = {}) {
     try {
-        const now = new Date();
-        const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
-
-        // Get today's date in JST for DB query
-        const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-        const todayStr = jstNow.toISOString().split('T')[0];
-        const todayStart = new Date(todayStr + 'T00:00:00.000Z');
-        const todayEnd = new Date(todayStr + 'T23:59:59.999Z');
-
         const modeStr = options.limit ? `Batch limit: ${options.limit}` : "UNLIMITED (Manual)";
-        console.log(`[SCRAPE] Starting syncTodayResults (${modeStr})...`);
+        console.log(`[SYNC] Starting syncTodayResults (${modeStr})...`);
 
-        const targetRaces = await prisma.raceSchedule.findMany({
-            where: {
-                raceDate: { gte: todayStart, lte: todayEnd },
-                deadlineAt: { lt: tenMinutesAgo },
-                resultSynced: false,
-            },
-            orderBy: [{ deadlineAt: 'asc' }, { placeName: 'asc' }, { raceNumber: 'asc' }],
-            take: options.limit, // Apply limit if provided (for cron), otherwise no limit (for manual)
-        });
+        const targetRaces = await getUnsyncedRaces(options.limit);
 
         if (targetRaces.length === 0) {
-            console.log(`[SCRAPE] No unsycned completed races found.`);
+            console.log(`[SYNC] No unsynced completed races found.`);
             return { success: true, count: 0, processedRaces: [] };
         }
 
-        console.log(`[SCRAPE] Found ${targetRaces.length} races to process.`);
+        console.log(`[SYNC] Found ${targetRaces.length} races to process.`);
 
         let syncedCount = 0;
         const processedRaces: { placeName: string; raceNumber: number; raceDate: Date }[] = [];
 
-        // --- SCRAPE & SAVE LOOP ---
         for (let i = 0; i < targetRaces.length; i++) {
             const schedule = targetRaces[i];
             const progress = `[${i + 1}/${targetRaces.length}]`;
 
-            console.log(`${progress} ${schedule.placeName} R${schedule.raceNumber}: 取得開始...`);
-
-            const venue = VENUES.find(v => v.name === schedule.placeName);
-            if (!venue) {
-                console.warn(`${progress} ❌ エラー: 会場名不明 (${schedule.placeName})`);
-                continue;
-            }
-
-            const jstRaceDate = new Date(schedule.raceDate.getTime() + 9 * 60 * 60 * 1000);
-            const hdParam = jstRaceDate.toISOString().split('T')[0].replace(/-/g, '');
-            const url = `https://www.boatrace.jp/owpc/pc/race/raceresult?rno=${schedule.raceNumber}&jcd=${venue.id}&hd=${hdParam}`;
-
             try {
-                const res = await fetch(url, {
-                    cache: 'no-store',
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
-                });
-
-                if (!res.ok) {
-                    console.warn(`${progress} ❌ エラー: HTTP ${res.status}`);
-                    continue;
-                }
-
-                const html = await res.text();
-                const $ = cheerio.load(html);
-
-                // --- Parse Arrivals ---
-                const arrivalsData: { place: number; boatNumber: number; racerName: string; racerNumber: number | null }[] = [];
-                const resultTable = $('table.is-w495, table.is-w748').first();
-
-                let placeIndex = 0;
-                resultTable.find('tbody tr').each((_, row) => {
-                    const boatCell = $(row).find('td[class*="is-boatColor"]');
-                    if (boatCell.length === 0) return;
-
-                    placeIndex++;
-                    const boatNumber = parseInt(boatCell.text().trim(), 10);
-                    if (isNaN(boatNumber)) return;
-
-                    const nameSpan = $(row).find('span.is-fs18.is-fBold').first();
-                    const racerName = nameSpan.text().trim().replace(/\s+/g, '　') || '選手情報なし';
-                    const numberSpan = $(row).find('span.is-fs12').first();
-                    const racerNumberStr = numberSpan.text().trim();
-                    const racerNumber = racerNumberStr ? parseInt(racerNumberStr, 10) : null;
-
-                    arrivalsData.push({
-                        place: placeIndex,
-                        boatNumber,
-                        racerName,
-                        racerNumber: (racerNumber && !isNaN(racerNumber)) ? racerNumber : null,
-                    });
-                });
-
-                if (arrivalsData.length < 3) {
-                    console.warn(`${progress} ⏩ スキップ: 着順データ不足 (確定前?)`);
-                    continue;
-                }
-
-                const first = arrivalsData[0]?.boatNumber;
-                const second = arrivalsData[1]?.boatNumber;
-                const third = arrivalsData[2]?.boatNumber;
-
-                // --- Parse Payouts ---
-                const payoutsData: { type: string; numbers: string; amount: number }[] = [];
-                const betTypeMap: Record<string, string> = {
-                    '3連単': '3TR', '3連複': '3PL', '2連単': '2TR', '2連複': '2PL',
-                    '拡連複': 'WIDE', '単勝': 'WIN', '複勝': 'PLACE',
-                };
-
-                $('div.grid_unit tbody').each((_, tbody) => {
-                    const labelCell = $(tbody).find('td[rowspan]').first();
-                    const jaLabel = labelCell.text().trim();
-                    const betType = betTypeMap[jaLabel];
-                    if (!betType) return;
-
-                    $(tbody).find('tr.is-p3-0').each((_, row) => {
-                        const numberSpans = $(row).find('span.numberSet1_number');
-                        if (numberSpans.length === 0) return;
-
-                        const combination = numberSpans.map((_, s) => $(s).text().trim()).get().join('-');
-                        if (!combination) return;
-
-                        const payoutSpan = $(row).find('span.is-payout1').first();
-                        const payoutText = payoutSpan.text().trim();
-                        if (!payoutText || payoutText === '\u00a0') return;
-
-                        const amount = parseInt(payoutText.replace(/[¥,\s]/g, ''), 10);
-                        if (!isNaN(amount) && amount > 0) {
-                            payoutsData.push({ type: betType, numbers: combination, amount });
-                        }
-                    });
-                });
-
-                if (payoutsData.length === 0) {
-                    console.warn(`${progress} ⏩ スキップ: 払戻データなし`);
-                    continue;
-                }
-
-                // --- IMMEDIATE PERSISTENCE (ONE BY ONE) ---
-                const raceDate = schedule.raceDate;
-
-                // 1. Transaction to ensure result and schedule status are atomic
-                await prisma.$transaction(async (tx) => {
-                    // Update Payouts table
-                    await tx.raceResult.upsert({
-                        where: {
-                            placeName_raceNumber_raceDate: {
-                                placeName: schedule.placeName,
-                                raceNumber: schedule.raceNumber,
-                                raceDate
-                            }
-                        },
-                        update: {
-                            firstPlace: first,
-                            secondPlace: second,
-                            thirdPlace: third,
-                            payouts: payoutsData,
-                            arrivals: arrivalsData,
-                        },
-                        create: {
-                            placeName: schedule.placeName,
-                            raceNumber: schedule.raceNumber,
-                            raceDate,
-                            firstPlace: first,
-                            secondPlace: second,
-                            thirdPlace: third,
-                            payouts: payoutsData,
-                            arrivals: arrivalsData,
-                        }
-                    });
-
-                    // Update schedule status
-                    await tx.raceSchedule.update({
-                        where: { id: schedule.id },
-                        data: { resultSynced: true }
-                    });
-
-                    // 2. Upsert racers found in this race
-                    for (const a of arrivalsData) {
-                        if (a.racerNumber && a.racerName && a.racerName !== '選手情報なし') {
-                            await tx.racer.upsert({
-                                where: { racerNumber: a.racerNumber },
-                                update: { name: a.racerName.replace(/　/g, ' ').trim() },
-                                create: {
-                                    racerNumber: a.racerNumber,
-                                    name: a.racerName.replace(/　/g, ' ').trim(),
-                                    grade: 'B1' // Default if new
-                                }
-                            });
-                        }
-                    }
-                });
-
-                const trifectaPayout = payoutsData.find(p => p.type === '3TR')?.amount || 0;
-                console.log(`${progress} ✅ ${schedule.placeName} R${schedule.raceNumber}: 保存成功 (3連単: ${trifectaPayout.toLocaleString()}円)`);
-
+                console.log(`${progress} ${schedule.placeName} R${schedule.raceNumber}: 取得開始...`);
+                await syncAndSaveSingleResult(schedule.placeName, schedule.raceNumber, schedule.raceDate);
                 processedRaces.push({
                     placeName: schedule.placeName,
                     raceNumber: schedule.raceNumber,
-                    raceDate
+                    raceDate: schedule.raceDate
                 });
                 syncedCount++;
-
-            } catch (scrapeErr: any) {
-                console.error(`${progress} ❌ エラー (${schedule.placeName} R${schedule.raceNumber}):`, scrapeErr.message);
+            } catch (err: any) {
+                console.error(`${progress} ${schedule.placeName} R${schedule.raceNumber}: ${err.message}`);
             }
 
-            // Rate limiting: 500ms delay between requests to be polite
+            // Rate limiting: 500ms delay between requests
             if (i < targetRaces.length - 1) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
 
-        console.log(`[SCRAPE] 処理完了。同期数: ${syncedCount}/${targetRaces.length}`);
+        console.log(`[SYNC] 処理完了。同期数: ${syncedCount}/${targetRaces.length}`);
         return { success: true, count: syncedCount, processedRaces };
     } catch (e: any) {
-        console.error("[SCRAPE Error] syncTodayResults failed:", e);
+        console.error("[SYNC Error] syncTodayResults failed:", e);
         return { success: false, error: e.message };
     }
 }

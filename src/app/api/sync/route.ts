@@ -1,20 +1,16 @@
 import { NextResponse } from "next/server";
-import { syncTodaySchedule, syncOfficialGradeAndDay } from "@/lib/boatrace-api";
+import { syncTodaySchedule } from "@/lib/boatrace-api";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
     try {
-        // Simple authentication check using URL search params or Authorization header
-        // For cron jobs, Vercel allows passing a secure secret via a query parameter or header
         const { searchParams } = new URL(req.url);
         const secret = searchParams.get("secret");
         const authHeader = req.headers.get("authorization");
 
-        // Allow if secret matches CRON_SECRET or AUTH_SECRET
         const validSecret = process.env.CRON_SECRET || process.env.AUTH_SECRET;
 
-        // If a secret is configured but not provided, reject the request
         if (validSecret) {
             const isParamValid = secret === validSecret;
             const isHeaderValid = authHeader === `Bearer ${validSecret}`;
@@ -24,23 +20,19 @@ export async function GET(req: Request) {
             }
         }
 
-        console.log("[CRON] Starting daily sync job...");
+        console.log("[SYNC] Starting schedule sync (v3 API - grade/day included)...");
 
-        // 1. First, sync the schedule from the JSON API (Programs)
+        // v3 API で grade_label / day_label も含めて取得されるため、supplement-schedule は不要
         const scheduleResult = await syncTodaySchedule();
-
-        // 2. Second, scrape the official website for accurate Grade and Day data
-        const scrapeResult = await syncOfficialGradeAndDay();
 
         return NextResponse.json({
             success: true,
             schedule: scheduleResult,
-            scrape: scrapeResult,
             timestamp: new Date().toISOString()
         });
 
     } catch (error: any) {
-        console.error("[CRON] Sync failed:", error);
+        console.error("[SYNC] Failed:", error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }
