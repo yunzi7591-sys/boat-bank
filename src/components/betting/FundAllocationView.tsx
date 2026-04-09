@@ -20,9 +20,11 @@ const AmountInput = memo(function AmountInput({
     const inputRef = useRef<HTMLInputElement>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const raw = e.target.value.replace(/[^0-9]/g, '');
+        // 全角数字→半角に変換してから数字以外を除去
+        const normalized = e.target.value.replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0));
+        const raw = normalized.replace(/[^0-9]/g, '');
         setText(raw);
-        onAmountChange(parseInt(raw, 10) || 0);
+        onAmountChange((parseInt(raw, 10) || 0) * 100);
     };
 
     return (
@@ -40,7 +42,7 @@ const AmountInput = memo(function AmountInput({
                     spellCheck={false}
                     enterKeyHint="done"
                     value={text}
-                    placeholder="金額を入力"
+                    placeholder="0"
                     onChange={handleChange}
                     onFocus={() => {
                         // モバイルSafari対策: フォーカス時にスクロール位置を安定させる
@@ -56,7 +58,7 @@ const AmountInput = memo(function AmountInput({
                     }}
                     className="flex-1 font-bold text-slate-900 px-3 py-3 text-right bg-transparent rounded-lg appearance-none border-0 outline-none ring-0 focus:outline-none focus:ring-0 focus:border-0"
                 />
-                <span className="text-base font-bold text-slate-400 pr-3 whitespace-nowrap select-none">円</span>
+                <span className="text-base font-bold text-slate-400 pr-3 whitespace-nowrap select-none">00円</span>
             </div>
         </div>
     );
