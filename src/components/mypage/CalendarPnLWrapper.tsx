@@ -10,6 +10,7 @@ interface CalendarPnLWrapperProps {
     initialDailyPredictions: { [date: string]: DailyPredictionItem[] };
     currentYear: number;
     currentMonth: number;
+    fetchAction?: (year: number, month: number) => Promise<{ success: boolean; data: DailyPnLItem[]; dailyPredictions: { [date: string]: DailyPredictionItem[] } }>;
 }
 
 export function CalendarPnLWrapper({
@@ -18,6 +19,7 @@ export function CalendarPnLWrapper({
     initialDailyPredictions,
     currentYear,
     currentMonth,
+    fetchAction,
 }: CalendarPnLWrapperProps) {
     const [year, setYear] = useState(currentYear);
     const [month, setMonth] = useState(currentMonth);
@@ -29,7 +31,9 @@ export function CalendarPnLWrapper({
         setYear(newYear);
         setMonth(newMonth);
         startTransition(async () => {
-            const result = await fetchDailyStats(newYear, newMonth);
+            const result = fetchAction
+                ? await fetchAction(newYear, newMonth)
+                : await fetchDailyStats(newYear, newMonth);
             if (result.success) {
                 setDailyStats(result.data);
                 setDailyPredictions(result.dailyPredictions);
