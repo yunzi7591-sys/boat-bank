@@ -9,8 +9,8 @@ import { Label } from '@/components/ui/label';
 
 export function FundAllocationView() {
     const { activeBetType, selections, addFormationToCart } = useBetStore();
-    const [amount, setAmount] = useState(100);
-    const [inputValue, setInputValue] = useState("1");
+    const [amount, setAmount] = useState(0);
+    const [inputValue, setInputValue] = useState("0");
 
     const unrolled = useMemo(() => unrollCombinations(activeBetType, selections), [activeBetType, selections]);
 
@@ -68,16 +68,29 @@ export function FundAllocationView() {
                     <Label className="text-xs font-bold text-slate-500">1点あたりの金額</Label>
                     <div className="flex items-center gap-0 bg-white rounded-lg border border-slate-200 overflow-hidden">
                         <input
-                            ref={(el) => { if (el) el.setAttribute('inputmode', 'numeric'); }}
-                            type="number"
-                            min={0}
-                            value={amount}
-                            onChange={(e) => {
-                                const v = Math.max(0, Math.floor(Number(e.target.value)));
-                                setAmount(v);
-                                setInputValue(String(v));
+                            type="text"
+                            inputMode="decimal"
+                            pattern="[0-9]*"
+                            value={inputValue}
+                            placeholder="0"
+                            onFocus={(e) => {
+                                if (e.target.value === "0") {
+                                    setInputValue("");
+                                }
                             }}
-                            className="flex-1 text-xl font-bold text-slate-900 px-3 py-2 text-right border-none outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            onBlur={() => {
+                                if (inputValue === "" || inputValue === "0") {
+                                    setInputValue("0");
+                                    setAmount(0);
+                                }
+                            }}
+                            onChange={(e) => {
+                                const raw = e.target.value.replace(/[^0-9]/g, '');
+                                setInputValue(raw);
+                                const v = parseInt(raw, 10);
+                                setAmount(isNaN(v) ? 0 : v);
+                            }}
+                            className="flex-1 text-xl font-bold text-slate-900 px-3 py-2 text-right border-none outline-none bg-transparent"
                             style={{ fontSize: '20px' }}
                         />
                         <span className="text-base font-bold text-slate-400 pr-3 whitespace-nowrap">円</span>
