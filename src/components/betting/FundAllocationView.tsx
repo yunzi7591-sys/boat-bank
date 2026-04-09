@@ -96,8 +96,9 @@ export function FundAllocationView() {
                 </div>
 
                 <Button
-                    className="w-full font-bold bg-blue-600 hover:bg-blue-700 h-14 text-lg rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                    className="w-full font-bold bg-blue-600 hover:bg-blue-700 h-14 text-lg rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:shadow-none"
                     onClick={handleAddToCart}
+                    disabled={amount <= 0}
                 >
                     カートに追加
                 </Button>
