@@ -319,33 +319,19 @@ export function RaceHubClient({
                     </Link>
                 )}
 
-                {isFinished ? (
-                    <Card className="border shadow-sm opacity-50 grayscale border-slate-200">
+                <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=true`}>
+                    <Card className="border shadow-sm transition-transform hover:scale-[1.02] active:scale-95 border-slate-200 bg-white">
                         <CardContent className="p-5 flex items-center gap-4">
                             <div className="bg-slate-800 text-white w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm">
                                 <Lock className="w-5 h-5" />
                             </div>
                             <div>
-                                <h4 className="font-black text-slate-500 text-[15px] mb-0.5">自分の賭けを登録（非公開）</h4>
-                                <p className="text-[11px] font-bold text-slate-400 leading-snug">このレースは締め切りました</p>
+                                <h4 className="font-black text-slate-800 text-[15px] mb-0.5">自分の賭けを登録（非公開）</h4>
+                                <p className="text-[11px] font-bold text-slate-500 leading-snug">タイムラインには出さず、自身の収支ポートフォリオ用として保存します。</p>
                             </div>
                         </CardContent>
                     </Card>
-                ) : (
-                    <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=true`}>
-                        <Card className="border shadow-sm transition-transform hover:scale-[1.02] active:scale-95 border-slate-200 bg-white">
-                            <CardContent className="p-5 flex items-center gap-4">
-                                <div className="bg-slate-800 text-white w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm">
-                                    <Lock className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h4 className="font-black text-slate-800 text-[15px] mb-0.5">自分の賭けを登録（非公開）</h4>
-                                    <p className="text-[11px] font-bold text-slate-500 leading-snug">タイムラインには出さず、自身の収支ポートフォリオ用として保存します。</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </Link>
-                )}
+                </Link>
             </div>
 
             {/* Market Preview */}
