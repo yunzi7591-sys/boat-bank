@@ -78,7 +78,7 @@ export default async function MyPage() {
                         </div>
                         <div className="text-right">
                             <p className="text-slate-400 text-[10px] font-bold tracking-widest mb-0.5 uppercase">Available Balance</p>
-                            <p className="text-3xl font-light tracking-tight">{user.points.toLocaleString()} <span className="text-sm font-bold text-slate-400">pt</span></p>
+                            <p className="text-3xl font-light tracking-tight">{user.points.toLocaleString()} <span className="text-sm font-bold text-slate-400">円</span></p>
                         </div>
                     </div>
 
@@ -108,7 +108,7 @@ export default async function MyPage() {
                         <div className="text-right">
                             <p className="text-[10px] font-bold text-[#64748d] uppercase tracking-wider">収支</p>
                             <p className={`text-2xl font-light tabular-nums tracking-tight ${stats.totalRefund - stats.totalInvestment >= 0 ? 'text-[#533afd]' : 'text-[#ea2261]'}`}>
-                                {stats.totalRefund - stats.totalInvestment >= 0 ? '+' : ''}{(stats.totalRefund - stats.totalInvestment).toLocaleString()}<span className="text-xs ml-0.5">pt</span>
+                                {stats.totalRefund - stats.totalInvestment >= 0 ? '+' : ''}{(stats.totalRefund - stats.totalInvestment).toLocaleString()}<span className="text-xs ml-0.5">円</span>
                             </p>
                         </div>
                     </div>
@@ -117,11 +117,11 @@ export default async function MyPage() {
                     <div className="grid grid-cols-3 gap-3 pt-3 border-t border-[#e5edf5]">
                         <div>
                             <p className="text-[10px] text-[#64748d] font-bold">投資額</p>
-                            <p className="text-sm font-bold text-[#061b31] tabular-nums">{stats.totalInvestment.toLocaleString()}<span className="text-[10px] text-[#64748d] ml-0.5">pt</span></p>
+                            <p className="text-sm font-bold text-[#061b31] tabular-nums">{stats.totalInvestment.toLocaleString()}<span className="text-[10px] text-[#64748d] ml-0.5">円</span></p>
                         </div>
                         <div>
                             <p className="text-[10px] text-[#64748d] font-bold">回収額</p>
-                            <p className="text-sm font-bold text-[#061b31] tabular-nums">{stats.totalRefund.toLocaleString()}<span className="text-[10px] text-[#64748d] ml-0.5">pt</span></p>
+                            <p className="text-sm font-bold text-[#061b31] tabular-nums">{stats.totalRefund.toLocaleString()}<span className="text-[10px] text-[#64748d] ml-0.5">円</span></p>
                         </div>
                         <div>
                             <p className="text-[10px] text-[#64748d] font-bold">的中</p>
@@ -188,19 +188,19 @@ export default async function MyPage() {
                                                     <p className="text-xs text-neutral-400 mt-2">{new Date(pred.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</p>
                                                 </div>
                                                 <div className="text-right flex flex-col items-end gap-2">
-                                                    <span className="text-sm font-bold text-neutral-600">{pred.price} pt</span>
+                                                    <span className="text-sm font-bold text-neutral-600">{pred.price} 円</span>
 
                                                     {/* Result Badge */}
                                                     {!pred.isSettled ? (
                                                         <Badge variant="outline" className="text-[#64748d] border-[#e5edf5] bg-[#f6f8fa]">🕒 結果待ち</Badge>
                                                     ) : pred.isHit ? (
                                                         <Badge className="bg-[#15be53] text-white border-[#15be53] shadow-sm animate-pulse">
-                                                            🎯 的中 (+{pred.hitAmount || pred.refundAmount} pt)
+                                                            🎯 的中 (+{pred.hitAmount || pred.refundAmount} 円)
                                                         </Badge>
                                                     ) : pred.hitAmount && pred.hitAmount > 0 ? (
                                                         // Point gain without hit means full refund
                                                         <Badge className="bg-[#9b6829] text-white border-[#9b6829] shadow-sm">
-                                                            ↩️ 返還 (+{pred.hitAmount} pt)
+                                                            ↩️ 返還 (+{pred.hitAmount} 円)
                                                         </Badge>
                                                     ) : (
                                                         <Badge variant="secondary" className="text-neutral-600">❌ 不的中</Badge>
