@@ -90,11 +90,6 @@ export default async function MyPage() {
 
                     <div className="flex items-center gap-3">
                         <ProfileEditModal initialName={user.name || ""} initialBio={user.bio || ""} />
-                        <Link href={`/users/${userId}`}>
-                            <Button variant="ghost" size="sm" className="h-8 text-xs font-bold rounded-lg text-slate-300 hover:bg-white/[0.08] hover:text-white">
-                                公開プロフィールを確認
-                            </Button>
-                        </Link>
                     </div>
                 </div>
             </div>
