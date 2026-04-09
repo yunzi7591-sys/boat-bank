@@ -70,7 +70,9 @@ export function FundAllocationView() {
                         <Input
                             type="text"
                             inputMode="numeric"
+                            pattern="[0-9]*"
                             value={inputValue}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                                 const raw = e.target.value.replace(/[^0-9]/g, '');
                                 setInputValue(raw);
