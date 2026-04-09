@@ -67,11 +67,10 @@ export function FundAllocationView() {
                 <div className="flex flex-col gap-2">
                     <Label className="text-xs font-bold text-slate-500">1点あたりの金額</Label>
                     <div className="flex items-center gap-1">
-                        <Input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
+                        <input
+                            type="tel"
                             value={inputValue}
+                            placeholder="0"
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                                 const raw = e.target.value.replace(/[^0-9]/g, '');
@@ -79,7 +78,8 @@ export function FundAllocationView() {
                                 const v = parseInt(raw, 10);
                                 setAmount(isNaN(v) ? 0 : v * 100);
                             }}
-                            className="text-xl font-bold text-slate-900 border-slate-300 focus:ring-blue-500 w-24 text-right"
+                            className="text-xl font-bold text-slate-900 border border-slate-300 rounded-md px-3 py-2 w-24 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            style={{ fontSize: '20px' }}
                         />
                         <span className="text-lg font-bold text-slate-400 whitespace-nowrap">00 円</span>
                     </div>
