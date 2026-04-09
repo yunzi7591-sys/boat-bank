@@ -110,9 +110,9 @@ export function RaceHubClient({
                                 onClick={() => handleTabClick(rNum)}
                                 className="snap-center shrink-0 cursor-pointer focus:outline-none"
                             >
-                                <div className={`flex flex-col items-center justify-center w-[54px] h-[58px] rounded-xl border-2 transition-all duration-200 ${isActive ? 'border-blue-600 bg-blue-50 shadow-md scale-105' : 'border-slate-100 bg-white opacity-80 hover:bg-slate-50'
+                                <div className={`flex flex-col items-center justify-center w-[54px] h-[58px] rounded-xl border-2 transition-all duration-200 ${isActive ? 'border-blue-600 bg-blue-50 shadow-md scale-105' : rFinished ? 'border-slate-100 bg-slate-50 opacity-50' : 'border-slate-100 bg-white opacity-80 hover:bg-slate-50'
                                     }`}>
-                                    <span className={`text-[15px] font-black ${isActive ? 'text-blue-900' : 'text-slate-700'}`}>
+                                    <span className={`text-[15px] font-black ${isActive ? 'text-blue-900' : rFinished ? 'text-slate-300' : 'text-slate-700'}`}>
                                         {rNum}
                                         <span className="text-[10px] ml-[1px]">R</span>
                                     </span>
