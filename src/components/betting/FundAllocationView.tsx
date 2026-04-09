@@ -4,7 +4,6 @@ import { useBetStore } from '@/store/bet-store';
 import { Button } from '@/components/ui/button';
 import { unrollCombinations, BetType, BOAT_COLORS } from '@/lib/bet-logic';
 import { useMemo, useState } from 'react';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export function FundAllocationView() {
@@ -58,16 +57,17 @@ export function FundAllocationView() {
             <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
                     <Label className="text-xs font-bold text-slate-500">1点あたりの金額</Label>
-                    <div className="flex items-center gap-0 bg-white rounded-lg border border-slate-200 overflow-hidden">
+                    <div className="flex items-center gap-0 bg-white rounded-lg border border-slate-200">
                         <input
                             type="text"
                             inputMode="numeric"
                             pattern="[0-9]*"
+                            autoComplete="off"
                             value={text}
                             placeholder="金額を入力"
                             onChange={(e) => setText(e.target.value.replace(/[^0-9]/g, ''))}
-                            className="flex-1 text-xl font-bold text-slate-900 px-3 py-2 text-right border-none outline-none bg-transparent"
-                            style={{ fontSize: '20px' }}
+                            className="flex-1 font-bold text-slate-900 px-3 py-2 text-right border-none outline-none bg-transparent rounded-lg"
+                            style={{ fontSize: '16px' }}
                         />
                         <span className="text-base font-bold text-slate-400 pr-3 whitespace-nowrap">円</span>
                     </div>
