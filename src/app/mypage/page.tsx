@@ -141,8 +141,8 @@ export default async function MyPage() {
                 <Link href="/mypage/venues">
                     <div className="bg-white border border-[#e5edf5] rounded-lg p-4 flex items-center justify-between" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
                         <div>
-                            <h3 className="text-sm font-bold text-[#061b31]">場別回収率</h3>
-                            <p className="text-xs text-[#64748d] mt-0.5">24場の成績を確認</p>
+                            <h3 className="text-sm font-bold text-[#061b31]">詳細成績</h3>
+                            <p className="text-xs text-[#64748d] mt-0.5">24場の回収率・収支を確認</p>
                         </div>
                         <ChevronRight className="w-5 h-5 text-[#64748d]" />
                     </div>
