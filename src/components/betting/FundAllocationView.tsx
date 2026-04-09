@@ -2,14 +2,69 @@
 
 import { useBetStore } from '@/store/bet-store';
 import { Button } from '@/components/ui/button';
-import { unrollCombinations, BetType, BOAT_COLORS } from '@/lib/bet-logic';
-import { useMemo, useState } from 'react';
+import { unrollCombinations, BOAT_COLORS } from '@/lib/bet-logic';
+import { memo, useMemo, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
+
+/**
+ * 金額入力だけを担当する子コンポーネント。
+ * selections / activeBetType を subscribe しないので、
+ * マークシート操作時に再レンダーされず input のフォーカスが維持される。
+ */
+const AmountInput = memo(function AmountInput({
+    onAmountChange,
+}: {
+    onAmountChange: (amount: number) => void;
+}) {
+    const [text, setText] = useState("");
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value.replace(/[^0-9]/g, '');
+        setText(raw);
+        onAmountChange(parseInt(raw, 10) || 0);
+    };
+
+    return (
+        <div className="flex flex-col gap-2">
+            <Label className="text-xs font-bold text-slate-500">1点あたりの金額</Label>
+            <div className="flex items-center gap-0 bg-white rounded-lg border border-slate-200">
+                <input
+                    ref={inputRef}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    enterKeyHint="done"
+                    value={text}
+                    placeholder="金額を入力"
+                    onChange={handleChange}
+                    onFocus={() => {
+                        // モバイルSafari対策: フォーカス時にスクロール位置を安定させる
+                        setTimeout(() => {
+                            inputRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                        }, 300);
+                    }}
+                    style={{
+                        fontSize: '16px',       // iOS Safari の auto-zoom を防止
+                        touchAction: 'manipulation',
+                        WebkitUserSelect: 'text',
+                        userSelect: 'text',
+                    }}
+                    className="flex-1 font-bold text-slate-900 px-3 py-3 text-right bg-transparent rounded-lg appearance-none border-0 outline-none ring-0 focus:outline-none focus:ring-0 focus:border-0"
+                />
+                <span className="text-base font-bold text-slate-400 pr-3 whitespace-nowrap select-none">円</span>
+            </div>
+        </div>
+    );
+});
 
 export function FundAllocationView() {
     const { activeBetType, selections, addFormationToCart } = useBetStore();
-    const [text, setText] = useState("");
-    const amount = parseInt(text, 10) || 0;
+    const [amount, setAmount] = useState(0);
 
     const unrolled = useMemo(() => unrollCombinations(activeBetType, selections), [activeBetType, selections]);
 
@@ -23,7 +78,7 @@ export function FundAllocationView() {
 
     const handleAddToCart = () => {
         addFormationToCart(amount);
-    }
+    };
 
     return (
         <div className="w-full mt-6 flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
@@ -55,28 +110,7 @@ export function FundAllocationView() {
             </div>
 
             <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                    <Label className="text-xs font-bold text-slate-500">1点あたりの金額</Label>
-                    <div className="flex items-center gap-0 bg-white rounded-lg border border-slate-200">
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            autoComplete="off"
-                            value={text}
-                            placeholder="金額を入力"
-                            onChange={(e) => setText(e.target.value.replace(/[^0-9]/g, ''))}
-                            className="flex-1 text-base font-bold text-slate-900 px-3 py-3 text-right border-none outline-none bg-transparent rounded-lg"
-                        />
-                        <span className="text-base font-bold text-slate-400 pr-3 whitespace-nowrap">円</span>
-                    </div>
-                    <div className="flex gap-2 mt-1">
-                        <Button variant="outline" size="sm" onClick={() => setText(String(amount + 100))} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+100</Button>
-                        <Button variant="outline" size="sm" onClick={() => setText(String(amount + 500))} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+500</Button>
-                        <Button variant="outline" size="sm" onClick={() => setText(String(amount + 1000))} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+1000</Button>
-                        <Button variant="default" size="sm" onClick={() => setText("")} className="flex-1 text-xs font-bold bg-slate-800 text-white hover:bg-slate-700">C</Button>
-                    </div>
-                </div>
+                <AmountInput onAmountChange={setAmount} />
 
                 <div className="flex justify-between items-center py-2 px-1">
                     <span className="text-sm font-bold text-slate-500">合計ベット額</span>
