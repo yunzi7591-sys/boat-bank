@@ -64,67 +64,36 @@ export function FundAllocationView() {
             </div>
 
             <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col gap-4">
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
                     <Label className="text-xs font-bold text-slate-500">1点あたりの金額</Label>
-                    <div className="flex items-baseline justify-center gap-1 bg-slate-50 rounded-lg py-3 px-4 border border-slate-200">
-                        <span className="text-3xl font-black text-slate-900 tabular-nums tracking-tight">
-                            {inputValue || "0"}
-                        </span>
-                        <span className="text-xl font-bold text-slate-400">00</span>
-                        <span className="text-base font-bold text-slate-400 ml-1">円</span>
+                    <div className="flex items-center gap-0 bg-white rounded-lg border border-slate-200 overflow-hidden">
+                        <input
+                            ref={(el) => { if (el) el.setAttribute('inputmode', 'numeric'); }}
+                            type="number"
+                            min={0}
+                            value={amount}
+                            onChange={(e) => {
+                                const v = Math.max(0, Math.floor(Number(e.target.value)));
+                                setAmount(v);
+                                setInputValue(String(v));
+                            }}
+                            className="flex-1 text-xl font-bold text-slate-900 px-3 py-2 text-right border-none outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            style={{ fontSize: '20px' }}
+                        />
+                        <span className="text-base font-bold text-slate-400 pr-3 whitespace-nowrap">円</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-1.5">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                            <button
-                                key={n}
-                                onClick={() => {
-                                    const next = inputValue + String(n);
-                                    setInputValue(next);
-                                    setAmount(parseInt(next, 10) * 100);
-                                }}
-                                className="h-11 rounded-lg bg-white border border-slate-200 text-lg font-bold text-slate-800 active:bg-slate-100 active:scale-95 transition-all"
-                            >
-                                {n}
-                            </button>
-                        ))}
-                        <button
-                            onClick={() => {
-                                const next = inputValue + "0";
-                                if (inputValue.length > 0) {
-                                    setInputValue(next);
-                                    setAmount(parseInt(next, 10) * 100);
-                                }
-                            }}
-                            className="h-11 rounded-lg bg-white border border-slate-200 text-lg font-bold text-slate-800 active:bg-slate-100 active:scale-95 transition-all"
-                        >
-                            0
-                        </button>
-                        <button
-                            onClick={() => {
-                                const next = inputValue.slice(0, -1);
-                                setInputValue(next);
-                                const v = parseInt(next, 10);
-                                setAmount(isNaN(v) ? 0 : v * 100);
-                            }}
-                            className="h-11 rounded-lg bg-slate-100 border border-slate-200 text-lg font-bold text-slate-500 active:bg-slate-200 active:scale-95 transition-all"
-                        >
-                            ←
-                        </button>
-                        <button
-                            onClick={() => {
-                                setInputValue("");
-                                setAmount(0);
-                            }}
-                            className="h-11 rounded-lg bg-slate-800 border border-slate-700 text-lg font-bold text-white active:bg-slate-700 active:scale-95 transition-all"
-                        >
-                            C
-                        </button>
+                    <div className="flex gap-2 mt-1">
+                        <Button variant="outline" size="sm" onClick={() => { setAmount(p => { const n = p + 100; setInputValue(String(n)); return n; }); }} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+100</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setAmount(p => { const n = p + 500; setInputValue(String(n)); return n; }); }} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+500</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setAmount(p => { const n = p + 1000; setInputValue(String(n)); return n; }); }} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+1000</Button>
+                        <Button variant="default" size="sm" onClick={() => { setAmount(0); setInputValue("0"); }} className="flex-1 text-xs font-bold bg-slate-800 text-white hover:bg-slate-700">C</Button>
                     </div>
                 </div>
 
                 <div className="flex justify-between items-center py-2 px-1">
                     <span className="text-sm font-bold text-slate-500">合計ベット額</span>
                     <span className="text-2xl font-black text-blue-700 tracking-tight">{(unrolled.length * amount).toLocaleString()}<span className="text-sm font-bold ml-0.5">円</span></span>
+                    <span className="text-xs text-slate-400 ml-1">({unrolled.length}点 × {amount.toLocaleString()}円)</span>
                 </div>
 
                 <Button
