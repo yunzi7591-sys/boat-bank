@@ -193,6 +193,66 @@ export async function getUserVenueStatsWithPeriod(
     });
 }
 
+// --- Daily predictions (per-race detail) ---
+
+export interface DailyPredictionItem {
+    placeName: string;
+    raceNumber: number;
+    betAmount: number;
+    hitAmount: number;
+    isSettled: boolean;
+    isHit: boolean;
+}
+
+/**
+ * 指定月の日ごとの予想一覧を返す（レース単位の詳細）
+ */
+export async function getUserDailyPredictions(
+    userId: string,
+    year: number,
+    month: number
+): Promise<{ [date: string]: DailyPredictionItem[] }> {
+    const gte = new Date(Date.UTC(year, month - 1, 1));
+    const lt = new Date(Date.UTC(year, month, 1));
+
+    const predictions = await prisma.prediction.findMany({
+        where: {
+            authorId: userId,
+            raceDate: { gte, lt },
+        },
+        select: {
+            raceDate: true,
+            placeName: true,
+            raceNumber: true,
+            betAmount: true,
+            hitAmount: true,
+            refundAmount: true,
+            isSettled: true,
+            isHit: true,
+        },
+        orderBy: [{ raceDate: "asc" }, { placeName: "asc" }, { raceNumber: "asc" }],
+    });
+
+    const result: { [date: string]: DailyPredictionItem[] } = {};
+
+    for (const pred of predictions) {
+        const dateStr = pred.raceDate.toISOString().slice(0, 10);
+        if (!result[dateStr]) {
+            result[dateStr] = [];
+        }
+        result[dateStr].push({
+            placeName: pred.placeName,
+            raceNumber: pred.raceNumber,
+            betAmount: pred.betAmount || 0,
+            hitAmount: pred.isSettled ? (pred.hitAmount || pred.refundAmount || 0) : 0,
+            isSettled: pred.isSettled,
+            isHit: pred.isHit,
+        });
+    }
+
+    return result;
+}
+
 // --- Calendar stats ---
 
 export interface DailyPnL {

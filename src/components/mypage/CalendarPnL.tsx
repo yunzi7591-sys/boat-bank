@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -13,17 +13,18 @@ interface DailyPnLItem {
   predictions: number;
 }
 
-interface MonthlyPnLItem {
-  month: string; // "2026-01"
-  investment: number;
-  refund: number;
-  pnl: number;
-  predictions: number;
+interface DailyPredictionItem {
+  placeName: string;
+  raceNumber: number;
+  betAmount: number;
+  hitAmount: number;
+  isSettled: boolean;
+  isHit: boolean;
 }
 
 interface CalendarPnLProps {
   dailyStats: DailyPnLItem[];
-  monthlyPnL: MonthlyPnLItem[];
+  dailyPredictions: { [date: string]: DailyPredictionItem[] };
   currentYear: number;
   currentMonth: number; // 1-12
   onMonthChange?: (year: number, month: number) => void;
@@ -54,17 +55,15 @@ function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
-/** Build calendar grid: 6 weeks x 7 days */
+/** Build calendar grid: enough weeks to cover the month */
 function buildCalendarDays(year: number, month: number) {
   const firstDay = new Date(year, month - 1, 1);
   const startDow = firstDay.getDay(); // 0=Sun
   const daysInMonth = new Date(year, month, 0).getDate();
 
-  // Start from the Sunday of the week containing the 1st
   const startDate = new Date(year, month - 1, 1 - startDow);
 
   const days: { date: Date; inMonth: boolean }[] = [];
-  // Always show enough rows to cover the month (max 6 weeks)
   const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
 
   for (let i = 0; i < totalCells; i++) {
@@ -129,10 +128,14 @@ function CalendarGrid({
   year,
   month,
   dailyMap,
+  selectedDate,
+  onDateClick,
 }: {
   year: number;
   month: number;
   dailyMap: Map<string, DailyPnLItem>;
+  selectedDate: string | null;
+  onDateClick: (dateKey: string) => void;
 }) {
   const today = new Date();
   const days = useMemo(() => buildCalendarDays(year, month), [year, month]);
@@ -159,15 +162,20 @@ function CalendarGrid({
           const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
           const stat = dailyMap.get(key);
           const isToday = isSameDay(date, today);
+          const isSelected = selectedDate === key;
           const dow = date.getDay();
 
           return (
-            <div
+            <button
+              type="button"
               key={key}
+              onClick={() => {
+                if (inMonth) onDateClick(key);
+              }}
               className={`
-                relative flex flex-col items-center py-1.5 min-h-[48px] rounded-md text-center
-                ${isToday ? "border-2 border-[#533afd]" : "border border-transparent"}
-                ${!inMonth ? "opacity-30" : ""}
+                relative flex flex-col items-center py-1.5 min-h-[48px] rounded-md text-center transition-colors
+                ${isSelected ? "bg-[#533afd]/10 border-2 border-[#533afd]" : isToday ? "border-2 border-[#533afd]" : "border border-transparent"}
+                ${!inMonth ? "opacity-30 cursor-default" : "cursor-pointer hover:bg-[#f1f5f9]"}
               `}
             >
               <span
@@ -196,9 +204,106 @@ function CalendarGrid({
                   {formatCompactCurrency(stat.pnl)}
                 </span>
               )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DailyDetail({
+  dateKey,
+  month,
+  predictions,
+}: {
+  dateKey: string;
+  month: number;
+  predictions: DailyPredictionItem[];
+}) {
+  const day = parseInt(dateKey.split("-")[2], 10);
+
+  if (predictions.length === 0) {
+    return (
+      <div className="mt-3 bg-[#f8fafc] rounded-lg p-4 text-center text-sm text-[#64748d]">
+        {month}月{day}日 — この日の予想はありません
+      </div>
+    );
+  }
+
+  const total = predictions.reduce((sum, p) => {
+    if (!p.isSettled) return sum;
+    return sum + (p.hitAmount - p.betAmount);
+  }, 0);
+
+  return (
+    <div className="mt-3 bg-[#f8fafc] rounded-lg p-4">
+      <div className="text-xs font-bold text-[#061b31] mb-2">
+        {month}月{day}日の結果
+      </div>
+      <div className="border-t border-[#e5edf5]" />
+
+      <div className="mt-2 space-y-1.5">
+        {predictions.map((p, i) => {
+          const pnl = p.hitAmount - p.betAmount;
+          // Determine if this is a refund (settled, not hit, but hitAmount > 0)
+          const isRefund = p.isSettled && !p.isHit && p.hitAmount > 0;
+
+          let textColor = "text-[#94a3b8]"; // default grey for miss
+          let label = "";
+
+          if (!p.isSettled) {
+            textColor = "text-[#94a3b8]";
+            label = "結果待ち";
+          } else if (p.isHit) {
+            textColor = "text-[#533afd]";
+            label = "的中";
+          } else if (isRefund) {
+            textColor = "text-[#ca8a04]";
+            label = "返還";
+          }
+
+          const pnlDisplay = p.isSettled
+            ? `${pnl >= 0 ? "+" : ""}${formatCurrency(pnl)}円`
+            : "";
+
+          return (
+            <div key={`${p.placeName}-${p.raceNumber}-${i}`} className="flex items-center justify-between text-xs">
+              <span className={`font-bold ${textColor}`}>
+                {p.placeName} {p.raceNumber}R
+              </span>
+              <span className={`font-bold ${textColor}`}>
+                {!p.isSettled ? (
+                  <span className="text-[10px] text-[#94a3b8]">結果待ち</span>
+                ) : (
+                  <>
+                    {pnlDisplay}
+                    {label && (
+                      <span className="ml-1.5 text-[10px]">{label}</span>
+                    )}
+                  </>
+                )}
+              </span>
             </div>
           );
         })}
+      </div>
+
+      <div className="border-t border-[#e5edf5] mt-2 pt-2">
+        <div className="flex items-center justify-between text-xs font-black">
+          <span className="text-[#061b31]">合計</span>
+          <span
+            className={
+              total > 0
+                ? "text-[#533afd]"
+                : total < 0
+                  ? "text-[#ea2261]"
+                  : "text-[#64748d]"
+            }
+          >
+            {total >= 0 ? "+" : ""}{formatCurrency(total)}円
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -222,7 +327,7 @@ function MonthlySummary({
   }, [dailyStats]);
 
   return (
-    <div className="mt-4 bg-[#f8fafc] rounded-lg p-3">
+    <div className="mb-4 bg-[#f8fafc] rounded-lg p-3">
       <div className="text-[10px] font-bold text-[#64748d] mb-2">月間サマリー</div>
       <div className="grid grid-cols-2 gap-2">
         <SummaryCell label="投資額" value={`¥${formatCurrency(totals.investment)}`} />
@@ -256,74 +361,17 @@ function SummaryCell({ label, value }: { label: string; value: string }) {
   );
 }
 
-function YearlySummary({
-  monthlyPnL,
-  currentYear,
-}: {
-  monthlyPnL: MonthlyPnLItem[];
-  currentYear: number;
-}) {
-  // Build a map for quick lookup
-  const monthMap = useMemo(() => {
-    const m = new Map<string, MonthlyPnLItem>();
-    for (const item of monthlyPnL) {
-      m.set(item.month, item);
-    }
-    return m;
-  }, [monthlyPnL]);
-
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-
-  return (
-    <div className="mt-4">
-      <div className="text-[10px] font-bold text-[#64748d] mb-2">
-        {currentYear}年 月別収支
-      </div>
-      <div className="grid grid-cols-3 gap-1.5">
-        {months.map((m) => {
-          const key = `${currentYear}-${String(m).padStart(2, "0")}`;
-          const item = monthMap.get(key);
-          const pnl = item?.pnl ?? 0;
-          const hasPredictions = (item?.predictions ?? 0) > 0;
-
-          return (
-            <div
-              key={m}
-              className="bg-white border border-[#e5edf5] rounded-lg p-2 text-center"
-            >
-              <div className="text-[10px] font-bold text-[#64748d]">{m}月</div>
-              <div
-                className={`text-xs font-black mt-0.5 ${
-                  !hasPredictions
-                    ? "text-[#c0c8d4]"
-                    : pnl > 0
-                      ? "text-[#533afd]"
-                      : pnl < 0
-                        ? "text-[#ea2261]"
-                        : "text-[#64748d]"
-                }`}
-              >
-                {hasPredictions
-                  ? `${pnl >= 0 ? "+" : ""}¥${formatCurrency(Math.abs(pnl))}`
-                  : "-"}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function CalendarPnL({
   dailyStats,
-  monthlyPnL,
+  dailyPredictions,
   currentYear,
   currentMonth,
   onMonthChange,
 }: CalendarPnLProps) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
   const dailyMap = useMemo(() => {
     const m = new Map<string, DailyPnLItem>();
     for (const item of dailyStats) {
@@ -331,6 +379,10 @@ export function CalendarPnL({
     }
     return m;
   }, [dailyStats]);
+
+  function handleDateClick(dateKey: string) {
+    setSelectedDate((prev) => (prev === dateKey ? null : dateKey));
+  }
 
   return (
     <div className="bg-white border border-[#e5edf5] rounded-lg p-4">
@@ -340,20 +392,25 @@ export function CalendarPnL({
         onMonthChange={onMonthChange}
       />
 
+      <MonthlySummary dailyStats={dailyStats} />
+
       <CalendarGrid
         year={currentYear}
         month={currentMonth}
         dailyMap={dailyMap}
+        selectedDate={selectedDate}
+        onDateClick={handleDateClick}
       />
 
-      <MonthlySummary dailyStats={dailyStats} />
-
-      <YearlySummary
-        monthlyPnL={monthlyPnL}
-        currentYear={currentYear}
-      />
+      {selectedDate && (
+        <DailyDetail
+          dateKey={selectedDate}
+          month={currentMonth}
+          predictions={dailyPredictions[selectedDate] ?? []}
+        />
+      )}
     </div>
   );
 }
 
-export type { CalendarPnLProps, DailyPnLItem, MonthlyPnLItem };
+export type { CalendarPnLProps, DailyPnLItem, DailyPredictionItem };

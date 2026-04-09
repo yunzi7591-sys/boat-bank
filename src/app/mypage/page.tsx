@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getUserStats, getUserDailyStats, getUserMonthlyPnL } from "@/lib/stats";
+import { getUserStats, getUserDailyStats, getUserDailyPredictions } from "@/lib/stats";
 import { CalendarPnLWrapper } from "@/components/mypage/CalendarPnLWrapper";
 import { notFound, redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,9 +34,9 @@ export default async function MyPage() {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
-    const [dailyStats, monthlyPnL] = await Promise.all([
+    const [dailyStats, dailyPredictions] = await Promise.all([
         getUserDailyStats(userId, currentYear, currentMonth),
-        getUserMonthlyPnL(userId, currentYear),
+        getUserDailyPredictions(userId, currentYear, currentMonth),
     ]);
 
     // 2. Get Published Predictions
@@ -154,7 +154,7 @@ export default async function MyPage() {
                 <CalendarPnLWrapper
                     userId={userId}
                     initialDailyStats={dailyStats}
-                    monthlyPnL={monthlyPnL}
+                    initialDailyPredictions={dailyPredictions}
                     currentYear={currentYear}
                     currentMonth={currentMonth}
                 />
