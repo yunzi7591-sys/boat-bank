@@ -60,28 +60,33 @@ export function FundAllocationView() {
 
             <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                    <Label className="text-xs font-bold text-slate-500">1点あたりの金額 (pt)</Label>
-                    <div className="flex gap-2">
+                    <Label className="text-xs font-bold text-slate-500">1点あたりの金額</Label>
+                    <div className="flex items-center gap-1">
                         <Input
                             type="number"
-                            min={100}
-                            step={100}
-                            value={amount}
-                            onChange={(e) => setAmount(Number(e.target.value))}
-                            className="text-lg font-bold text-slate-900 border-slate-300 focus:ring-blue-500"
+                            min={1}
+                            step={1}
+                            value={amount / 100}
+                            onChange={(e) => {
+                                const v = Math.max(0, Math.floor(Number(e.target.value)));
+                                setAmount(v * 100);
+                            }}
+                            className="text-xl font-bold text-slate-900 border-slate-300 focus:ring-blue-500 w-24 text-right"
                         />
+                        <span className="text-lg font-bold text-slate-400 whitespace-nowrap">00 円</span>
                     </div>
                     <div className="flex gap-2 mt-1">
-                        <Button variant="outline" size="sm" onClick={() => handleAddAmount(100)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+100</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleAddAmount(500)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+500</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleAddAmount(1000)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+1000</Button>
-                        <Button variant="default" size="sm" onClick={() => setAmount(100)} className="flex-1 text-xs font-bold bg-slate-800 text-white hover:bg-slate-700">クリア</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleAddAmount(100)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+1</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleAddAmount(500)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+5</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleAddAmount(1000)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+10</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleAddAmount(5000)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+50</Button>
+                        <Button variant="default" size="sm" onClick={() => setAmount(100)} className="flex-1 text-xs font-bold bg-slate-800 text-white hover:bg-slate-700">C</Button>
                     </div>
                 </div>
 
                 <div className="flex justify-between items-center py-2 px-1">
                     <span className="text-sm font-bold text-slate-500">合計ベット額</span>
-                    <span className="text-2xl font-black text-blue-700 tracking-tight">{(unrolled.length * amount).toLocaleString()} <span className="text-sm font-bold">pt</span></span>
+                    <span className="text-2xl font-black text-blue-700 tracking-tight">{(unrolled.length * amount).toLocaleString()}<span className="text-sm font-bold ml-0.5">円</span></span>
                 </div>
 
                 <Button
