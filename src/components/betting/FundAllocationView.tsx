@@ -3,19 +3,14 @@
 import { useBetStore } from '@/store/bet-store';
 import { Button } from '@/components/ui/button';
 import { unrollCombinations, BetType, BOAT_COLORS } from '@/lib/bet-logic';
-import { useMemo, useState, useRef, useCallback } from 'react';
+import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export function FundAllocationView() {
     const { activeBetType, selections, addFormationToCart } = useBetStore();
-    const [amount, setAmount] = useState(0);
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    const syncInput = useCallback((val: number) => {
-        setAmount(val);
-        if (inputRef.current) inputRef.current.value = val === 0 ? "" : String(val);
-    }, []);
+    const [text, setText] = useState("");
+    const amount = parseInt(text, 10) || 0;
 
     const unrolled = useMemo(() => unrollCombinations(activeBetType, selections), [activeBetType, selections]);
 
@@ -65,28 +60,22 @@ export function FundAllocationView() {
                     <Label className="text-xs font-bold text-slate-500">1点あたりの金額</Label>
                     <div className="flex items-center gap-0 bg-white rounded-lg border border-slate-200 overflow-hidden">
                         <input
-                            ref={inputRef}
                             type="text"
                             inputMode="numeric"
                             pattern="[0-9]*"
-                            defaultValue=""
+                            value={text}
                             placeholder="金額を入力"
-                            onChange={(e) => {
-                                const raw = e.target.value.replace(/[^0-9]/g, '');
-                                if (raw !== e.target.value) e.target.value = raw;
-                                const v = parseInt(raw, 10);
-                                setAmount(isNaN(v) ? 0 : v);
-                            }}
+                            onChange={(e) => setText(e.target.value.replace(/[^0-9]/g, ''))}
                             className="flex-1 text-xl font-bold text-slate-900 px-3 py-2 text-right border-none outline-none bg-transparent"
                             style={{ fontSize: '20px' }}
                         />
                         <span className="text-base font-bold text-slate-400 pr-3 whitespace-nowrap">円</span>
                     </div>
                     <div className="flex gap-2 mt-1">
-                        <Button variant="outline" size="sm" onClick={() => syncInput(amount + 100)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+100</Button>
-                        <Button variant="outline" size="sm" onClick={() => syncInput(amount + 500)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+500</Button>
-                        <Button variant="outline" size="sm" onClick={() => syncInput(amount + 1000)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+1000</Button>
-                        <Button variant="default" size="sm" onClick={() => syncInput(0)} className="flex-1 text-xs font-bold bg-slate-800 text-white hover:bg-slate-700">C</Button>
+                        <Button variant="outline" size="sm" onClick={() => setText(String(amount + 100))} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+100</Button>
+                        <Button variant="outline" size="sm" onClick={() => setText(String(amount + 500))} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+500</Button>
+                        <Button variant="outline" size="sm" onClick={() => setText(String(amount + 1000))} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+1000</Button>
+                        <Button variant="default" size="sm" onClick={() => setText("")} className="flex-1 text-xs font-bold bg-slate-800 text-white hover:bg-slate-700">C</Button>
                     </div>
                 </div>
 
