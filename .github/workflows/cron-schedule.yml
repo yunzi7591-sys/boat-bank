@@ -2,7 +2,7 @@ name: Daily Schedule Sync
 
 on:
   schedule:
-    # 23:00 UTC = 08:00 JST - バックアップ用（メインは外部Cronサービス）
+    # 23:00 UTC = 08:00 JST
     - cron: '0 23 * * *'
   workflow_dispatch:
 
@@ -10,7 +10,33 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Sync today's race schedule (v3 API)
+      - name: Sync schedule in chunks
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE_URL: https://boat-bank.vercel.app
         run: |
-          curl -s --fail -X GET "https://boat-bank.vercel.app/api/cron/schedule" \
-          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          OFFSET=0
+          LIMIT=20
+          while true; do
+            echo ">>> Fetching offset=$OFFSET limit=$LIMIT"
+            RESPONSE=$(curl -s --max-time 15 \
+              "$BASE_URL/api/cron/schedule?offset=$OFFSET&limit=$LIMIT" \
+              -H "Authorization: Bearer $CRON_SECRET")
+            echo "$RESPONSE"
+
+            DONE=$(echo "$RESPONSE" | jq -r '.done // "true"')
+            SUCCESS=$(echo "$RESPONSE" | jq -r '.success // "false"')
+
+            if [ "$DONE" = "true" ] || [ "$SUCCESS" = "false" ]; then
+              echo ">>> Finished (done=$DONE, success=$SUCCESS)"
+              break
+            fi
+
+            OFFSET=$(echo "$RESPONSE" | jq -r '.nextOffset // 0')
+            sleep 3
+          done
+      - name: Supplement schedule
+        run: |
+          curl -s --max-time 15 \
+            "https://boat-bank.vercel.app/api/cron/supplement-schedule" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
