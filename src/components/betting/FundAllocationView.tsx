@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 export function FundAllocationView() {
     const { activeBetType, selections, addFormationToCart } = useBetStore();
     const [amount, setAmount] = useState(100);
+    const [inputValue, setInputValue] = useState("1");
 
     const unrolled = useMemo(() => unrollCombinations(activeBetType, selections), [activeBetType, selections]);
 
@@ -22,7 +23,11 @@ export function FundAllocationView() {
     }
 
     const handleAddAmount = (add: number) => {
-        setAmount((prev) => prev + add);
+        setAmount((prev) => {
+            const next = prev + add;
+            setInputValue(String(next / 100));
+            return next;
+        });
     };
 
     const handleAddToCart = () => {
@@ -63,13 +68,14 @@ export function FundAllocationView() {
                     <Label className="text-xs font-bold text-slate-500">1点あたりの金額</Label>
                     <div className="flex items-center gap-1">
                         <Input
-                            type="number"
-                            min={1}
-                            step={1}
-                            value={amount / 100}
+                            type="text"
+                            inputMode="numeric"
+                            value={inputValue}
                             onChange={(e) => {
-                                const v = Math.max(0, Math.floor(Number(e.target.value)));
-                                setAmount(v * 100);
+                                const raw = e.target.value.replace(/[^0-9]/g, '');
+                                setInputValue(raw);
+                                const v = parseInt(raw, 10);
+                                setAmount(isNaN(v) ? 0 : v * 100);
                             }}
                             className="text-xl font-bold text-slate-900 border-slate-300 focus:ring-blue-500 w-24 text-right"
                         />
@@ -80,7 +86,7 @@ export function FundAllocationView() {
                         <Button variant="outline" size="sm" onClick={() => handleAddAmount(500)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+5</Button>
                         <Button variant="outline" size="sm" onClick={() => handleAddAmount(1000)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+10</Button>
                         <Button variant="outline" size="sm" onClick={() => handleAddAmount(5000)} className="flex-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50">+50</Button>
-                        <Button variant="default" size="sm" onClick={() => setAmount(100)} className="flex-1 text-xs font-bold bg-slate-800 text-white hover:bg-slate-700">C</Button>
+                        <Button variant="default" size="sm" onClick={() => { setAmount(100); setInputValue("1"); }} className="flex-1 text-xs font-bold bg-slate-800 text-white hover:bg-slate-700">C</Button>
                     </div>
                 </div>
 
