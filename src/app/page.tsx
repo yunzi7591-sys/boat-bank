@@ -31,11 +31,23 @@ export default async function DashboardPage() {
   const hitRate = stats.totalPredictions > 0 ? (stats.hitCount / stats.totalPredictions) * 100 : 0;
   const isProfit = stats.recoveryRate >= 100;
 
-  const latestResults = [
-    { place: "大村", race: 9, p1: 1, p2: 2, p3: 4, payout: 1250 },
-    { place: "桐生", race: 10, p1: 3, p2: 1, p3: 6, payout: 18400 },
-    { place: "住之江", race: 11, p1: 4, p2: 5, p3: 6, payout: 124500 },
-  ];
+  const latestResultsRaw = await prisma.raceResult.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+  });
+
+  const latestResults = latestResultsRaw.map(r => {
+    const payouts = (r.payouts as any[]) || [];
+    const trifecta = payouts.find(p => p.type === '3TR');
+    return {
+      place: r.placeName,
+      race: r.raceNumber,
+      p1: r.firstPlace,
+      p2: r.secondPlace,
+      p3: r.thirdPlace,
+      payout: trifecta?.amount || 0,
+    };
+  });
 
   const getColorStyle = (n: number) => {
     const colorObj = BOAT_COLORS.find(c => c.no === n);
