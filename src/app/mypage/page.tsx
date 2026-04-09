@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getUserStats } from "@/lib/stats";
+import { getUserStats, getUserVenueStats } from "@/lib/stats";
 import { notFound, redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,6 +27,7 @@ export default async function MyPage() {
 
     // 1. Get Calculated Stats
     const stats = await getUserStats(userId);
+    const venueStats = await getUserVenueStats(userId);
 
     // 2. Get Published Predictions
     const publishedPredictions = await prisma.prediction.findMany({
@@ -124,6 +125,30 @@ export default async function MyPage() {
                     </Card>
                 </div>
             </div>
+
+            {/* Venue Stats */}
+            {venueStats.length > 0 && (
+                <div className="max-w-4xl mx-auto px-4 mb-8">
+                    <h3 className="text-sm font-light text-[#061b31] mb-3">場別回収率</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {venueStats.map((v) => (
+                            <div key={v.placeName} className="bg-white border border-[#e5edf5] rounded-lg p-3" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm font-bold text-[#061b31]">{v.placeName}</span>
+                                    <span className="text-[10px] text-[#64748d]">{v.totalPredictions}R</span>
+                                </div>
+                                <div className={`text-xl font-light tabular-nums ${v.recoveryRate >= 100 ? 'text-[#533afd]' : 'text-[#061b31]'}`}>
+                                    {v.recoveryRate.toFixed(1)}<span className="text-xs ml-0.5">%</span>
+                                </div>
+                                <div className="flex justify-between mt-1 text-[10px] text-[#64748d]">
+                                    <span>投資 {v.totalInvestment.toLocaleString()}</span>
+                                    <span>回収 {v.totalRefund.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Tabs Section */}
             <div className="max-w-4xl mx-auto px-4">
