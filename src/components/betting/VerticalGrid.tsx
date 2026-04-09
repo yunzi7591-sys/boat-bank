@@ -79,13 +79,7 @@ export function VerticalGrid({ racers = [] }: VerticalGridProps) {
                         {cols.map((col) => {
                             const isSelected = selections[col].includes(no);
 
-                            // Disable if selected in another column (only for Exacta/Trifecta types)
-                            const isExactaOrTrifecta = activeBetType === '3TR' || activeBetType === '2TR';
-                            let isDisabled = false;
-                            if (isExactaOrTrifecta && !isSelected) {
-                                const otherCols = cols.filter(c => c !== col);
-                                isDisabled = otherCols.some(c => selections[c].includes(no));
-                            }
+                            const isDisabled = false;
 
                             return (
                                 <div
