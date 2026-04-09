@@ -291,35 +291,61 @@ export function RaceHubClient({
                     <PenTool className="w-4 h-4 text-blue-600" /> TAKE ACTION
                 </h3>
 
-                <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=false`}>
-                    <Card className={`border-2 shadow-md transition-transform hover:scale-[1.02] active:scale-95 ${isFinished ? 'opacity-50 pointer-events-none grayscale' : 'border-blue-200 bg-gradient-to-br from-white to-blue-50'
-                        }`}>
+                {isFinished ? (
+                    <Card className="border-2 shadow-md opacity-50 grayscale border-slate-200">
                         <CardContent className="p-5 flex items-center gap-4">
                             <div className="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm">
                                 <PenTool className="w-5 h-5" />
                             </div>
                             <div>
-                                <h4 className="font-black text-blue-900 text-[15px] mb-0.5">予想を販売・公開する</h4>
-                                <p className="text-[11px] font-bold text-blue-600/80 leading-snug">自信の予想をマーケットに並べて、ポイントを稼ぎましょう！</p>
+                                <h4 className="font-black text-slate-500 text-[15px] mb-0.5">予想を販売・公開する</h4>
+                                <p className="text-[11px] font-bold text-slate-400 leading-snug">このレースは締め切りました</p>
                             </div>
                         </CardContent>
                     </Card>
-                </Link>
+                ) : (
+                    <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=false`}>
+                        <Card className="border-2 shadow-md transition-transform hover:scale-[1.02] active:scale-95 border-blue-200 bg-gradient-to-br from-white to-blue-50">
+                            <CardContent className="p-5 flex items-center gap-4">
+                                <div className="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm">
+                                    <PenTool className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h4 className="font-black text-blue-900 text-[15px] mb-0.5">予想を販売・公開する</h4>
+                                    <p className="text-[11px] font-bold text-blue-600/80 leading-snug">自信の予想をマーケットに並べて、ポイントを稼ぎましょう！</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </Link>
+                )}
 
-                <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=true`}>
-                    <Card className={`border shadow-sm transition-transform hover:scale-[1.02] active:scale-95 ${isFinished ? 'opacity-50 pointer-events-none grayscale' : 'border-slate-200 bg-white'
-                        }`}>
+                {isFinished ? (
+                    <Card className="border shadow-sm opacity-50 grayscale border-slate-200">
                         <CardContent className="p-5 flex items-center gap-4">
                             <div className="bg-slate-800 text-white w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm">
                                 <Lock className="w-5 h-5" />
                             </div>
                             <div>
-                                <h4 className="font-black text-slate-800 text-[15px] mb-0.5">自分の賭けを登録（非公開）</h4>
-                                <p className="text-[11px] font-bold text-slate-500 leading-snug">タイムラインには出さず、自身の収支ポートフォリオ用として保存します。</p>
+                                <h4 className="font-black text-slate-500 text-[15px] mb-0.5">自分の賭けを登録（非公開）</h4>
+                                <p className="text-[11px] font-bold text-slate-400 leading-snug">このレースは締め切りました</p>
                             </div>
                         </CardContent>
                     </Card>
-                </Link>
+                ) : (
+                    <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=true`}>
+                        <Card className="border shadow-sm transition-transform hover:scale-[1.02] active:scale-95 border-slate-200 bg-white">
+                            <CardContent className="p-5 flex items-center gap-4">
+                                <div className="bg-slate-800 text-white w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm">
+                                    <Lock className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h4 className="font-black text-slate-800 text-[15px] mb-0.5">自分の賭けを登録（非公開）</h4>
+                                    <p className="text-[11px] font-bold text-slate-500 leading-snug">タイムラインには出さず、自身の収支ポートフォリオ用として保存します。</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </Link>
+                )}
             </div>
 
             {/* Market Preview */}
