@@ -10,33 +10,16 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Sync schedule in chunks
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Sync schedule directly
         env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          BASE_URL: https://boat-bank.vercel.app
-        run: |
-          OFFSET=0
-          LIMIT=20
-          while true; do
-            echo ">>> Fetching offset=$OFFSET limit=$LIMIT"
-            RESPONSE=$(curl -s --max-time 15 \
-              "$BASE_URL/api/cron/schedule?offset=$OFFSET&limit=$LIMIT" \
-              -H "Authorization: Bearer $CRON_SECRET")
-            echo "$RESPONSE"
-
-            DONE=$(echo "$RESPONSE" | jq -r '.done // "true"')
-            SUCCESS=$(echo "$RESPONSE" | jq -r '.success // "false"')
-
-            if [ "$DONE" = "true" ] || [ "$SUCCESS" = "false" ]; then
-              echo ">>> Finished (done=$DONE, success=$SUCCESS)"
-              break
-            fi
-
-            OFFSET=$(echo "$RESPONSE" | jq -r '.nextOffset // 0')
-            sleep 3
-          done
-      - name: Supplement schedule
-        run: |
-          curl -s --max-time 15 \
-            "https://boat-bank.vercel.app/api/cron/supplement-schedule" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node scripts/sync-schedule.mjs
