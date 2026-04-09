@@ -2,7 +2,7 @@
 
 import { useBetStore } from '@/store/bet-store';
 import { Button } from '@/components/ui/button';
-import { unrollCombinations, BetType } from '@/lib/bet-logic';
+import { unrollCombinations, BetType, BOAT_COLORS } from '@/lib/bet-logic';
 import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,14 +43,17 @@ export function FundAllocationView() {
             <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pb-2 pr-2 custom-scrollbar">
                 {unrolled.map((comb) => (
                     <div key={comb.id} className="flex justify-center items-center border border-slate-200 rounded-lg py-1.5 px-2 bg-white shadow-sm font-mono text-base font-bold text-slate-700">
-                        {comb.id.split('-').map((n, i, arr) => (
-                            <span key={i} className="flex items-center">
-                                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs text-white bg-boat-${n}`}>
-                                    {n}
+                        {comb.id.split(/[-=]/).map((n, i, arr) => {
+                            const colorObj = BOAT_COLORS.find(c => c.no === Number(n));
+                            return (
+                                <span key={i} className="flex items-center">
+                                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${colorObj?.colorCls || 'bg-slate-200 text-slate-800'}`}>
+                                        {n}
+                                    </span>
+                                    {i < arr.length - 1 && <span className="mx-0.5 text-neutral-300">-</span>}
                                 </span>
-                                {i < arr.length - 1 && <span className="mx-0.5 text-neutral-300">-</span>}
-                            </span>
-                        ))}
+                            );
+                        })}
                     </div>
                 ))}
             </div>
