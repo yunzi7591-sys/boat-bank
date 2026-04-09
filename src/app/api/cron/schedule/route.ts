@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { syncTodayScheduleChunk } from '@/lib/boatrace-api';
+import { syncTodaySchedule } from '@/lib/boatrace-api';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 10;
+export const maxDuration = 300;
 
 export async function GET(request: Request) {
     try {
@@ -15,15 +15,22 @@ export async function GET(request: Request) {
             }
         }
 
-        const url = new URL(request.url);
-        const offset = parseInt(url.searchParams.get('offset') || '0', 10);
-        const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+        console.log("[CRON] Starting today's schedule sync...");
+        const result = await syncTodaySchedule();
 
-        console.log(`[CRON] Schedule sync chunk: offset=${offset}, limit=${limit}`);
+        if (!result.success) {
+            return NextResponse.json({ success: false, message: result.error });
+        }
 
-        const result = await syncTodayScheduleChunk(offset, limit);
+        if ((result as any).skipped) {
+            return NextResponse.json({ success: true, status: 'AlreadySynced', count: result.count });
+        }
 
-        return NextResponse.json(result);
+        return NextResponse.json({
+            success: true,
+            count: result.count,
+            entries: (result as any).entries || 0
+        });
     } catch (e: any) {
         console.error('[CRON SCHEDULE SYNC ERROR]', e);
         return NextResponse.json({ success: false, error: e.message }, { status: 500 });

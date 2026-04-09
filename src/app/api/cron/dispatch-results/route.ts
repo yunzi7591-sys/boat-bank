@@ -3,7 +3,7 @@ import { Client } from '@upstash/qstash';
 import { getUnsyncedRaces } from '@/lib/boatrace-api';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 10;
+export const maxDuration = 300;
 
 const BATCH_LIMIT = 20;
 
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
         const { syncTodayResults } = await import('@/lib/boatrace-api');
         const { settleRacePredictions } = await import('@/lib/evaluate');
 
-        const syncRes = await syncTodayResults({ limit: 5 });
+        const syncRes = await syncTodayResults({});
         const processedRaces = syncRes.processedRaces || [];
 
         let settlementCount = 0;

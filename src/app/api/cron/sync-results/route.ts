@@ -3,7 +3,7 @@ import { syncTodayResults } from '@/lib/boatrace-api';
 import { settleRacePredictions } from '@/lib/evaluate';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /**
  * レガシー互換: バッチ結果同期 + 精算
@@ -23,8 +23,7 @@ export async function GET(request: Request) {
 
         console.log("[CRON] Starting batch result sync (legacy)...");
 
-        // Vercel Hobby 10秒制限対策: limit を 5 に制限
-        const syncRes = await syncTodayResults({ limit: 5 });
+        const syncRes = await syncTodayResults({});
         if (!syncRes.success) {
             return NextResponse.json({ success: false, error: syncRes.error }, { status: 500 });
         }
