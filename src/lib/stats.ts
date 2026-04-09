@@ -192,3 +192,124 @@ export async function getUserVenueStatsWithPeriod(
         };
     });
 }
+
+// --- Calendar stats ---
+
+export interface DailyPnL {
+    date: string; // "2026-04-01"
+    investment: number;
+    refund: number;
+    pnl: number; // refund - investment
+    predictions: number;
+}
+
+export interface MonthlyPnL {
+    month: string; // "2026-01"
+    investment: number;
+    refund: number;
+    pnl: number;
+    predictions: number;
+}
+
+/**
+ * 指定月の各日の収支を返す（予想がない日は含めない）
+ */
+export async function getUserDailyStats(
+    userId: string,
+    year: number,
+    month: number
+): Promise<DailyPnL[]> {
+    const gte = new Date(Date.UTC(year, month - 1, 1));
+    const lt = new Date(Date.UTC(year, month, 1));
+
+    const predictions = await prisma.prediction.findMany({
+        where: {
+            authorId: userId,
+            raceDate: { gte, lt },
+        },
+        select: {
+            raceDate: true,
+            betAmount: true,
+            hitAmount: true,
+            refundAmount: true,
+            isSettled: true,
+        },
+    });
+
+    const dayMap = new Map<string, { inv: number; ref: number; count: number }>();
+
+    for (const pred of predictions) {
+        // raceDate is stored as UTC 00:00 representing JST date
+        const dateStr = pred.raceDate.toISOString().slice(0, 10);
+        const entry = dayMap.get(dateStr) || { inv: 0, ref: 0, count: 0 };
+        entry.inv += pred.betAmount || 0;
+        if (pred.isSettled) {
+            entry.ref += pred.hitAmount || pred.refundAmount || 0;
+        }
+        entry.count++;
+        dayMap.set(dateStr, entry);
+    }
+
+    return Array.from(dayMap.entries())
+        .map(([date, d]) => ({
+            date,
+            investment: d.inv,
+            refund: d.ref,
+            pnl: d.ref - d.inv,
+            predictions: d.count,
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * 指定年の月別収支サマリーを返す（1月〜12月の12件、予想がない月も0で含める）
+ */
+export async function getUserMonthlyPnL(
+    userId: string,
+    year: number
+): Promise<MonthlyPnL[]> {
+    const gte = new Date(Date.UTC(year, 0, 1));
+    const lt = new Date(Date.UTC(year + 1, 0, 1));
+
+    const predictions = await prisma.prediction.findMany({
+        where: {
+            authorId: userId,
+            raceDate: { gte, lt },
+        },
+        select: {
+            raceDate: true,
+            betAmount: true,
+            hitAmount: true,
+            refundAmount: true,
+            isSettled: true,
+        },
+    });
+
+    const monthMap = new Map<string, { inv: number; ref: number; count: number }>();
+
+    for (const pred of predictions) {
+        const d = pred.raceDate;
+        const monthStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+        const entry = monthMap.get(monthStr) || { inv: 0, ref: 0, count: 0 };
+        entry.inv += pred.betAmount || 0;
+        if (pred.isSettled) {
+            entry.ref += pred.hitAmount || pred.refundAmount || 0;
+        }
+        entry.count++;
+        monthMap.set(monthStr, entry);
+    }
+
+    // Always return 12 months
+    return Array.from({ length: 12 }, (_, i) => {
+        const m = String(i + 1).padStart(2, "0");
+        const monthStr = `${year}-${m}`;
+        const d = monthMap.get(monthStr) || { inv: 0, ref: 0, count: 0 };
+        return {
+            month: monthStr,
+            investment: d.inv,
+            refund: d.ref,
+            pnl: d.ref - d.inv,
+            predictions: d.count,
+        };
+    });
+}

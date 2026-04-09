@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getUserStats, getUserVenueStats, getUserVenueStatsWithPeriod } from "@/lib/stats";
-import { VenueStatsGrid } from "@/components/mypage/VenueStatsGrid";
+import { getUserStats, getUserDailyStats, getUserMonthlyPnL } from "@/lib/stats";
+import { CalendarPnLWrapper } from "@/components/mypage/CalendarPnLWrapper";
 import { notFound, redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +11,7 @@ import { DemoEvalButton } from "@/components/mypage/DemoEvalButton";
 import { ProfileEditModal } from "@/components/mypage/ProfileEditModal";
 import { AccountSettings } from "@/components/mypage/AccountSettings";
 import { Button } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
 
 export default async function MyPage() {
     const session = await auth();
@@ -28,18 +29,15 @@ export default async function MyPage() {
 
     // 1. Get Calculated Stats
     const stats = await getUserStats(userId);
-    const venueStats = await getUserVenueStats(userId);
 
-    // 1b. Venue stats for all periods (parallel)
-    const currentYear = new Date().getFullYear();
-    const months = Array.from({ length: 12 }, (_, i) => `${currentYear}-${String(i + 1).padStart(2, '0')}`);
-    const [allTimeVenueStats, yearVenueStats, ...monthlyResults] = await Promise.all([
-        getUserVenueStatsWithPeriod(userId, "all"),
-        getUserVenueStatsWithPeriod(userId, "year"),
-        ...months.map(m => getUserVenueStatsWithPeriod(userId, m)),
+    // 1b. Calendar data
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const [dailyStats, monthlyPnL] = await Promise.all([
+        getUserDailyStats(userId, currentYear, currentMonth),
+        getUserMonthlyPnL(userId, currentYear),
     ]);
-    const monthlyStats: { [key: string]: typeof allTimeVenueStats } = {};
-    months.forEach((m, i) => { monthlyStats[m] = monthlyResults[i]; });
 
     // 2. Get Published Predictions
     const publishedPredictions = await prisma.prediction.findMany({
@@ -138,12 +136,27 @@ export default async function MyPage() {
                 </div>
             </div>
 
-            {/* Venue Stats Grid */}
+            {/* Venue Stats Link */}
             <div className="max-w-4xl mx-auto px-4 mb-8">
-                <VenueStatsGrid
-                    allTimeStats={allTimeVenueStats}
-                    yearStats={yearVenueStats}
-                    monthlyStats={monthlyStats}
+                <Link href="/mypage/venues">
+                    <div className="bg-white border border-[#e5edf5] rounded-lg p-4 flex items-center justify-between" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
+                        <div>
+                            <h3 className="text-sm font-bold text-[#061b31]">場別回収率</h3>
+                            <p className="text-xs text-[#64748d] mt-0.5">24場の成績を確認</p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-[#64748d]" />
+                    </div>
+                </Link>
+            </div>
+
+            {/* Calendar PnL */}
+            <div className="max-w-4xl mx-auto px-4 mb-8">
+                <CalendarPnLWrapper
+                    userId={userId}
+                    initialDailyStats={dailyStats}
+                    monthlyPnL={monthlyPnL}
+                    currentYear={currentYear}
+                    currentMonth={currentMonth}
                 />
             </div>
 
