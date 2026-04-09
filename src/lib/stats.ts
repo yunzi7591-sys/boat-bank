@@ -58,6 +58,136 @@ export async function getUserVenueStats(userId: string): Promise<VenueStats[]> {
         .sort((a, b) => b.totalPredictions - a.totalPredictions);
 }
 
+export async function getPublicUserStats(userId: string): Promise<UserStats> {
+    const predictions = await prisma.prediction.findMany({
+        where: { authorId: userId, isPrivate: false },
+        select: {
+            isSettled: true,
+            isHit: true,
+            betAmount: true,
+            hitAmount: true,
+            refundAmount: true,
+        },
+    });
+
+    let totalInvestment = 0;
+    let totalRefund = 0;
+    let hitCount = 0;
+    let totalPredictions = predictions.length;
+
+    for (const pred of predictions) {
+        totalInvestment += pred.betAmount || 0;
+        if (pred.isSettled) {
+            totalRefund += (pred.hitAmount || pred.refundAmount || 0);
+            if (pred.isHit) hitCount++;
+        }
+    }
+
+    const recoveryRate = totalInvestment > 0 ? (totalRefund / totalInvestment) * 100 : 0;
+
+    return {
+        totalInvestment,
+        totalRefund,
+        recoveryRate,
+        hitCount,
+        totalPredictions,
+    };
+}
+
+export async function getPublicDailyStats(
+    userId: string,
+    year: number,
+    month: number
+): Promise<DailyPnL[]> {
+    const gte = new Date(Date.UTC(year, month - 1, 1));
+    const lt = new Date(Date.UTC(year, month, 1));
+
+    const predictions = await prisma.prediction.findMany({
+        where: {
+            authorId: userId,
+            isPrivate: false,
+            raceDate: { gte, lt },
+        },
+        select: {
+            raceDate: true,
+            betAmount: true,
+            hitAmount: true,
+            refundAmount: true,
+            isSettled: true,
+        },
+    });
+
+    const dayMap = new Map<string, { inv: number; ref: number; count: number }>();
+
+    for (const pred of predictions) {
+        const dateStr = pred.raceDate.toISOString().slice(0, 10);
+        const entry = dayMap.get(dateStr) || { inv: 0, ref: 0, count: 0 };
+        entry.inv += pred.betAmount || 0;
+        if (pred.isSettled) {
+            entry.ref += pred.hitAmount || pred.refundAmount || 0;
+        }
+        entry.count++;
+        dayMap.set(dateStr, entry);
+    }
+
+    return Array.from(dayMap.entries())
+        .map(([date, d]) => ({
+            date,
+            investment: d.inv,
+            refund: d.ref,
+            pnl: d.ref - d.inv,
+            predictions: d.count,
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export async function getPublicDailyPredictions(
+    userId: string,
+    year: number,
+    month: number
+): Promise<{ [date: string]: DailyPredictionItem[] }> {
+    const gte = new Date(Date.UTC(year, month - 1, 1));
+    const lt = new Date(Date.UTC(year, month, 1));
+
+    const predictions = await prisma.prediction.findMany({
+        where: {
+            authorId: userId,
+            isPrivate: false,
+            raceDate: { gte, lt },
+        },
+        select: {
+            raceDate: true,
+            placeName: true,
+            raceNumber: true,
+            betAmount: true,
+            hitAmount: true,
+            refundAmount: true,
+            isSettled: true,
+            isHit: true,
+        },
+        orderBy: [{ raceDate: "asc" }, { placeName: "asc" }, { raceNumber: "asc" }],
+    });
+
+    const result: { [date: string]: DailyPredictionItem[] } = {};
+
+    for (const pred of predictions) {
+        const dateStr = pred.raceDate.toISOString().slice(0, 10);
+        if (!result[dateStr]) {
+            result[dateStr] = [];
+        }
+        result[dateStr].push({
+            placeName: pred.placeName,
+            raceNumber: pred.raceNumber,
+            betAmount: pred.betAmount || 0,
+            hitAmount: pred.isSettled ? (pred.hitAmount || pred.refundAmount || 0) : 0,
+            isSettled: pred.isSettled,
+            isHit: pred.isHit,
+        });
+    }
+
+    return result;
+}
+
 export async function getUserStats(userId: string): Promise<UserStats> {
     const predictions = await prisma.prediction.findMany({
         where: { authorId: userId },
