@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import { syncTodaySchedule } from '@/lib/boatrace-api';
+import { syncTodayScheduleChunk } from '@/lib/boatrace-api';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // 60 seconds
+export const maxDuration = 10;
 
 export async function GET(request: Request) {
     try {
-        // Validate Cron Secret
         const authHeader = request.headers.get('authorization');
         const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
 
@@ -16,33 +15,15 @@ export async function GET(request: Request) {
             }
         }
 
-        console.log("[CRON] Starting today's schedule + entry sync...");
+        const url = new URL(request.url);
+        const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+        const limit = parseInt(url.searchParams.get('limit') || '20', 10);
 
-        const result = await syncTodaySchedule();
+        console.log(`[CRON] Schedule sync chunk: offset=${offset}, limit=${limit}`);
 
-        if (!result.success) {
-            console.warn("[CRON] Schedule sync skipped or failed:", result.error);
-            return NextResponse.json({ success: false, status: 'Skipped', message: result.error });
-        }
+        const result = await syncTodayScheduleChunk(offset, limit);
 
-        // Check if it was an early-skip (already synced today)
-        if ((result as any).skipped) {
-            console.log(`[CRON] Schedule already synced today (${result.count} races). No-op.`);
-            return NextResponse.json({
-                success: true,
-                status: 'AlreadySynced',
-                count: result.count
-            });
-        }
-
-        console.log(`[CRON] Successfully synced ${result.count} schedules and ${(result as any).entries || 0} entries.`);
-        return NextResponse.json({
-            success: true,
-            status: 'Success',
-            count: result.count,
-            syncedSchedules: result.count,
-            syncedEntries: (result as any).entries || 0
-        });
+        return NextResponse.json(result);
     } catch (e: any) {
         console.error('[CRON SCHEDULE SYNC ERROR]', e);
         return NextResponse.json({ success: false, error: e.message }, { status: 500 });

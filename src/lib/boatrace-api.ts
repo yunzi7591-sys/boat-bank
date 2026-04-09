@@ -35,6 +35,120 @@ function normalizeDayLabel(label: string | undefined): string {
     return "開催中";
 }
 
+/**
+ * チャンク対応: offset〜offset+limit のプログラムだけ処理する
+ * GitHub Actions から複数回呼ばれる想定
+ */
+export async function syncTodayScheduleChunk(offset: number = 0, limit: number = 20) {
+    try {
+        const res = await fetch(SCHEDULE_API_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`API Fetch failed: ${res.status}`);
+
+        const data = await res.json();
+        const allPrograms = data.programs || [];
+
+        if (allPrograms.length === 0) {
+            return { success: true, total: 0, processed: 0, done: true };
+        }
+
+        const chunk = allPrograms.slice(offset, offset + limit);
+        if (chunk.length === 0) {
+            return { success: true, total: allPrograms.length, processed: 0, done: true };
+        }
+
+        const uniqueRacers = new Map<number, { name: string; grade: string }>();
+        const parsedPrograms: any[] = [];
+
+        for (const prog of chunk) {
+            const stadiumId = prog.stadium_number.toString().padStart(2, '0');
+            const venue = VENUES.find(v => v.id === stadiumId);
+            if (!venue) continue;
+
+            const placeName = venue.name;
+            const raceNumber = prog.number;
+            const raceDate = new Date(prog.date);
+            const deadlineAt = new Date(`${prog.closed_at.replace(' ', 'T')}+09:00`);
+            const grade = normalizeGradeLabel(prog.grade_label);
+            const day = normalizeDayLabel(prog.day_label);
+
+            const entriesData: any[] = [];
+            for (const b of (prog.boats || [])) {
+                const rName = typeof b.racer_name === 'string' ? b.racer_name.trim() : "";
+                const rNum = typeof b.racer_number === 'number' ? b.racer_number : null;
+                const rGrade = extractRacerClass(b.racer_class_number);
+                if (rNum && rName && rName !== "undefined undefined") {
+                    uniqueRacers.set(rNum, { name: rName, grade: rGrade });
+                    entriesData.push({ boatNumber: b.racer_boat_number, racerNumber: rNum });
+                }
+            }
+            parsedPrograms.push({ placeName, raceNumber, raceDate, deadlineAt, grade, day, entriesData });
+        }
+
+        // Racer upsert (小チャンク)
+        const racerArray = Array.from(uniqueRacers.entries()).map(([rNum, info]) => ({
+            racerNumber: rNum, name: info.name, grade: info.grade
+        }));
+        for (let i = 0; i < racerArray.length; i += 20) {
+            const rc = racerArray.slice(i, i + 20);
+            await prisma.$transaction(rc.map(r =>
+                prisma.racer.upsert({
+                    where: { racerNumber: r.racerNumber },
+                    update: { name: r.name, grade: r.grade },
+                    create: { racerNumber: r.racerNumber, name: r.name, grade: r.grade }
+                })
+            ));
+        }
+
+        // Racer ID map
+        const racerIds = Array.from(uniqueRacers.keys());
+        const racersInDb = await prisma.racer.findMany({
+            where: { racerNumber: { in: racerIds } },
+            select: { id: true, racerNumber: true }
+        });
+        const racerIdMap = new Map(racersInDb.map(r => [r.racerNumber, r.id]));
+
+        // Schedule insert
+        await prisma.raceSchedule.createMany({
+            data: parsedPrograms.map(pr => ({
+                placeName: pr.placeName, raceNumber: pr.raceNumber,
+                raceDate: pr.raceDate, deadlineAt: pr.deadlineAt,
+                grade: pr.grade, day: pr.day
+            })),
+            skipDuplicates: true
+        });
+
+        // Entry insert
+        const entriesData: any[] = [];
+        for (const pr of parsedPrograms) {
+            for (const entry of pr.entriesData) {
+                const racerId = racerIdMap.get(entry.racerNumber);
+                if (racerId) {
+                    entriesData.push({
+                        placeName: pr.placeName, raceNumber: pr.raceNumber,
+                        raceDate: pr.raceDate, boatNumber: entry.boatNumber, racerId
+                    });
+                }
+            }
+        }
+        if (entriesData.length > 0) {
+            await prisma.raceEntry.createMany({ data: entriesData, skipDuplicates: true });
+        }
+
+        const done = offset + limit >= allPrograms.length;
+        console.log(`[CHUNK] offset=${offset} limit=${limit}: ${parsedPrograms.length} schedules, ${entriesData.length} entries. done=${done}`);
+        return {
+            success: true,
+            total: allPrograms.length,
+            processed: parsedPrograms.length,
+            nextOffset: offset + limit,
+            done
+        };
+    } catch (e: any) {
+        console.error("[CHUNK Error]", e);
+        return { success: false, error: e.message };
+    }
+}
+
 export async function syncTodaySchedule() {
     try {
         console.log(`[API] Fetching schedule from ${SCHEDULE_API_URL}...`);
