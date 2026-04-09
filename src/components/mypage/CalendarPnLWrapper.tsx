@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CalendarPnL, DailyPnLItem, MonthlyPnLItem } from "./CalendarPnL";
+import { CalendarPnL, DailyPnLItem, DailyPredictionItem } from "./CalendarPnL";
 import { fetchDailyStats } from "@/actions/stats";
 
 interface CalendarPnLWrapperProps {
     userId: string;
     initialDailyStats: DailyPnLItem[];
-    monthlyPnL: MonthlyPnLItem[];
+    initialDailyPredictions: { [date: string]: DailyPredictionItem[] };
     currentYear: number;
     currentMonth: number;
 }
@@ -15,13 +15,14 @@ interface CalendarPnLWrapperProps {
 export function CalendarPnLWrapper({
     userId,
     initialDailyStats,
-    monthlyPnL,
+    initialDailyPredictions,
     currentYear,
     currentMonth,
 }: CalendarPnLWrapperProps) {
     const [year, setYear] = useState(currentYear);
     const [month, setMonth] = useState(currentMonth);
     const [dailyStats, setDailyStats] = useState<DailyPnLItem[]>(initialDailyStats);
+    const [dailyPredictions, setDailyPredictions] = useState<{ [date: string]: DailyPredictionItem[] }>(initialDailyPredictions);
     const [isPending, startTransition] = useTransition();
 
     const handleMonthChange = (newYear: number, newMonth: number) => {
@@ -31,6 +32,7 @@ export function CalendarPnLWrapper({
             const result = await fetchDailyStats(newYear, newMonth);
             if (result.success) {
                 setDailyStats(result.data);
+                setDailyPredictions(result.dailyPredictions);
             }
         });
     };
@@ -39,7 +41,7 @@ export function CalendarPnLWrapper({
         <div className={isPending ? "opacity-60 transition-opacity" : ""}>
             <CalendarPnL
                 dailyStats={dailyStats}
-                monthlyPnL={monthlyPnL}
+                dailyPredictions={dailyPredictions}
                 currentYear={year}
                 currentMonth={month}
                 onMonthChange={handleMonthChange}
