@@ -137,12 +137,21 @@ export default async function MyPage() {
             </div>
 
             {/* Venue Stats Link */}
-            <div className="max-w-4xl mx-auto px-4 mb-8">
+            <div className="max-w-4xl mx-auto px-4 mb-8 flex flex-col gap-2">
                 <Link href="/mypage/venues">
                     <div className="bg-white border border-[#e5edf5] rounded-lg p-4 flex items-center justify-between" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
                         <div>
                             <h3 className="text-sm font-bold text-[#061b31]">詳細成績</h3>
                             <p className="text-xs text-[#64748d] mt-0.5">24場の回収率・収支を確認</p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-[#64748d]" />
+                    </div>
+                </Link>
+                <Link href={`/users/${userId}`}>
+                    <div className="bg-white border border-[#e5edf5] rounded-lg p-4 flex items-center justify-between" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
+                        <div>
+                            <h3 className="text-sm font-bold text-[#061b31]">公開プロフィール</h3>
+                            <p className="text-xs text-[#64748d] mt-0.5">他のユーザーから見えるプロフィールを確認</p>
                         </div>
                         <ChevronRight className="w-5 h-5 text-[#64748d]" />
                     </div>
