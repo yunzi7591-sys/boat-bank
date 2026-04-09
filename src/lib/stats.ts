@@ -10,6 +10,53 @@ export interface UserStats {
     totalPredictions: number;
 }
 
+export interface VenueStats {
+    placeName: string;
+    totalInvestment: number;
+    totalRefund: number;
+    recoveryRate: number;
+    hitCount: number;
+    totalPredictions: number;
+}
+
+export async function getUserVenueStats(userId: string): Promise<VenueStats[]> {
+    const predictions = await prisma.prediction.findMany({
+        where: { authorId: userId },
+        select: {
+            placeName: true,
+            isSettled: true,
+            isHit: true,
+            betAmount: true,
+            hitAmount: true,
+            refundAmount: true,
+        },
+    });
+
+    const venueMap = new Map<string, { inv: number; ref: number; hit: number; total: number }>();
+
+    for (const pred of predictions) {
+        const entry = venueMap.get(pred.placeName) || { inv: 0, ref: 0, hit: 0, total: 0 };
+        entry.inv += pred.betAmount || 0;
+        entry.total++;
+        if (pred.isSettled) {
+            entry.ref += (pred.hitAmount || pred.refundAmount || 0);
+            if (pred.isHit) entry.hit++;
+        }
+        venueMap.set(pred.placeName, entry);
+    }
+
+    return Array.from(venueMap.entries())
+        .map(([placeName, d]) => ({
+            placeName,
+            totalInvestment: d.inv,
+            totalRefund: d.ref,
+            recoveryRate: d.inv > 0 ? (d.ref / d.inv) * 100 : 0,
+            hitCount: d.hit,
+            totalPredictions: d.total,
+        }))
+        .sort((a, b) => b.totalPredictions - a.totalPredictions);
+}
+
 export async function getUserStats(userId: string): Promise<UserStats> {
     const predictions = await prisma.prediction.findMany({
         where: { authorId: userId },
