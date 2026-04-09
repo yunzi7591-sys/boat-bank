@@ -94,40 +94,40 @@ export default async function MyPage() {
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="max-w-4xl mx-auto px-4 -mt-8 mb-8 z-10 relative">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className={`shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] border-2 ${isPositiveReturn ? 'border-[#533afd] bg-[#533afd]/5' : 'border-[#e5edf5]'}`}>
-                        <CardHeader className="py-3 px-4 pb-2">
-                            <CardTitle className="text-sm text-[#64748d] font-bold">通算回収率</CardTitle>
-                        </CardHeader>
-                        <CardContent className="px-4 pb-4">
-                            <p className={`text-4xl font-light ${isPositiveReturn ? 'text-[#533afd]' : 'text-[#061b31]'}`}>
-                                {stats.recoveryRate.toFixed(1)}<span className="text-xl">%</span>
+            {/* Stats */}
+            <div className="max-w-4xl mx-auto px-4 -mt-8 mb-6 z-10 relative">
+                <div className="bg-white border border-[#e5edf5] rounded-lg p-4" style={{ boxShadow: 'rgba(50,50,93,0.25) 0px 13px 27px -5px, rgba(0,0,0,0.1) 0px 8px 16px -8px' }}>
+                    {/* Recovery Rate - Hero */}
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <p className="text-[10px] font-bold text-[#64748d] uppercase tracking-wider">回収率</p>
+                            <p className={`text-4xl font-light tabular-nums tracking-tight ${isPositiveReturn && stats.totalInvestment > 0 ? 'text-[#533afd]' : 'text-[#061b31]'}`}>
+                                {stats.totalInvestment === 0 ? "0.0" : stats.recoveryRate.toFixed(1)}<span className="text-lg ml-0.5">%</span>
                             </p>
-                            {isPositiveReturn && <p className="text-xs text-[#533afd] font-bold mt-1">Excellent!</p>}
-                        </CardContent>
-                    </Card>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[10px] font-bold text-[#64748d] uppercase tracking-wider">収支</p>
+                            <p className={`text-2xl font-light tabular-nums tracking-tight ${stats.totalRefund - stats.totalInvestment >= 0 ? 'text-[#533afd]' : 'text-[#ea2261]'}`}>
+                                {stats.totalRefund - stats.totalInvestment >= 0 ? '+' : ''}{(stats.totalRefund - stats.totalInvestment).toLocaleString()}<span className="text-xs ml-0.5">pt</span>
+                            </p>
+                        </div>
+                    </div>
 
-                    <Card className="shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] border border-[#e5edf5]">
-                        <CardHeader className="py-3 px-4 pb-2">
-                            <CardTitle className="text-sm text-[#64748d] font-bold">総回収額</CardTitle>
-                        </CardHeader>
-                        <CardContent className="px-4 pb-4">
-                            <p className="text-2xl font-bold text-[#061b31]">{stats.totalRefund.toLocaleString()} <span className="text-sm text-[#64748d]">pt</span></p>
-                            <p className="text-xs text-[#64748d] mt-1">的中: {stats.hitCount}R</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] border border-[#e5edf5]">
-                        <CardHeader className="py-3 px-4 pb-2">
-                            <CardTitle className="text-sm text-[#64748d] font-bold">総投資額 (販売分)</CardTitle>
-                        </CardHeader>
-                        <CardContent className="px-4 pb-4">
-                            <p className="text-2xl font-bold text-[#061b31]">{stats.totalInvestment.toLocaleString()} <span className="text-sm text-[#64748d]">pt</span></p>
-                            <p className="text-xs text-[#64748d] mt-1">予想提供: {stats.totalPredictions}R</p>
-                        </CardContent>
-                    </Card>
+                    {/* Detail Row */}
+                    <div className="grid grid-cols-3 gap-3 pt-3 border-t border-[#e5edf5]">
+                        <div>
+                            <p className="text-[10px] text-[#64748d] font-bold">投資額</p>
+                            <p className="text-sm font-bold text-[#061b31] tabular-nums">{stats.totalInvestment.toLocaleString()}<span className="text-[10px] text-[#64748d] ml-0.5">pt</span></p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-[#64748d] font-bold">回収額</p>
+                            <p className="text-sm font-bold text-[#061b31] tabular-nums">{stats.totalRefund.toLocaleString()}<span className="text-[10px] text-[#64748d] ml-0.5">pt</span></p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-[#64748d] font-bold">的中</p>
+                            <p className="text-sm font-bold text-[#061b31] tabular-nums">{stats.hitCount}<span className="text-[10px] text-[#64748d] ml-0.5">/ {stats.totalPredictions}R</span></p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
