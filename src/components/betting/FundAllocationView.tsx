@@ -66,8 +66,7 @@ export function FundAllocationView() {
                             value={text}
                             placeholder="金額を入力"
                             onChange={(e) => setText(e.target.value.replace(/[^0-9]/g, ''))}
-                            className="flex-1 font-bold text-slate-900 px-3 py-2 text-right border-none outline-none bg-transparent rounded-lg"
-                            style={{ fontSize: '16px' }}
+                            className="flex-1 text-base font-bold text-slate-900 px-3 py-3 text-right border-none outline-none bg-transparent rounded-lg"
                         />
                         <span className="text-base font-bold text-slate-400 pr-3 whitespace-nowrap">円</span>
                     </div>
