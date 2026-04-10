@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown, X } from "lucide-react";
 import { deleteBet } from "@/actions/bet";
 
@@ -389,7 +389,7 @@ function DailyDetail({
                               e.stopPropagation();
                               onDelete(p.id);
                             }}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[#ea2261]/10 text-[#ea2261] transition-opacity ml-1"
+                            className="p-0.5 rounded hover:bg-[#ea2261]/10 text-[#ea2261]/50 hover:text-[#ea2261] transition-colors ml-1"
                             aria-label="削除"
                           >
                             <X className="w-3 h-3" />
@@ -488,7 +488,7 @@ export function CalendarPnL({
   onRefresh,
 }: CalendarPnLProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   const dailyMap = useMemo(() => {
     const m = new Map<string, DailyPnLItem>();
@@ -498,17 +498,24 @@ export function CalendarPnL({
     return m;
   }, [dailyStats]);
 
+  // deletedIdsでフィルタした予想データ
+  const filteredPredictions = useMemo(() => {
+    const result: { [date: string]: DailyPredictionItem[] } = {};
+    for (const [date, items] of Object.entries(dailyPredictions)) {
+      result[date] = items.filter(p => !deletedIds.has(p.id));
+    }
+    return result;
+  }, [dailyPredictions, deletedIds]);
+
   function handleDateClick(dateKey: string) {
     setSelectedDate((prev) => (prev === dateKey ? null : dateKey));
   }
 
   function handleDelete(betId: string) {
-    startTransition(async () => {
-      const result = await deleteBet(betId);
-      if (result.success) {
-        onRefresh?.();
-      }
-    });
+    // 即座にUIから消す
+    setDeletedIds(prev => new Set(prev).add(betId));
+    // バックグラウンドでサーバー削除
+    deleteBet(betId).then(() => onRefresh?.());
   }
 
   return (
@@ -533,7 +540,7 @@ export function CalendarPnL({
         <DailyDetail
           dateKey={selectedDate}
           month={currentMonth}
-          predictions={dailyPredictions[selectedDate] ?? []}
+          predictions={filteredPredictions[selectedDate] ?? []}
           onDelete={handleDelete}
         />
       )}
