@@ -14,7 +14,10 @@ export default async function MarketPage() {
         where: { isPrivate: false, publishType: "internal" },
         orderBy: { createdAt: 'desc' },
         take: 50,
-        include: { author: { select: { name: true } } }
+        include: {
+            author: { select: { name: true } },
+            _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
+        }
     });
 
     let followingPredictions: typeof allPredictions = [];
@@ -34,7 +37,10 @@ export default async function MarketPage() {
                 where: { authorId: { in: followingIds }, isPrivate: false, publishType: "internal" },
                 orderBy: { createdAt: 'desc' },
                 take: 50,
-                include: { author: { select: { name: true } } }
+                include: {
+                    author: { select: { name: true } },
+                    _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
+                }
             });
         }
     }
