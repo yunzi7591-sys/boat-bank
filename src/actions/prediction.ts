@@ -94,7 +94,7 @@ export async function ridePrediction(predictionId: string) {
     await prisma.$transaction(async (tx) => {
         const user = await tx.user.findUnique({ where: { id: userId } });
         if (!user || user.points < betAmount) {
-            throw new Error(`ポイントが不足しています。ベットには ${betAmount.toLocaleString()}pt 必要です。`);
+            throw new Error(`ポイントが不足しています。相乗りには ${betAmount.toLocaleString()}pt 必要です。`);
         }
 
         // Deduct points
