@@ -60,18 +60,24 @@ function RankList({ list, type }: { list: RankEntry[]; type: "recovery" | "pt" }
 }
 
 export function RankingClient({
-    recoveryRanking,
+    recoveryAll,
+    recoveryByVenue,
     ptAllRanking,
     ptMonthRanking,
     currentMonth,
 }: {
-    recoveryRanking: RankEntry[];
+    recoveryAll: RankEntry[];
+    recoveryByVenue: { [venue: string]: RankEntry[] };
     ptAllRanking: RankEntry[];
     ptMonthRanking: RankEntry[];
     currentMonth: number;
 }) {
     const [activeTab, setActiveTab] = useState<"recovery" | "pt">("recovery");
     const [ptPeriod, setPtPeriod] = useState<"all" | "month">("all");
+    const [selectedVenue, setSelectedVenue] = useState<string>("all");
+
+    const venueNames = Object.keys(recoveryByVenue).sort();
+    const currentRecovery = selectedVenue === "all" ? recoveryAll : (recoveryByVenue[selectedVenue] || []);
 
     return (
         <div>
@@ -94,12 +100,23 @@ export function RankingClient({
             </div>
 
             {activeTab === "recovery" && (
-                <RankList list={recoveryRanking} type="recovery" />
+                <>
+                    <select
+                        value={selectedVenue}
+                        onChange={(e) => setSelectedVenue(e.target.value)}
+                        className="mb-3 w-full bg-white border border-[#e5edf5] rounded-lg px-3 py-2 text-sm font-bold text-[#061b31] focus:outline-none focus:ring-2 focus:ring-[#533afd]"
+                    >
+                        <option value="all">全場</option>
+                        {venueNames.map(v => (
+                            <option key={v} value={v}>{v}</option>
+                        ))}
+                    </select>
+                    <RankList list={currentRecovery} type="recovery" />
+                </>
             )}
 
             {activeTab === "pt" && (
                 <>
-                    {/* Period toggle */}
                     <div className="flex gap-1 mb-3 bg-[#f6f8fa] rounded-md p-0.5 w-fit">
                         <button
                             onClick={() => setPtPeriod("all")}

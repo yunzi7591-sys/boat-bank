@@ -16,7 +16,7 @@ export default async function RankingPage() {
     // 公開予想(isPrivate: false)のみで集計
     const predictions = await prisma.prediction.findMany({
         where: { isSettled: true, isPrivate: false },
-        select: { authorId: true, betAmount: true, hitAmount: true, refundAmount: true, isHit: true, raceDate: true },
+        select: { authorId: true, placeName: true, betAmount: true, hitAmount: true, refundAmount: true, isHit: true, raceDate: true },
     });
 
     // 獲得pt: transactionsのSELL_PREDICTIONを集計
@@ -30,27 +30,42 @@ export default async function RankingPage() {
     });
     const userNameMap = new Map(users.map(u => [u.id, u.name || "Unknown"]));
 
-    // --- 回収率ランキング ---
-    const recoveryMap = new Map<string, { inv: number; ref: number; count: number }>();
-    for (const pred of predictions) {
-        const entry = recoveryMap.get(pred.authorId) || { inv: 0, ref: 0, count: 0 };
-        entry.inv += pred.betAmount || 0;
-        entry.ref += pred.hitAmount || pred.refundAmount || 0;
-        entry.count++;
-        recoveryMap.set(pred.authorId, entry);
+    // --- 回収率ランキング（全場+各場） ---
+    function buildRecoveryRanking(preds: typeof predictions): RankEntry[] {
+        const map = new Map<string, { inv: number; ref: number; count: number }>();
+        for (const pred of preds) {
+            const entry = map.get(pred.authorId) || { inv: 0, ref: 0, count: 0 };
+            entry.inv += pred.betAmount || 0;
+            entry.ref += pred.hitAmount || pred.refundAmount || 0;
+            entry.count++;
+            map.set(pred.authorId, entry);
+        }
+        const ranking: RankEntry[] = [];
+        for (const [userId, stats] of map) {
+            if (stats.count < 3) continue;
+            ranking.push({
+                id: userId,
+                name: userNameMap.get(userId) || "Unknown",
+                value: stats.inv > 0 ? (stats.ref / stats.inv) * 100 : 0,
+                sub: `${stats.count}R`,
+            });
+        }
+        return ranking.sort((a, b) => b.value - a.value);
     }
 
-    const recoveryRanking: RankEntry[] = [];
-    for (const [userId, stats] of recoveryMap) {
-        if (stats.count < 3) continue;
-        recoveryRanking.push({
-            id: userId,
-            name: userNameMap.get(userId) || "Unknown",
-            value: stats.inv > 0 ? (stats.ref / stats.inv) * 100 : 0,
-            sub: `${stats.count}R`,
-        });
+    // 全場
+    const recoveryAll = buildRecoveryRanking(predictions);
+
+    // 各場
+    const recoveryByVenue: { [venue: string]: RankEntry[] } = {};
+    const venueNames = [...new Set(predictions.map(p => p.placeName))].sort();
+    for (const venue of venueNames) {
+        const venuePreds = predictions.filter(p => p.placeName === venue);
+        const ranking = buildRecoveryRanking(venuePreds);
+        if (ranking.length > 0) {
+            recoveryByVenue[venue] = ranking;
+        }
     }
-    recoveryRanking.sort((a, b) => b.value - a.value);
 
     // --- 獲得ptランキング(通算) ---
     const ptAllMap = new Map<string, number>();
@@ -104,7 +119,8 @@ export default async function RankingPage() {
 
             <div className="px-4 -mt-4 relative z-10">
                 <RankingClient
-                    recoveryRanking={recoveryRanking}
+                    recoveryAll={recoveryAll}
+                    recoveryByVenue={recoveryByVenue}
                     ptAllRanking={ptAllRanking}
                     ptMonthRanking={ptMonthRanking}
                     currentMonth={now.getMonth() + 1}
