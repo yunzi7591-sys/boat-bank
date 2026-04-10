@@ -260,13 +260,18 @@ model UserBet {
   betAmount      Int
   refundAmount   Int       @default(0)
   slotNumber     Int       @default(0)
-  
+
   // Actual betting fields (Phase 46)
   betType        String?   // "3TR", "3PL", "2TR", "2PL", "WIN"
   combination    String?   // "1-2-3", "1=2=3", etc.
   placeName      String?   // 場名
   raceNumber     Int?      // 1~12
   raceDate       DateTime? // 開催日
+
+  // 精算結果
+  isSettled      Boolean   @default(false)
+  isHit          Boolean   @default(false)
+  hitAmount      Int       @default(0) // 的中時の払戻金額
 
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   race           Race?     @relation(fields: [raceId], references: [id], onDelete: Cascade)

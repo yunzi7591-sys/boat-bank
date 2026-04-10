@@ -200,24 +200,38 @@ export async function getUserStats(userId: string): Promise<UserStats> {
         },
     });
 
+    // UserBet (自分の賭け記録) も取得
+    const userBets = await prisma.userBet.findMany({
+        where: { userId },
+        select: {
+            betAmount: true,
+            isSettled: true,
+            isHit: true,
+            hitAmount: true,
+        },
+    });
+
     let totalInvestment = 0;
-    let totalRefund = 0; // Total returned to the user (wins + refunds)
+    let totalRefund = 0;
     let hitCount = 0;
-    let totalPredictions = predictions.length;
+    let totalPredictions = predictions.length + userBets.length;
 
     for (const pred of predictions) {
-        // sum up all bets made by the user
         totalInvestment += pred.betAmount || 0;
-
-        // sum up all returns
         if (pred.isSettled) {
-            // Using hitAmount as the unified field for earned points (includes refunds and wins)
             totalRefund += (pred.hitAmount || pred.refundAmount || 0);
             if (pred.isHit) hitCount++;
         }
     }
 
-    // Calculate recovery rate
+    for (const bet of userBets) {
+        totalInvestment += bet.betAmount || 0;
+        if (bet.isSettled) {
+            totalRefund += bet.hitAmount || 0;
+            if (bet.isHit) hitCount++;
+        }
+    }
+
     const recoveryRate = totalInvestment > 0 ? (totalRefund / totalInvestment) * 100 : 0;
 
     return {
@@ -345,31 +359,24 @@ export async function getUserDailyPredictions(
     const gte = new Date(Date.UTC(year, month - 1, 1));
     const lt = new Date(Date.UTC(year, month, 1));
 
-    const predictions = await prisma.prediction.findMany({
-        where: {
-            authorId: userId,
-            raceDate: { gte, lt },
-        },
-        select: {
-            raceDate: true,
-            placeName: true,
-            raceNumber: true,
-            betAmount: true,
-            hitAmount: true,
-            refundAmount: true,
-            isSettled: true,
-            isHit: true,
-        },
-        orderBy: [{ raceDate: "asc" }, { placeName: "asc" }, { raceNumber: "asc" }],
-    });
+    const [predictions, userBets] = await Promise.all([
+        prisma.prediction.findMany({
+            where: { authorId: userId, raceDate: { gte, lt } },
+            select: { raceDate: true, placeName: true, raceNumber: true, betAmount: true, hitAmount: true, refundAmount: true, isSettled: true, isHit: true },
+            orderBy: [{ raceDate: "asc" }, { placeName: "asc" }, { raceNumber: "asc" }],
+        }),
+        prisma.userBet.findMany({
+            where: { userId, raceDate: { gte, lt } },
+            select: { raceDate: true, placeName: true, raceNumber: true, betAmount: true, hitAmount: true, isSettled: true, isHit: true },
+            orderBy: [{ raceDate: "asc" }, { placeName: "asc" }, { raceNumber: "asc" }],
+        }),
+    ]);
 
     const result: { [date: string]: DailyPredictionItem[] } = {};
 
     for (const pred of predictions) {
         const dateStr = pred.raceDate.toISOString().slice(0, 10);
-        if (!result[dateStr]) {
-            result[dateStr] = [];
-        }
+        if (!result[dateStr]) result[dateStr] = [];
         result[dateStr].push({
             placeName: pred.placeName,
             raceNumber: pred.raceNumber,
@@ -377,6 +384,20 @@ export async function getUserDailyPredictions(
             hitAmount: pred.isSettled ? (pred.hitAmount || pred.refundAmount || 0) : 0,
             isSettled: pred.isSettled,
             isHit: pred.isHit,
+        });
+    }
+
+    for (const bet of userBets) {
+        if (!bet.raceDate || !bet.placeName || !bet.raceNumber) continue;
+        const dateStr = bet.raceDate.toISOString().slice(0, 10);
+        if (!result[dateStr]) result[dateStr] = [];
+        result[dateStr].push({
+            placeName: bet.placeName,
+            raceNumber: bet.raceNumber,
+            betAmount: bet.betAmount || 0,
+            hitAmount: bet.isSettled ? (bet.hitAmount || 0) : 0,
+            isSettled: bet.isSettled,
+            isHit: bet.isHit,
         });
     }
 
@@ -412,42 +433,40 @@ export async function getUserDailyStats(
     const gte = new Date(Date.UTC(year, month - 1, 1));
     const lt = new Date(Date.UTC(year, month, 1));
 
-    const predictions = await prisma.prediction.findMany({
-        where: {
-            authorId: userId,
-            raceDate: { gte, lt },
-        },
-        select: {
-            raceDate: true,
-            betAmount: true,
-            hitAmount: true,
-            refundAmount: true,
-            isSettled: true,
-        },
-    });
+    const [predictions, userBets] = await Promise.all([
+        prisma.prediction.findMany({
+            where: { authorId: userId, raceDate: { gte, lt } },
+            select: { raceDate: true, betAmount: true, hitAmount: true, refundAmount: true, isSettled: true },
+        }),
+        prisma.userBet.findMany({
+            where: { userId, raceDate: { gte, lt } },
+            select: { raceDate: true, betAmount: true, hitAmount: true, isSettled: true },
+        }),
+    ]);
 
     const dayMap = new Map<string, { inv: number; ref: number; count: number }>();
 
     for (const pred of predictions) {
-        // raceDate is stored as UTC 00:00 representing JST date
         const dateStr = pred.raceDate.toISOString().slice(0, 10);
         const entry = dayMap.get(dateStr) || { inv: 0, ref: 0, count: 0 };
         entry.inv += pred.betAmount || 0;
-        if (pred.isSettled) {
-            entry.ref += pred.hitAmount || pred.refundAmount || 0;
-        }
+        if (pred.isSettled) entry.ref += pred.hitAmount || pred.refundAmount || 0;
+        entry.count++;
+        dayMap.set(dateStr, entry);
+    }
+
+    for (const bet of userBets) {
+        if (!bet.raceDate) continue;
+        const dateStr = bet.raceDate.toISOString().slice(0, 10);
+        const entry = dayMap.get(dateStr) || { inv: 0, ref: 0, count: 0 };
+        entry.inv += bet.betAmount || 0;
+        if (bet.isSettled) entry.ref += bet.hitAmount || 0;
         entry.count++;
         dayMap.set(dateStr, entry);
     }
 
     return Array.from(dayMap.entries())
-        .map(([date, d]) => ({
-            date,
-            investment: d.inv,
-            refund: d.ref,
-            pnl: d.ref - d.inv,
-            predictions: d.count,
-        }))
+        .map(([date, d]) => ({ date, investment: d.inv, refund: d.ref, pnl: d.ref - d.inv, predictions: d.count }))
         .sort((a, b) => a.date.localeCompare(b.date));
 }
 
