@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Edit2, Loader2 } from "lucide-react";
 
-export function ProfileEditModal({ initialName, initialBio }: { initialName: string; initialBio: string }) {
+export function ProfileEditModal({ initialName, initialBio, initialLink }: { initialName: string; initialBio: string; initialLink?: string }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -24,8 +24,9 @@ export function ProfileEditModal({ initialName, initialBio }: { initialName: str
         setError("");
         const name = formData.get("name") as string;
         const bio = formData.get("bio") as string;
+        const link = formData.get("link") as string;
 
-        const res = await updateProfile({ name, bio });
+        const res = await updateProfile({ name, bio, link });
         setLoading(false);
 
         if (res.success) {
@@ -55,6 +56,10 @@ export function ProfileEditModal({ initialName, initialBio }: { initialName: str
                     <div>
                         <label className="text-xs font-bold text-slate-500 mb-1 block">自己紹介 (Bio)</label>
                         <Textarea name="bio" defaultValue={initialBio} placeholder="得意な場、予想スタイルなど" rows={4} />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 mb-1 block">リンク</label>
+                        <Input name="link" defaultValue={initialLink} placeholder="https://example.com" type="url" />
                     </div>
                     {error && <p className="text-xs text-red-500 font-bold">{error}</p>}
                     <Button type="submit" disabled={loading} className="w-full font-bold bg-slate-900 hover:bg-slate-800 text-white h-12 rounded-xl">

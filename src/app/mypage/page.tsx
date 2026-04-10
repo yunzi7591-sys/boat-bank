@@ -22,7 +22,7 @@ export default async function MyPage() {
     // Fetch full user for points
     const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { name: true, points: true, role: true, bio: true }
+        select: { name: true, points: true, role: true, bio: true, link: true }
     });
 
     if (!user) notFound();
@@ -66,15 +66,10 @@ export default async function MyPage() {
             {/* Header Profile */}
             <div className="bg-[#1c1e54] text-white p-6 pb-12 rounded-b-lg shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] relative overflow-hidden">
                 <div className="max-w-4xl mx-auto">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-4 border border-white/[0.1] p-2 pr-6 rounded-lg bg-white/[0.08] backdrop-blur-sm">
-                            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-[#061b31] font-bold text-xl shadow-inner border-2 border-[#e5edf5]">
-                                {user.name?.charAt(0) || "U"}
-                            </div>
-                            <div className="flex flex-col">
-                                <h1 className="text-lg font-light tracking-tight">{user.name}</h1>
-                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{user.role}</span>
-                            </div>
+                    <div className="flex justify-between items-start mb-3">
+                        <div>
+                            <h1 className="text-lg font-light tracking-tight">{user.name}</h1>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{user.role}</span>
                         </div>
                         <div className="text-right">
                             <p className="text-slate-400 text-[10px] font-bold tracking-widest mb-0.5 uppercase">Points</p>
@@ -82,14 +77,18 @@ export default async function MyPage() {
                         </div>
                     </div>
 
-                    <div className="flex flex-col mb-4">
-                        <p className="text-sm text-slate-300 font-medium leading-relaxed max-w-sm">
-                            {user.bio || "自己紹介が未設定です。"}
-                        </p>
-                    </div>
+                    <p className="text-sm text-slate-300 font-medium leading-relaxed max-w-sm mb-2">
+                        {user.bio || "自己紹介が未設定です。"}
+                    </p>
+
+                    {user.link && (
+                        <a href={user.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#b9b9f9] hover:text-white transition-colors mb-3">
+                            🔗 {user.link.replace(/^https?:\/\//, '')}
+                        </a>
+                    )}
 
                     <div className="flex items-center gap-3">
-                        <ProfileEditModal initialName={user.name || ""} initialBio={user.bio || ""} />
+                        <ProfileEditModal initialName={user.name || ""} initialBio={user.bio || ""} initialLink={user.link || ""} />
                     </div>
                 </div>
             </div>

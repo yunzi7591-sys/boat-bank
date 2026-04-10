@@ -23,7 +23,8 @@ model User {
   dailyPoints   Int       @default(500)   // 毎日付与される500pt（翌日リセット）
   lastDailyReset DateTime? // 最後にdailyPointsをリセットした日
   role          String    @default("BUYER")
-  bio           String?   // 自己紹介 (Phase 8 追加)
+  bio           String?   // 自己紹介
+  link          String?   // プロフィールリンク（URL）
   
   // Relations
   accounts      Account[]
