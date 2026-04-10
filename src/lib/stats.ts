@@ -20,6 +20,60 @@ export interface VenueStats {
     totalPredictions: number;
 }
 
+export interface UserPointsDetail {
+    points: number;        // 保有ポイント（恒久）
+    dailyPoints: number;   // 毎日付与ポイント（翌日リセット）
+    totalPoints: number;   // 合計（points + dailyPoints）
+    totalEarned: number;   // 通算獲得pt（SELL_PREDICTIONの合計）
+    monthEarned: number;   // 今月獲得pt
+}
+
+export async function getUserPointsDetail(userId: string): Promise<UserPointsDetail> {
+    // ユーザーの保有ポイントを取得
+    const user = await prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { points: true, dailyPoints: true },
+    });
+
+    // JST基準で今月の範囲を算出（JST = UTC+9）
+    const nowUtc = new Date();
+    const jstOffsetMs = 9 * 60 * 60 * 1000;
+    const nowJst = new Date(nowUtc.getTime() + jstOffsetMs);
+    const jstYear = nowJst.getUTCFullYear();
+    const jstMonth = nowJst.getUTCMonth(); // 0-indexed
+    // 今月1日 00:00 JST → UTC
+    const monthStartUtc = new Date(Date.UTC(jstYear, jstMonth, 1) - jstOffsetMs);
+    // 来月1日 00:00 JST → UTC
+    const monthEndUtc = new Date(Date.UTC(jstYear, jstMonth + 1, 1) - jstOffsetMs);
+
+    // SELL_PREDICTION の通算合計と今月合計を並行取得
+    const [totalAgg, monthAgg] = await Promise.all([
+        prisma.transaction.aggregate({
+            where: { userId, action: "SELL_PREDICTION" },
+            _sum: { points: true },
+        }),
+        prisma.transaction.aggregate({
+            where: {
+                userId,
+                action: "SELL_PREDICTION",
+                createdAt: { gte: monthStartUtc, lt: monthEndUtc },
+            },
+            _sum: { points: true },
+        }),
+    ]);
+
+    const totalEarned = totalAgg._sum.points ?? 0;
+    const monthEarned = monthAgg._sum.points ?? 0;
+
+    return {
+        points: user.points,
+        dailyPoints: user.dailyPoints,
+        totalPoints: user.points + user.dailyPoints,
+        totalEarned,
+        monthEarned,
+    };
+}
+
 export async function getUserVenueStats(userId: string): Promise<VenueStats[]> {
     // マイページ: UserBetのみ
     const userBets = await prisma.userBet.findMany({
