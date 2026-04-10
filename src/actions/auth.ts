@@ -34,14 +34,14 @@ export async function registerUser(formData: FormData) {
                 name,
                 email,
                 password: hashedPassword,
-                points: 10000, // 10,000pt Welcome Bonus!
+                points: 5000, // 5,000pt Welcome Bonus!
             },
         });
 
         await tx.transaction.create({
             data: {
                 userId: user.id,
-                points: 10000,
+                points: 5000,
                 action: "WELCOME_BONUS",
             }
         });
