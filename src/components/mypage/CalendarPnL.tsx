@@ -464,7 +464,12 @@ function MonthlySummary({
             {totals.pnl >= 0 ? "+" : ""}¥{formatCurrency(Math.abs(totals.pnl))}
           </div>
         </div>
-        <SummaryCell label="予想数" value={`${totals.predictions}件`} />
+        <div className="bg-white rounded-lg p-2.5 text-center">
+          <div className="text-[10px] font-bold text-[#64748d] mb-0.5">回収率</div>
+          <div className={`text-sm font-black ${totals.investment > 0 && (totals.refund / totals.investment) >= 1 ? "text-[#533afd]" : "text-[#061b31]"}`}>
+            {totals.investment > 0 ? ((totals.refund / totals.investment) * 100).toFixed(1) : "0.0"}%
+          </div>
+        </div>
       </div>
     </div>
   );
