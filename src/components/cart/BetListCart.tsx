@@ -325,7 +325,14 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                                 : 0,
                                                             placeName: formData.get('placeName') as string || qPlaceName,
                                                             raceNumber: parseInt(formData.get('raceNumber') as string) || parseInt(qRaceNumber),
-                                                            raceDate: new Date(),
+                                                            raceDate: (() => {
+                                                                // JST基準で当日の00:00:00 UTCを生成
+                                                                const jst = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+                                                                const y = jst.getFullYear();
+                                                                const m = String(jst.getMonth() + 1).padStart(2, '0');
+                                                                const d = String(jst.getDate()).padStart(2, '0');
+                                                                return new Date(`${y}-${m}-${d}T00:00:00.000Z`);
+                                                            })(),
                                                             deadlineAt: new Date(formData.get('deadlineAt') as string),
                                                             cartData: cart,
                                                             isPrivate: false,
