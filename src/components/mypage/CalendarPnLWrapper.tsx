@@ -41,6 +41,18 @@ export function CalendarPnLWrapper({
         });
     };
 
+    const handleRefresh = () => {
+        startTransition(async () => {
+            const result = fetchAction
+                ? await fetchAction(year, month)
+                : await fetchDailyStats(year, month);
+            if (result.success) {
+                setDailyStats(result.data);
+                setDailyPredictions(result.dailyPredictions);
+            }
+        });
+    };
+
     return (
         <div className={isPending ? "opacity-60 transition-opacity" : ""}>
             <CalendarPnL
@@ -49,6 +61,7 @@ export function CalendarPnLWrapper({
                 currentYear={year}
                 currentMonth={month}
                 onMonthChange={handleMonthChange}
+                onRefresh={handleRefresh}
             />
         </div>
     );

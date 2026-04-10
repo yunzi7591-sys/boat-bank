@@ -156,9 +156,11 @@ export async function getPublicDailyPredictions(
             raceDate: { gte, lt },
         },
         select: {
+            id: true,
             raceDate: true,
             placeName: true,
             raceNumber: true,
+            predictedNumbers: true,
             betAmount: true,
             hitAmount: true,
             refundAmount: true,
@@ -175,9 +177,14 @@ export async function getPublicDailyPredictions(
         if (!result[dateStr]) {
             result[dateStr] = [];
         }
+        const pn = pred.predictedNumbers as { type?: string; combination?: string } | null;
         result[dateStr].push({
+            id: pred.id,
+            source: 'prediction',
             placeName: pred.placeName,
             raceNumber: pred.raceNumber,
+            betType: pn?.type ?? undefined,
+            combination: pn?.combination ?? undefined,
             betAmount: pred.betAmount || 0,
             hitAmount: pred.isSettled ? (pred.hitAmount || pred.refundAmount || 0) : 0,
             isSettled: pred.isSettled,
@@ -357,8 +364,12 @@ export async function getUserVenueStatsWithPeriod(
 // --- Daily predictions (per-race detail) ---
 
 export interface DailyPredictionItem {
+    id: string;
+    source: 'prediction' | 'userbet';
     placeName: string;
     raceNumber: number;
+    betType?: string;
+    combination?: string;
     betAmount: number;
     hitAmount: number;
     isSettled: boolean;
@@ -379,12 +390,12 @@ export async function getUserDailyPredictions(
     const [predictions, userBets] = await Promise.all([
         prisma.prediction.findMany({
             where: { authorId: userId, raceDate: { gte, lt } },
-            select: { raceDate: true, placeName: true, raceNumber: true, betAmount: true, hitAmount: true, refundAmount: true, isSettled: true, isHit: true },
+            select: { id: true, raceDate: true, placeName: true, raceNumber: true, predictedNumbers: true, betAmount: true, hitAmount: true, refundAmount: true, isSettled: true, isHit: true },
             orderBy: [{ raceDate: "asc" }, { placeName: "asc" }, { raceNumber: "asc" }],
         }),
         prisma.userBet.findMany({
             where: { userId, raceDate: { gte, lt } },
-            select: { raceDate: true, placeName: true, raceNumber: true, betAmount: true, hitAmount: true, isSettled: true, isHit: true },
+            select: { id: true, raceDate: true, placeName: true, raceNumber: true, betType: true, combination: true, betAmount: true, hitAmount: true, isSettled: true, isHit: true },
             orderBy: [{ raceDate: "asc" }, { placeName: "asc" }, { raceNumber: "asc" }],
         }),
     ]);
@@ -394,9 +405,15 @@ export async function getUserDailyPredictions(
     for (const pred of predictions) {
         const dateStr = pred.raceDate.toISOString().slice(0, 10);
         if (!result[dateStr]) result[dateStr] = [];
+        // Extract betType from predictedNumbers JSON if available
+        const pn = pred.predictedNumbers as { type?: string; combination?: string } | null;
         result[dateStr].push({
+            id: pred.id,
+            source: 'prediction',
             placeName: pred.placeName,
             raceNumber: pred.raceNumber,
+            betType: pn?.type ?? undefined,
+            combination: pn?.combination ?? undefined,
             betAmount: pred.betAmount || 0,
             hitAmount: pred.isSettled ? (pred.hitAmount || pred.refundAmount || 0) : 0,
             isSettled: pred.isSettled,
@@ -409,8 +426,12 @@ export async function getUserDailyPredictions(
         const dateStr = bet.raceDate.toISOString().slice(0, 10);
         if (!result[dateStr]) result[dateStr] = [];
         result[dateStr].push({
+            id: bet.id,
+            source: 'userbet',
             placeName: bet.placeName,
             raceNumber: bet.raceNumber,
+            betType: bet.betType ?? undefined,
+            combination: bet.combination ?? undefined,
             betAmount: bet.betAmount || 0,
             hitAmount: bet.isSettled ? (bet.hitAmount || 0) : 0,
             isSettled: bet.isSettled,
