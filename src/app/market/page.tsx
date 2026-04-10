@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TimelineCard } from "@/components/market/TimelineCard";
+import { MarketFeed } from "@/components/market/MarketFeed";
 import { Globe, Users } from "lucide-react";
 
 export const revalidate = 0;
@@ -10,10 +10,11 @@ export default async function MarketPage() {
     const session = await auth();
     const userId = session?.user?.id;
 
+    // internal + external の公開予想を全て取得
     const allPredictions = await prisma.prediction.findMany({
-        where: { isPrivate: false, publishType: "internal" },
+        where: { isPrivate: false },
         orderBy: { createdAt: 'desc' },
-        take: 50,
+        take: 100,
         include: {
             author: { select: { name: true } },
             _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
@@ -21,7 +22,7 @@ export default async function MarketPage() {
     });
 
     let followingPredictions: typeof allPredictions = [];
-    let followingSet = new Set<string>();
+    let followingIds: string[] = [];
 
     if (userId) {
         const follows = await prisma.follows.findMany({
@@ -29,14 +30,13 @@ export default async function MarketPage() {
             select: { followingId: true }
         });
 
-        const followingIds = follows.map(f => f.followingId);
-        followingIds.forEach(id => followingSet.add(id));
+        followingIds = follows.map(f => f.followingId);
 
         if (followingIds.length > 0) {
             followingPredictions = await prisma.prediction.findMany({
-                where: { authorId: { in: followingIds }, isPrivate: false, publishType: "internal" },
+                where: { authorId: { in: followingIds }, isPrivate: false },
                 orderBy: { createdAt: 'desc' },
-                take: 50,
+                take: 100,
                 include: {
                     author: { select: { name: true } },
                     _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
@@ -71,20 +71,7 @@ export default async function MarketPage() {
 
                     <div className="mt-4">
                         <TabsContent value="all" className="m-0 focus-visible:outline-none focus-visible:ring-0">
-                            {allPredictions.length === 0 ? (
-                                <div className="py-16 text-center text-[#64748d]">
-                                    <p className="font-semibold">フィードがありません</p>
-                                </div>
-                            ) : (
-                                allPredictions.map(pred => (
-                                    <TimelineCard
-                                        key={pred.id}
-                                        prediction={pred}
-                                        currentUserId={userId}
-                                        isFollowingAuthor={userId ? followingSet.has(pred.authorId) : false}
-                                    />
-                                ))
-                            )}
+                            <MarketFeed predictions={allPredictions} currentUserId={userId} followingIds={followingIds} />
                         </TabsContent>
 
                         <TabsContent value="following" className="m-0 focus-visible:outline-none focus-visible:ring-0">
@@ -96,14 +83,7 @@ export default async function MarketPage() {
                                     <p className="text-sm">お気に入りの予想家をフォローしましょう</p>
                                 </div>
                             ) : (
-                                followingPredictions.map(pred => (
-                                    <TimelineCard
-                                        key={pred.id}
-                                        prediction={pred}
-                                        currentUserId={userId}
-                                        isFollowingAuthor={true}
-                                    />
-                                ))
+                                <MarketFeed predictions={followingPredictions} currentUserId={userId} followingIds={followingIds} />
                             )}
                         </TabsContent>
                     </div>
