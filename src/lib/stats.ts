@@ -21,29 +21,30 @@ export interface VenueStats {
 }
 
 export async function getUserVenueStats(userId: string): Promise<VenueStats[]> {
-    const predictions = await prisma.prediction.findMany({
-        where: { authorId: userId },
+    // マイページ: UserBetのみ
+    const userBets = await prisma.userBet.findMany({
+        where: { userId },
         select: {
             placeName: true,
             isSettled: true,
             isHit: true,
             betAmount: true,
             hitAmount: true,
-            refundAmount: true,
         },
     });
 
     const venueMap = new Map<string, { inv: number; ref: number; hit: number; total: number }>();
 
-    for (const pred of predictions) {
-        const entry = venueMap.get(pred.placeName) || { inv: 0, ref: 0, hit: 0, total: 0 };
-        entry.inv += pred.betAmount || 0;
+    for (const bet of userBets) {
+        if (!bet.placeName) continue;
+        const entry = venueMap.get(bet.placeName) || { inv: 0, ref: 0, hit: 0, total: 0 };
+        entry.inv += bet.betAmount || 0;
         entry.total++;
-        if (pred.isSettled) {
-            entry.ref += (pred.hitAmount || pred.refundAmount || 0);
-            if (pred.isHit) entry.hit++;
+        if (bet.isSettled) {
+            entry.ref += bet.hitAmount || 0;
+            if (bet.isHit) entry.hit++;
         }
-        venueMap.set(pred.placeName, entry);
+        venueMap.set(bet.placeName, entry);
     }
 
     return Array.from(venueMap.entries())
@@ -60,7 +61,7 @@ export async function getUserVenueStats(userId: string): Promise<VenueStats[]> {
 
 export async function getPublicUserStats(userId: string): Promise<UserStats> {
     const predictions = await prisma.prediction.findMany({
-        where: { authorId: userId, isPrivate: false, publishType: "internal" },
+        where: { authorId: userId, isPrivate: false },
         select: {
             isSettled: true,
             isHit: true,
@@ -196,21 +197,7 @@ export async function getPublicDailyPredictions(
 }
 
 export async function getUserStats(userId: string): Promise<UserStats> {
-    const predictions = await prisma.prediction.findMany({
-        where: { authorId: userId },
-        select: {
-            placeName: true,
-            raceNumber: true,
-            raceDate: true,
-            isSettled: true,
-            isHit: true,
-            betAmount: true,
-            hitAmount: true,
-            refundAmount: true,
-        },
-    });
-
-    // UserBet (自分の賭け記録) も取得
+    // マイページ: UserBet（自分の賭け記録）のみ
     const userBets = await prisma.userBet.findMany({
         where: { userId },
         select: {
@@ -227,20 +214,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     let totalInvestment = 0;
     let totalRefund = 0;
 
-    // レース単位で的中判定するためのMap
     const raceMap = new Map<string, { settled: boolean; hit: boolean }>();
-
-    for (const pred of predictions) {
-        totalInvestment += pred.betAmount || 0;
-        if (pred.isSettled) {
-            totalRefund += (pred.hitAmount || pred.refundAmount || 0);
-        }
-        const key = `pred-${pred.placeName}-${pred.raceNumber}-${pred.raceDate.toISOString()}`;
-        const race = raceMap.get(key) || { settled: false, hit: false };
-        if (pred.isSettled) race.settled = true;
-        if (pred.isHit) race.hit = true;
-        raceMap.set(key, race);
-    }
 
     for (const bet of userBets) {
         totalInvestment += bet.betAmount || 0;
@@ -387,39 +361,14 @@ export async function getUserDailyPredictions(
     const gte = new Date(Date.UTC(year, month - 1, 1));
     const lt = new Date(Date.UTC(year, month, 1));
 
-    const [predictions, userBets] = await Promise.all([
-        prisma.prediction.findMany({
-            where: { authorId: userId, raceDate: { gte, lt } },
-            select: { id: true, raceDate: true, placeName: true, raceNumber: true, predictedNumbers: true, betAmount: true, hitAmount: true, refundAmount: true, isSettled: true, isHit: true },
-            orderBy: [{ raceDate: "asc" }, { placeName: "asc" }, { raceNumber: "asc" }],
-        }),
-        prisma.userBet.findMany({
-            where: { userId, raceDate: { gte, lt } },
-            select: { id: true, raceDate: true, placeName: true, raceNumber: true, betType: true, combination: true, betAmount: true, hitAmount: true, isSettled: true, isHit: true },
-            orderBy: [{ raceDate: "asc" }, { placeName: "asc" }, { raceNumber: "asc" }],
-        }),
-    ]);
+    // マイページ: UserBetのみ
+    const userBets = await prisma.userBet.findMany({
+        where: { userId, raceDate: { gte, lt } },
+        select: { id: true, raceDate: true, placeName: true, raceNumber: true, betType: true, combination: true, betAmount: true, hitAmount: true, isSettled: true, isHit: true },
+        orderBy: [{ raceDate: "asc" }, { placeName: "asc" }, { raceNumber: "asc" }],
+    });
 
     const result: { [date: string]: DailyPredictionItem[] } = {};
-
-    for (const pred of predictions) {
-        const dateStr = pred.raceDate.toISOString().slice(0, 10);
-        if (!result[dateStr]) result[dateStr] = [];
-        // Extract betType from predictedNumbers JSON if available
-        const pn = pred.predictedNumbers as { type?: string; combination?: string } | null;
-        result[dateStr].push({
-            id: pred.id,
-            source: 'prediction',
-            placeName: pred.placeName,
-            raceNumber: pred.raceNumber,
-            betType: pn?.type ?? undefined,
-            combination: pn?.combination ?? undefined,
-            betAmount: pred.betAmount || 0,
-            hitAmount: pred.isSettled ? (pred.hitAmount || pred.refundAmount || 0) : 0,
-            isSettled: pred.isSettled,
-            isHit: pred.isHit,
-        });
-    }
 
     for (const bet of userBets) {
         if (!bet.raceDate || !bet.placeName || !bet.raceNumber) continue;
@@ -471,27 +420,13 @@ export async function getUserDailyStats(
     const gte = new Date(Date.UTC(year, month - 1, 1));
     const lt = new Date(Date.UTC(year, month, 1));
 
-    const [predictions, userBets] = await Promise.all([
-        prisma.prediction.findMany({
-            where: { authorId: userId, raceDate: { gte, lt } },
-            select: { raceDate: true, betAmount: true, hitAmount: true, refundAmount: true, isSettled: true },
-        }),
-        prisma.userBet.findMany({
-            where: { userId, raceDate: { gte, lt } },
-            select: { raceDate: true, betAmount: true, hitAmount: true, isSettled: true },
-        }),
-    ]);
+    // マイページ: UserBetのみ
+    const userBets = await prisma.userBet.findMany({
+        where: { userId, raceDate: { gte, lt } },
+        select: { raceDate: true, betAmount: true, hitAmount: true, isSettled: true },
+    });
 
     const dayMap = new Map<string, { inv: number; ref: number; count: number }>();
-
-    for (const pred of predictions) {
-        const dateStr = pred.raceDate.toISOString().slice(0, 10);
-        const entry = dayMap.get(dateStr) || { inv: 0, ref: 0, count: 0 };
-        entry.inv += pred.betAmount || 0;
-        if (pred.isSettled) entry.ref += pred.hitAmount || pred.refundAmount || 0;
-        entry.count++;
-        dayMap.set(dateStr, entry);
-    }
 
     for (const bet of userBets) {
         if (!bet.raceDate) continue;
