@@ -29,7 +29,7 @@ export async function VenueGrid() {
     const now = new Date();
 
     return (
-        <div className="mt-6 px-4">
+        <div className="mt-0">
             <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                     <Map className="w-4 h-4 text-blue-500" />
@@ -51,7 +51,7 @@ export async function VenueGrid() {
 
                     if (!isActive) {
                         return (
-                            <div key={venue.id} className="bg-slate-50/80 border border-slate-100 rounded-lg p-1.5 opacity-40 h-[60px] flex flex-col items-center justify-center">
+                            <div key={venue.id} className="bg-slate-50/80 border border-slate-100 rounded-lg p-1.5 opacity-30 h-[60px] flex flex-col items-center justify-center">
                                 <span className="text-[12px] font-bold text-slate-400">{venue.name}</span>
                                 <span className="text-[8px] text-slate-300 mt-0.5">非開催</span>
                             </div>
@@ -63,7 +63,7 @@ export async function VenueGrid() {
 
                     return (
                         <Link href={`/place/${venue.id}`} key={venue.id} className="block active:scale-95 transition-transform">
-                            <div className="bg-white border border-slate-200/80 rounded-lg p-1.5 flex flex-col items-center justify-between shadow-sm h-[60px] relative overflow-hidden">
+                            <div className="bg-white border border-slate-200/80 rounded-lg p-1.5 flex flex-col items-center justify-between shadow-[0_2px_8px_rgba(50,50,93,0.08)] h-[60px] relative overflow-hidden">
                                 {/* Top accent */}
                                 <div className={`absolute top-0 left-0 right-0 h-[2px] ${isFinished ? 'bg-slate-200' : 'bg-emerald-500'}`} />
 

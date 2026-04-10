@@ -69,7 +69,7 @@ export default async function MarketPage() {
                         </TabsTrigger>
                     </TabsList>
 
-                    <div className="mt-4">
+                    <div className="mt-4 bg-[#f8fafc] rounded-lg p-2">
                         <TabsContent value="all" className="m-0 focus-visible:outline-none focus-visible:ring-0">
                             <MarketFeed predictions={allPredictions} currentUserId={userId} followingIds={followingIds} />
                         </TabsContent>
