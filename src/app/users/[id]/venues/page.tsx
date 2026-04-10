@@ -18,13 +18,16 @@ export default async function UserVenuesPage(props: { params: Promise<{ id: stri
 
     const currentYear = new Date().getFullYear();
     const months = Array.from({ length: 12 }, (_, i) => `${currentYear}-${String(i + 1).padStart(2, '0')}`);
-    const [allTimeVenueStats, yearVenueStats, ...monthlyResults] = await Promise.all([
-        getUserVenueStatsWithPeriod(userId, "all"),
-        getUserVenueStatsWithPeriod(userId, "year"),
-        ...months.map(m => getUserVenueStatsWithPeriod(userId, m)),
-    ]);
+
+    const allTimeVenueStats = await getUserVenueStatsWithPeriod(userId, "all");
+    const yearVenueStats = await getUserVenueStatsWithPeriod(userId, "year");
+
     const monthlyStats: { [key: string]: typeof allTimeVenueStats } = {};
-    months.forEach((m, i) => { monthlyStats[m] = monthlyResults[i]; });
+    for (let i = 0; i < months.length; i += 3) {
+        const batch = months.slice(i, i + 3);
+        const results = await Promise.all(batch.map(m => getUserVenueStatsWithPeriod(userId, m)));
+        batch.forEach((m, j) => { monthlyStats[m] = results[j]; });
+    }
 
     return (
         <div className="min-h-screen bg-white font-sans pb-24">

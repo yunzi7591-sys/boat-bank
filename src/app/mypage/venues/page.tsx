@@ -13,13 +13,17 @@ export default async function VenuesPage() {
 
     const currentYear = new Date().getFullYear();
     const months = Array.from({ length: 12 }, (_, i) => `${currentYear}-${String(i + 1).padStart(2, '0')}`);
-    const [allTimeVenueStats, yearVenueStats, ...monthlyResults] = await Promise.all([
-        getPrivateVenueStatsWithPeriod(userId, "all"),
-        getPrivateVenueStatsWithPeriod(userId, "year"),
-        ...months.map(m => getPrivateVenueStatsWithPeriod(userId, m)),
-    ]);
+
+    // pgbouncer connection_limit対策: 3並列ずつ
+    const allTimeVenueStats = await getPrivateVenueStatsWithPeriod(userId, "all");
+    const yearVenueStats = await getPrivateVenueStatsWithPeriod(userId, "year");
+
     const monthlyStats: { [key: string]: typeof allTimeVenueStats } = {};
-    months.forEach((m, i) => { monthlyStats[m] = monthlyResults[i]; });
+    for (let i = 0; i < months.length; i += 3) {
+        const batch = months.slice(i, i + 3);
+        const results = await Promise.all(batch.map(m => getPrivateVenueStatsWithPeriod(userId, m)));
+        batch.forEach((m, j) => { monthlyStats[m] = results[j]; });
+    }
 
     return (
         <div className="min-h-screen bg-white font-sans pb-24">
