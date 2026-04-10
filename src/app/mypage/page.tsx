@@ -77,8 +77,8 @@ export default async function MyPage() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-slate-400 text-[10px] font-bold tracking-widest mb-0.5 uppercase">Available Balance</p>
-                            <p className="text-3xl font-light tracking-tight">{user.points.toLocaleString()} <span className="text-sm font-bold text-slate-400">円</span></p>
+                            <p className="text-slate-400 text-[10px] font-bold tracking-widest mb-0.5 uppercase">Points</p>
+                            <p className="text-3xl font-light tracking-tight">{user.points.toLocaleString()} <span className="text-sm font-bold text-slate-400">pt</span></p>
                         </div>
                     </div>
 
