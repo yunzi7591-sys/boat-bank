@@ -191,7 +191,7 @@ export default async function MyPage() {
                                                     <p className="text-xs text-neutral-400 mt-2">{new Date(pred.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</p>
                                                 </div>
                                                 <div className="text-right flex flex-col items-end gap-2">
-                                                    <span className="text-sm font-bold text-neutral-600">{pred.price} 円</span>
+                                                    <span className="text-sm font-bold text-neutral-600">{pred.price} pt</span>
 
                                                     {/* Result Badge */}
                                                     {!pred.isSettled ? (
