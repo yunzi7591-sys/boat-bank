@@ -106,7 +106,7 @@ export function RaceHubClient({
             </div>
 
             {/* Race Selection Tabs (1-12) */}
-            <div className="bg-white border-b shadow-sm sticky top-[60px] z-10">
+            <div className="bg-[#f8fafc] border-b shadow-sm sticky top-[60px] z-10">
                 <div ref={tabsRef} className="flex overflow-x-auto gap-2 p-3 snap-x [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {Array.from({ length: 12 }).map((_, i) => {
                         const rNum = i + 1;
@@ -138,7 +138,7 @@ export function RaceHubClient({
 
             {/* Active Race Status */}
             <div className="px-4 pt-6 pb-2">
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
+                <div className="bg-white rounded-2xl p-4 shadow-[0_2px_8px_rgba(50,50,93,0.08)] border border-slate-100 flex items-center justify-between">
                     <div>
                         <div className="flex items-center gap-2">
                             <span className="bg-slate-800 text-white font-black px-2 py-0.5 rounded text-sm">{activeRaceNumber}R</span>
@@ -156,7 +156,7 @@ export function RaceHubClient({
 
             {/* Entry List Section */}
             <div className="px-4 mt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+                <div className="bg-white rounded-2xl p-4 shadow-[0_2px_8px_rgba(50,50,93,0.08)] border border-slate-100">
                     <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
                         <h3 className="text-[13px] font-extrabold text-slate-800 tracking-wider flex items-center gap-1.5">
                             📋 出走表
@@ -298,7 +298,7 @@ export function RaceHubClient({
             )}
 
             {/* 3 Main Action Hub Cards */}
-            <div className={`px-4 mt-6 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 delay-100 fill-both`}>
+            <div className={`px-4 mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 delay-100 fill-both`}>
                 <h3 className="text-[13px] font-extrabold text-slate-800 tracking-wider flex items-center gap-1.5 mb-2">
                     <PenTool className="w-4 h-4 text-blue-600" /> アクション
                 </h3>

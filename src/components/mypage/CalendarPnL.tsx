@@ -445,7 +445,7 @@ function MonthlySummary({
   }, [dailyStats]);
 
   return (
-    <div className="mb-4 bg-[#f8fafc] rounded-lg p-3">
+    <div className="mb-4 bg-[#f1f5f9] rounded-lg p-3">
       <div className="text-[10px] font-bold text-[#64748d] mb-2">月間サマリー</div>
       <div className="grid grid-cols-2 gap-2">
         <SummaryCell label="投資額" value={`¥${formatCurrency(totals.investment)}`} />
@@ -530,7 +530,7 @@ export function CalendarPnL({
   }
 
   return (
-    <div className="bg-white border border-[#e5edf5] rounded-lg p-4">
+    <div className="bg-white border border-[#e5edf5] rounded-lg p-4 shadow-[0_4px_16px_rgba(50,50,93,0.1)]">
       <MonthHeader
         year={currentYear}
         month={currentMonth}

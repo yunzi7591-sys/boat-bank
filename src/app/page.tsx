@@ -41,12 +41,14 @@ export default async function DashboardPage() {
     <div className="min-h-full pb-8">
 
       {/* 2. 24 Venues Grid */}
-      <div className="mt-4">
-        <VenueGrid />
+      <div className="mt-5 px-4">
+        <div className="bg-white rounded-lg p-3 border border-[#e5edf5]">
+          <VenueGrid />
+        </div>
       </div>
 
       {/* 4. Latest Results */}
-      <div className="mt-8 px-4">
+      <div className="mt-5 px-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-light text-[#061b31] flex items-center gap-2">
             <Trophy className="w-4 h-4 text-amber-500" />
@@ -54,6 +56,7 @@ export default async function DashboardPage() {
           </h2>
           <span className="text-[10px] text-slate-400 font-semibold bg-slate-100 px-2 py-0.5 rounded-md">LIVE</span>
         </div>
+        <div className="bg-white rounded-lg p-3 border border-[#e5edf5]">
         <div className="flex flex-col gap-2.5">
           {latestResults.map((res, i) => (
             <div key={i} className="bg-white border border-[#e5edf5] rounded-lg p-4 flex items-center justify-between hover:border-slate-200 transition-colors">
@@ -72,6 +75,7 @@ export default async function DashboardPage() {
               </div>
             </div>
           ))}
+        </div>
         </div>
       </div>
     </div>

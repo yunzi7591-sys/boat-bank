@@ -93,7 +93,7 @@ export default async function MyPage() {
 
             {/* Stats */}
             <div className="max-w-4xl mx-auto px-4 -mt-8 mb-6 z-10 relative">
-                <div className="bg-white border border-[#e5edf5] rounded-lg p-4" style={{ boxShadow: 'rgba(50,50,93,0.25) 0px 13px 27px -5px, rgba(0,0,0,0.1) 0px 8px 16px -8px' }}>
+                <div className="bg-white border border-[#e5edf5] rounded-lg p-4" style={{ boxShadow: 'rgba(50,50,93,0.3) 0px 13px 27px -5px, rgba(0,0,0,0.15) 0px 8px 16px -8px' }}>
                     {/* Recovery Rate - Hero */}
                     <div className="flex items-center justify-between mb-4">
                         <div>
@@ -129,9 +129,9 @@ export default async function MyPage() {
             </div>
 
             {/* Venue Stats Link */}
-            <div className="max-w-4xl mx-auto px-4 mb-8 flex flex-col gap-2">
+            <div className="max-w-4xl mx-auto px-4 mb-8 flex flex-col gap-2 border-b border-[#e5edf5] pb-8">
                 <Link href="/mypage/venues">
-                    <div className="bg-white border border-[#e5edf5] rounded-lg p-4 flex items-center justify-between" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
+                    <div className="bg-white border border-[#e5edf5] rounded-lg p-4 flex items-center justify-between hover:scale-[1.01] transition-transform" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
                         <div>
                             <h3 className="text-sm font-bold text-[#061b31]">詳細成績</h3>
                             <p className="text-xs text-[#64748d] mt-0.5">24場の回収率・収支を確認</p>
@@ -140,7 +140,7 @@ export default async function MyPage() {
                     </div>
                 </Link>
                 <Link href={`/users/${userId}`}>
-                    <div className="bg-white border border-[#e5edf5] rounded-lg p-4 flex items-center justify-between" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
+                    <div className="bg-white border border-[#e5edf5] rounded-lg p-4 flex items-center justify-between hover:scale-[1.01] transition-transform" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
                         <div>
                             <h3 className="text-sm font-bold text-[#061b31]">公開プロフィール</h3>
                             <p className="text-xs text-[#64748d] mt-0.5">他のユーザーから見えるプロフィールを確認</p>
@@ -151,7 +151,7 @@ export default async function MyPage() {
             </div>
 
             {/* Calendar PnL */}
-            <div className="max-w-4xl mx-auto px-4 mb-8">
+            <div className="max-w-4xl mx-auto px-4 mb-8 border-b border-[#e5edf5] pb-8">
                 <CalendarPnLWrapper
                     userId={userId}
                     initialDailyStats={dailyStats}
