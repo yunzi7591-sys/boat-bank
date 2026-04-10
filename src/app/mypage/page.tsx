@@ -68,8 +68,12 @@ export default async function MyPage() {
                 <div className="max-w-4xl mx-auto">
                     <div className="flex justify-between items-start mb-3">
                         <div>
-                            <h1 className="text-lg font-light tracking-tight">{user.name}</h1>
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{user.role}</span>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-lg font-light tracking-tight">{user.name}</h1>
+                                {user.role === 'ADMIN' && (
+                                    <span className="text-[9px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">ADMIN</span>
+                                )}
+                            </div>
                         </div>
                         <div className="text-right">
                             <p className="text-slate-400 text-[10px] font-bold tracking-widest mb-0.5 uppercase">Points</p>
