@@ -136,7 +136,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                                     <span className="font-mono font-bold text-lg text-slate-900 tracking-widest">{c.id}</span>
                                                     <div className="flex flex-col items-end">
                                                         <span className="text-[10px] font-bold text-slate-400 tracking-widest mb-0.5">ALLOCATED</span>
-                                                        <span className="font-black text-sm text-slate-800">{c.amount.toLocaleString()} <span className="text-[10px] text-slate-500">pt</span></span>
+                                                        <span className="font-black text-sm text-slate-800">{c.amount.toLocaleString()} <span className="text-[10px] text-slate-500">円</span></span>
                                                     </div>
                                                 </div>
                                             ))}
