@@ -16,11 +16,16 @@ export async function publishPrediction(data: {
     deadlineAt: Date;
     cartData: Formation[];
     isPrivate?: boolean;
+    publishType: "internal" | "external";
+    externalUrl?: string;
+    analysisComment?: string;
 }) {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error("You must be logged in to publish a prediction.");
     }
+
+    const userId = session.user.id;
 
     // Ensure cart is not empty
     if (data.cartData.length === 0) {
@@ -32,24 +37,88 @@ export async function publishPrediction(data: {
         throw new Error("締切時刻を過ぎたレースの予想は公開できません。");
     }
 
+    // Validation by publishType
+    if (data.publishType === "internal") {
+        if (!data.title) {
+            throw new Error("タイトルは必須です。");
+        }
+    } else if (data.publishType === "external") {
+        if (!data.externalUrl || !/^https?:\/\//.test(data.externalUrl)) {
+            throw new Error("有効な外部サイトURL（http/httpsで始まる）を入力してください。");
+        }
+    }
+
     // Calculate total bet amount
     const betAmount = data.cartData.reduce((sum, f) => sum + f.combinations.reduce((sub, c) => sub + c.amount, 0), 0);
 
     // Convert cart to JSON string
     const predictedNumbersStr = JSON.stringify(data.cartData);
 
+    if (data.publishType === "external") {
+        // External publish: requires 100pt, betsPublic=false forced
+        const prediction = await prisma.$transaction(async (tx) => {
+            const user = await tx.user.findUnique({ where: { id: userId } });
+            if (!user || user.points < 100) {
+                throw new Error("ポイントが不足しています。外部サイトへの予想公開には100ptが必要です。");
+            }
+
+            // 100pt deduction
+            await tx.user.update({
+                where: { id: userId },
+                data: { points: { decrement: 100 } },
+            });
+
+            // Transaction record
+            await tx.transaction.create({
+                data: {
+                    userId,
+                    points: -100,
+                    action: "EXTERNAL_PUBLISH",
+                },
+            });
+
+            // Create prediction with betsPublic=false forced
+            const pred = await tx.prediction.create({
+                data: {
+                    title: data.title,
+                    commentary: data.commentary,
+                    price: data.price,
+                    predictedNumbers: predictedNumbersStr,
+                    authorId: userId,
+                    placeName: data.placeName,
+                    raceNumber: data.raceNumber,
+                    raceDate: data.raceDate,
+                    deadlineAt: data.deadlineAt,
+                    publishType: "external",
+                    externalUrl: data.externalUrl,
+                    betsPublic: false,
+                    isPrivate: false,
+                    betAmount: betAmount,
+                },
+            });
+
+            return pred;
+        });
+
+        return { success: true, predictionId: prediction.id };
+    }
+
+    // Internal publish
     const prediction = await prisma.prediction.create({
         data: {
             title: data.title,
             commentary: data.commentary,
             price: data.price,
             predictedNumbers: predictedNumbersStr,
-            authorId: session.user.id,
+            authorId: userId,
             placeName: data.placeName,
             raceNumber: data.raceNumber,
             raceDate: data.raceDate,
             deadlineAt: data.deadlineAt,
             isPrivate: data.isPrivate || false,
+            publishType: "internal",
+            analysisComment: data.analysisComment,
+            betsPublic: true,
             betAmount: betAmount,
         },
     });
@@ -72,6 +141,10 @@ export async function ridePrediction(predictionId: string) {
 
     if (!original) {
         throw new Error("元の予想が見つかりません。");
+    }
+
+    if (original.publishType === "external") {
+        throw new Error("外部サイトの予想には相乗りできません。");
     }
 
     if (new Date(original.deadlineAt) < new Date()) {

@@ -49,3 +49,16 @@ export async function registerUser(formData: FormData) {
 
     return { success: true };
 }
+
+export async function getUserPoints(): Promise<number> {
+    const { auth } = await import("@/auth");
+    const session = await auth();
+    if (!session?.user?.id) return 0;
+
+    const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { points: true },
+    });
+
+    return user?.points ?? 0;
+}

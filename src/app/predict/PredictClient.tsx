@@ -23,9 +23,10 @@ interface PredictClientProps {
     venue: { id: string; name: string } | null;
     raceNumber: number;
     racers: MockRacer[];
+    userPoints?: number;
 }
 
-export default function PredictClient({ venue, raceNumber, racers }: PredictClientProps) {
+export default function PredictClient({ venue, raceNumber, racers, userPoints }: PredictClientProps) {
     const { activeBetType, setBetType, cart, clearSelections } = useBetStore();
     const [viewCart, setViewCart] = useState(false);
 
@@ -107,7 +108,7 @@ export default function PredictClient({ venue, raceNumber, racers }: PredictClie
                                 <p className="text-sm font-bold">カートを読み込み中...</p>
                             </div>
                         }>
-                            <BetListCart />
+                            <BetListCart userPoints={userPoints} />
                         </Suspense>
                     </div>
                 )}

@@ -2,8 +2,8 @@ import { useBetStore } from '@/store/bet-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Edit2, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Trash2, Loader2, AlertTriangle, ExternalLink, Store } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import { publishPrediction } from '@/actions/prediction';
 import { submitBets } from '@/actions/bet';
-import { useState, useTransition } from 'react';
+import { getUserPoints } from '@/actions/auth';
+import { useState, useTransition, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { VENUES } from '@/lib/constants/venues';
@@ -22,15 +23,35 @@ import { cn } from '@/lib/utils';
 
 interface BetListCartProps {
     deadlineAt?: Date | null;
+    userPoints?: number;
 }
 
-export function BetListCart({ deadlineAt }: BetListCartProps = {}) {
+export function BetListCart({ deadlineAt, userPoints: initialUserPoints }: BetListCartProps = {}) {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { cart, updateCartItemAmount, updateCartFormationAmount, removeCombination, removeFormation, clearCart } = useBetStore();
     const [isPending, startTransition] = useTransition();
     const [isBetPending, startBetTransition] = useTransition();
     const [error, setError] = useState('');
+
+    // Publish type selection (local state)
+    const [publishType, setPublishType] = useState<"internal" | "external" | null>(null);
+    const [externalUrl, setExternalUrl] = useState('');
+    const [analysisComment, setAnalysisComment] = useState('');
+    const [externalConsent, setExternalConsent] = useState(false);
+
+    // User points (fetched client-side if not provided via props)
+    const [userPoints, setUserPoints] = useState<number>(initialUserPoints ?? 0);
+    const [pointsLoaded, setPointsLoaded] = useState(initialUserPoints !== undefined);
+
+    useEffect(() => {
+        if (initialUserPoints === undefined) {
+            getUserPoints().then((pts) => {
+                setUserPoints(pts);
+                setPointsLoaded(true);
+            });
+        }
+    }, [initialUserPoints]);
 
     // Initial values from URL params
     const qPlaceId = searchParams.get('placeId');
@@ -45,6 +66,18 @@ export function BetListCart({ deadlineAt }: BetListCartProps = {}) {
     const now = new Date();
     const isClosed = deadlineAt ? now > deadlineAt : false;
     const isPublic = !isPrivate;
+
+    const hasInsufficientPoints = userPoints < 100;
+
+    // URL validation
+    const isValidUrl = (url: string) => {
+        try {
+            new URL(url);
+            return /^https?:\/\//.test(url);
+        } catch {
+            return false;
+        }
+    };
 
     if (cart.length === 0) {
         return (
@@ -129,8 +162,8 @@ export function BetListCart({ deadlineAt }: BetListCartProps = {}) {
                             className={cn(
                                 "flex-1 font-bold shadow-sm transition-all text-white",
                                 isClosed
-                                    ? "bg-slate-700 hover:bg-slate-800" // Past deadline: 収支登録
-                                    : "bg-emerald-500 hover:bg-emerald-600" // Before deadline: 投票する(非公開)
+                                    ? "bg-slate-700 hover:bg-slate-800"
+                                    : "bg-emerald-500 hover:bg-emerald-600"
                             )}
                             onClick={() => {
                                 startBetTransition(async () => {
@@ -184,87 +217,243 @@ export function BetListCart({ deadlineAt }: BetListCartProps = {}) {
                                 締切終了
                             </Button>
                         ) : (
-                            <Dialog>
+                            <Dialog onOpenChange={(open) => {
+                                if (!open) {
+                                    setPublishType(null);
+                                    setExternalUrl('');
+                                    setAnalysisComment('');
+                                    setExternalConsent(false);
+                                    setError('');
+                                }
+                            }}>
                                 <DialogTrigger asChild>
                                     <Button
                                         size="lg"
                                         disabled={totalAmount === 0}
-                                        className="flex-1 bg-white text-blue-900 hover:bg-neutral-100 font-bold px-8 shadow-sm"
+                                        className="flex-1 bg-[#533afd] hover:bg-[#4434d4] text-white font-bold px-8 shadow-sm"
                                     >
                                         予想を公開する
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-md">
                                     <DialogHeader>
-                                        <DialogTitle>予想記事の公開設定</DialogTitle>
-                                        <DialogDescription>
+                                        <DialogTitle className="text-[#061b31]">予想記事の公開設定</DialogTitle>
+                                        <DialogDescription className="text-[#64748d]">
                                             カートの予想データを記事として作成・販売します。
                                         </DialogDescription>
                                     </DialogHeader>
 
-                                    <form
-                                        className="space-y-4"
-                                        action={(formData) => {
-                                            setError('');
-                                            startTransition(async () => {
-                                                try {
-                                                    const res = await publishPrediction({
-                                                        title: formData.get('title') as string,
-                                                        commentary: formData.get('commentary') as string,
-                                                        price: parseInt(formData.get('price') as string) || 0,
-                                                        placeName: formData.get('placeName') as string || qPlaceName,
-                                                        raceNumber: parseInt(formData.get('raceNumber') as string) || parseInt(qRaceNumber),
-                                                        raceDate: new Date(),
-                                                        deadlineAt: new Date(formData.get('deadlineAt') as string),
-                                                        cartData: cart,
-                                                        isPrivate: false
-                                                    });
-                                                    if (res?.success) {
-                                                        clearCart();
-                                                        toast.success('予想を公開しました');
-                                                        router.push(`/predictions/${res.predictionId}`);
+                                    {/* Step 0: Publish Type Selection */}
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setPublishType("internal")}
+                                            className="focus:outline-none"
+                                        >
+                                            <div className={cn(
+                                                "text-center p-4 border rounded-lg transition-all",
+                                                publishType === "internal"
+                                                    ? "border-[#533afd] bg-[#533afd]/5 ring-2 ring-[#533afd]/20"
+                                                    : "border-[#e5edf5] bg-white hover:border-[#533afd]/40"
+                                            )}>
+                                                <Store className={cn(
+                                                    "w-6 h-6 mx-auto mb-2",
+                                                    publishType === "internal" ? "text-[#533afd]" : "text-[#64748d]"
+                                                )} />
+                                                <h4 className={cn(
+                                                    "font-bold text-sm",
+                                                    publishType === "internal" ? "text-[#533afd]" : "text-[#061b31]"
+                                                )}>自サイトで販売</h4>
+                                                <p className="text-xs text-[#64748d] mt-1">買い目を公開して販売</p>
+                                            </div>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPublishType("external")}
+                                            className="focus:outline-none"
+                                        >
+                                            <div className={cn(
+                                                "text-center p-4 border rounded-lg transition-all",
+                                                publishType === "external"
+                                                    ? "border-[#533afd] bg-[#533afd]/5 ring-2 ring-[#533afd]/20"
+                                                    : "border-[#e5edf5] bg-white hover:border-[#533afd]/40"
+                                            )}>
+                                                <ExternalLink className={cn(
+                                                    "w-6 h-6 mx-auto mb-2",
+                                                    publishType === "external" ? "text-[#533afd]" : "text-[#64748d]"
+                                                )} />
+                                                <h4 className={cn(
+                                                    "font-bold text-sm",
+                                                    publishType === "external" ? "text-[#533afd]" : "text-[#061b31]"
+                                                )}>他サイトへ誘導</h4>
+                                                <p className="text-xs text-[#64748d] mt-1">100pt消費</p>
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    {/* Form appears after publishType is selected */}
+                                    {publishType && (
+                                        <form
+                                            className="space-y-4"
+                                            action={(formData) => {
+                                                setError('');
+                                                startTransition(async () => {
+                                                    try {
+                                                        if (publishType === "external") {
+                                                            if (!isValidUrl(externalUrl)) {
+                                                                setError('有効なURL（http:// または https:// で始まる）を入力してください');
+                                                                return;
+                                                            }
+                                                            if (!externalConsent) {
+                                                                setError('100pt消費に同意してください');
+                                                                return;
+                                                            }
+                                                            if (hasInsufficientPoints) {
+                                                                setError('ポイントが不足しています');
+                                                                return;
+                                                            }
+                                                        }
+
+                                                        const res = await publishPrediction({
+                                                            title: formData.get('title') as string,
+                                                            commentary: publishType === "internal"
+                                                                ? (formData.get('commentary') as string || '')
+                                                                : '',
+                                                            price: publishType === "internal"
+                                                                ? (parseInt(formData.get('price') as string) || 0)
+                                                                : 0,
+                                                            placeName: formData.get('placeName') as string || qPlaceName,
+                                                            raceNumber: parseInt(formData.get('raceNumber') as string) || parseInt(qRaceNumber),
+                                                            raceDate: new Date(),
+                                                            deadlineAt: new Date(formData.get('deadlineAt') as string),
+                                                            cartData: cart,
+                                                            isPrivate: false,
+                                                            publishType: publishType,
+                                                            externalUrl: publishType === "external" ? externalUrl : undefined,
+                                                            analysisComment: publishType === "internal" ? analysisComment : undefined,
+                                                        });
+                                                        if (res?.success) {
+                                                            clearCart();
+                                                            toast.success(
+                                                                publishType === "internal"
+                                                                    ? '予想を公開しました'
+                                                                    : '外部サイトへの誘導を公開しました'
+                                                            );
+                                                            router.push(`/predictions/${res.predictionId}`);
+                                                        }
+                                                    } catch (err: any) {
+                                                        setError(err.message || '公開に失敗しました');
                                                     }
-                                                } catch (err: any) {
-                                                    setError(err.message || '公開に失敗しました');
+                                                });
+                                            }}
+                                        >
+                                            <div>
+                                                <label className="text-xs font-bold text-[#64748d]">場名</label>
+                                                <Input name="placeName" defaultValue={qPlaceName} readOnly className="bg-slate-50 border-[#e5edf5]" />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-xs font-bold text-[#64748d]">レース番号</label>
+                                                    <Input name="raceNumber" type="number" defaultValue={qRaceNumber} readOnly className="bg-slate-50 border-[#e5edf5]" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-bold text-[#64748d]">締切時刻</label>
+                                                    <Input name="deadlineAt" type="datetime-local" defaultValue={deadlineAt ? new Date(deadlineAt.getTime() - deadlineAt.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''} required className="border-[#e5edf5]" />
+                                                </div>
+                                            </div>
+
+                                            {/* External URL - only for external */}
+                                            {publishType === "external" && (
+                                                <div>
+                                                    <label className="text-xs font-bold text-[#64748d]">外部サイトURL <span className="text-[#ea2261]">*</span></label>
+                                                    <Input
+                                                        type="url"
+                                                        placeholder="https://example.com/your-prediction"
+                                                        value={externalUrl}
+                                                        onChange={(e) => setExternalUrl(e.target.value)}
+                                                        required
+                                                        className="border-[#e5edf5]"
+                                                    />
+                                                    {externalUrl && !isValidUrl(externalUrl) && (
+                                                        <p className="text-[#ea2261] text-xs mt-1">有効なURL（http:// または https://）を入力してください</p>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <div>
+                                                <label className="text-xs font-bold text-[#64748d]">タイトル <span className="text-[#ea2261]">*</span></label>
+                                                <Input name="title" placeholder="自信の勝負レース" required className="border-[#e5edf5]" />
+                                            </div>
+
+                                            {/* Internal-only fields */}
+                                            {publishType === "internal" && (
+                                                <>
+                                                    <div>
+                                                        <label className="text-xs font-bold text-[#64748d]">展開予想 <span className="text-[10px] text-[#64748d] font-normal">（任意）</span></label>
+                                                        <Textarea
+                                                            name="commentary"
+                                                            placeholder="展開予想など..."
+                                                            rows={4}
+                                                            value={analysisComment}
+                                                            onChange={(e) => setAnalysisComment(e.target.value)}
+                                                            className="border-[#e5edf5]"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-bold text-[#64748d]">販売価格 (pt) - 0なら無料</label>
+                                                        <Input name="price" type="number" defaultValue="100" min="0" required className="border-[#e5edf5]" />
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            {/* External-only fields */}
+                                            {publishType === "external" && (
+                                                <>
+                                                    {/* Warning alert */}
+                                                    <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                                        <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                                        <p className="text-xs text-amber-800 leading-relaxed">
+                                                            買い目は公開されず、自身の収支計算のみに使用されます
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Consent checkbox */}
+                                                    <label className="flex items-start gap-2.5 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={externalConsent}
+                                                            onChange={(e) => setExternalConsent(e.target.checked)}
+                                                            className="mt-0.5 w-4 h-4 rounded border-[#e5edf5] text-[#533afd] focus:ring-[#533afd]"
+                                                        />
+                                                        <span className="text-xs text-[#061b31] leading-relaxed">
+                                                            外部サイトへの予想公開に100ptを消費することに同意します
+                                                        </span>
+                                                    </label>
+
+                                                    {/* Insufficient points warning */}
+                                                    {pointsLoaded && hasInsufficientPoints && (
+                                                        <p className="text-[#ea2261] text-xs font-bold">
+                                                            ポイントが不足しています（残高: {userPoints}pt）
+                                                        </p>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {error && <p className="text-[#ea2261] text-sm">{error}</p>}
+
+                                            <Button
+                                                type="submit"
+                                                disabled={
+                                                    isPending ||
+                                                    (publishType === "external" && (!externalConsent || hasInsufficientPoints || !isValidUrl(externalUrl)))
                                                 }
-                                            });
-                                        }}
-                                    >
-                                        <div>
-                                            <label className="text-xs font-bold text-neutral-500">場名</label>
-                                            <Input name="placeName" defaultValue={qPlaceName} readOnly className="bg-slate-50" />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-xs font-bold text-neutral-500">レース番号</label>
-                                                <Input name="raceNumber" type="number" defaultValue={qRaceNumber} readOnly className="bg-slate-50" />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold text-neutral-500">締切時刻 (手動/自動)</label>
-                                                <Input name="deadlineAt" type="datetime-local" defaultValue={deadlineAt ? new Date(deadlineAt.getTime() - deadlineAt.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''} required />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="text-xs font-bold text-neutral-500">タイトル</label>
-                                            <Input name="title" placeholder="自信の勝負レース" required />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-bold text-neutral-500">見解</label>
-                                            <Textarea name="commentary" placeholder="展開予想など..." rows={4} required />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-bold text-neutral-500">販売価格 (pt) - 0なら無料</label>
-                                            <Input name="price" type="number" defaultValue="100" min="0" required />
-                                        </div>
-
-                                        {error && <p className="text-red-500 text-sm">{error}</p>}
-
-                                        <Button type="submit" disabled={isPending} className="w-full font-bold bg-blue-600">
-                                            {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                            記事を公開する
-                                        </Button>
-                                    </form>
+                                                className="w-full font-bold bg-[#533afd] hover:bg-[#4434d4] text-white disabled:opacity-50"
+                                            >
+                                                {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                                {publishType === "internal" ? '記事を公開する' : '外部サイトへの誘導を公開する'}
+                                            </Button>
+                                        </form>
+                                    )}
                                 </DialogContent>
                             </Dialog>
                         )
