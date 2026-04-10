@@ -253,10 +253,18 @@ export async function syncTodaySchedule() {
         });
         const racerIdMap = new Map(allRacersInDb.map(r => [r.racerNumber, r.id]));
 
-        // 4, 5: Skip schedule/entry inserts if already synced (but racers above were still updated)
+        // 4, 5: If already synced, update deadlineAt only (締切時刻変更対応)
         if (schedulesAlreadySynced) {
-            console.log(`[API] Schedules already synced (${existingCount} races). Racer grades updated. Skipping schedule/entry inserts.`);
-            return { success: true, count: existingCount, skipped: true };
+            let updatedCount = 0;
+            for (const pr of parsedPrograms) {
+                const result = await prisma.raceSchedule.updateMany({
+                    where: { placeName: pr.placeName, raceNumber: pr.raceNumber, raceDate: pr.raceDate },
+                    data: { deadlineAt: pr.deadlineAt, grade: pr.grade, day: pr.day },
+                });
+                if (result.count > 0) updatedCount++;
+            }
+            console.log(`[API] Schedules already synced (${existingCount} races). Updated deadlineAt for ${updatedCount} races.`);
+            return { success: true, count: existingCount, updated: updatedCount, skipped: true };
         }
 
         // 4. RaceSchedule のバルクINSERTデータ作成
