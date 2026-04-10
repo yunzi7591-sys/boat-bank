@@ -9,9 +9,20 @@ export async function deleteBet(betId: string) {
     const session = await auth();
     if (!session?.user?.id) return { success: false };
 
-    // 自分のベットのみ削除可能
     await prisma.userBet.deleteMany({
         where: { id: betId, userId: session.user.id },
+    });
+
+    revalidatePath("/mypage");
+    return { success: true };
+}
+
+export async function deleteBets(betIds: string[]) {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false };
+
+    await prisma.userBet.deleteMany({
+        where: { id: { in: betIds }, userId: session.user.id },
     });
 
     revalidatePath("/mypage");
