@@ -1,8 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getUserStats } from "@/lib/stats";
-import { Card, CardContent } from "@/components/ui/card";
-import { ArrowUpRight, ArrowDownRight, Trophy, TrendingUp, Target, Wallet, Ship, ChevronRight } from "lucide-react";
+import { Trophy, Wallet, ChevronRight } from "lucide-react";
 import { BOAT_COLORS } from "@/lib/bet-logic";
 import { VenueGrid } from "@/components/dashboard/VenueGrid";
 import Link from "next/link";
@@ -14,22 +12,11 @@ export default async function DashboardPage() {
   const session = await auth();
 
   let points = 0;
-  let stats = {
-    totalInvestment: 0,
-    totalRefund: 0,
-    recoveryRate: 0,
-    hitCount: 0,
-    totalPredictions: 0,
-  };
 
   if (session?.user?.id) {
     const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { points: true } });
     points = user?.points || 0;
-    stats = await getUserStats(session.user.id);
   }
-
-  const hitRate = stats.totalPredictions > 0 ? (stats.hitCount / stats.totalPredictions) * 100 : 0;
-  const isProfit = stats.recoveryRate >= 100;
 
   const latestResultsRaw = await prisma.raceResult.findMany({
     orderBy: { createdAt: 'desc' },
@@ -67,53 +54,9 @@ export default async function DashboardPage() {
           <p className="text-white/50 text-[11px] font-semibold tracking-widest mb-1 uppercase">
             Total Assets
           </p>
-          <div className="flex items-baseline gap-2 mb-6">
+          <div className="flex items-baseline gap-2">
             <h1 className="text-5xl font-light tracking-tighter leading-none tabular-nums">{points.toLocaleString()}</h1>
-            <span className="text-white/50 font-light text-sm">円</span>
-          </div>
-
-          {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-3">
-            {/* Recovery Rate */}
-            <div className="bg-white/[0.06] backdrop-blur rounded-lg p-3.5 border border-white/[0.06]">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${isProfit && stats.totalInvestment > 0 ? 'bg-[#533afd]/20 text-[#b9b9f9]' : 'bg-red-500/15 text-red-400'}`}>
-                {isProfit ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-              </div>
-              <p className="text-[10px] text-white/50 font-medium mb-0.5">回収率</p>
-              <p className={`text-xl font-light tracking-tight ${isProfit && stats.totalInvestment > 0 ? 'text-[#b9b9f9]' : 'text-slate-200'}`}>
-                {stats.totalInvestment === 0 ? "0.0" : stats.recoveryRate.toFixed(1)}<span className="text-xs font-light opacity-40 ml-0.5">%</span>
-              </p>
-            </div>
-
-            {/* Hit Rate */}
-            <div className="bg-white/[0.06] backdrop-blur rounded-lg p-3.5 border border-white/[0.06]">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 bg-blue-500/20 text-blue-400">
-                <Target className="w-4 h-4" />
-              </div>
-              <p className="text-[10px] text-white/50 font-medium mb-0.5">的中率</p>
-              <p className="text-xl font-light tracking-tight text-slate-200">
-                {hitRate.toFixed(1)}<span className="text-xs font-light opacity-40 ml-0.5">%</span>
-              </p>
-            </div>
-
-            {/* Total Bet */}
-            <div className="bg-white/[0.06] backdrop-blur rounded-lg p-3.5 border border-white/[0.06]">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 bg-[#533afd]/20 text-[#b9b9f9]">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-              <p className="text-[10px] text-white/50 font-medium mb-0.5">投資額</p>
-              <p className="text-xl font-light tracking-tight text-slate-200">
-                {stats.totalInvestment > 9999 ? `${(stats.totalInvestment / 1000).toFixed(0)}k` : stats.totalInvestment.toLocaleString()}
-                <span className="text-xs font-light opacity-40 ml-0.5">円</span>
-              </p>
-            </div>
-          </div>
-
-          {/* Record Badge */}
-          <div className="mt-3 flex items-center gap-2 text-[11px] text-white/50">
-            <span className="bg-white/[0.06] px-2.5 py-1 rounded-full font-semibold">
-              {stats.hitCount}/{stats.totalPredictions} 的中
-            </span>
+            <span className="text-white/50 font-light text-sm">pt</span>
           </div>
         </div>
       </div>
@@ -139,7 +82,7 @@ export default async function DashboardPage() {
       ) : null}
 
       {/* 3. 24 Venues Grid */}
-      <div className={!session?.user || stats.totalPredictions === 0 ? "mt-6" : "-mt-2"}>
+      <div className={!session?.user ? "mt-6" : "-mt-2"}>
         <VenueGrid />
       </div>
 
