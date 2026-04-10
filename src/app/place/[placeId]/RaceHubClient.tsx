@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, PenTool, Lock, Eye, Clock } from "lucide-react";
+import { ArrowLeft, MapPin, PenTool, Lock, Clock } from "lucide-react";
+import { MarketFeed } from "@/components/market/MarketFeed";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BOAT_COLORS } from "@/lib/bet-logic";
@@ -346,57 +347,16 @@ export function RaceHubClient({
             </div>
 
             {/* Market Preview */}
-            <div className={`px-4 mt-10 animate-in fade-in slide-in-from-bottom-2 duration-300 delay-200 fill-both`}>
-                <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-2">
-                    <h3 className="text-[13px] font-extrabold text-slate-800 tracking-wider flex items-center gap-1.5">
-                        <Eye className="w-4 h-4 text-emerald-600" /> MARKET PREDICTIONS
-                    </h3>
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-200/50 px-2 py-0.5 rounded-sm">
-                        {marketPredictions.length}件の予想
-                    </span>
-                </div>
-
+            <div className="px-4 mt-10">
+                <h3 className="text-[13px] font-extrabold text-[#061b31] tracking-wider mb-3">このレースの予想</h3>
                 {marketPredictions.length === 0 ? (
-                    <div className="bg-white border rounded-xl p-8 flex flex-col items-center justify-center text-center shadow-sm">
+                    <div className="bg-white border border-[#e5edf5] rounded-lg p-8 flex flex-col items-center justify-center text-center">
                         <Clock className="w-8 h-8 text-slate-200 mb-2" />
-                        <p className="text-sm font-bold text-slate-500">現在、このレースの予想はありません。</p>
-                        <p className="text-[10px] text-slate-400 mt-1">一番乗りで予想を販売してみましょう！</p>
+                        <p className="text-sm font-bold text-[#64748d]">現在、このレースの予想はありません。</p>
+                        <p className="text-[10px] text-[#64748d] mt-1">一番乗りで予想を販売してみましょう！</p>
                     </div>
                 ) : (
-                    <div className="grid gap-3">
-                        {marketPredictions.map((pred: any) => (
-                            <Link href={`/predictions/${pred.id}`} key={pred.id}>
-                                <Card className="border-none shadow-sm rounded-xl overflow-hidden hover:ring-2 hover:ring-blue-100 transition-all bg-white">
-                                    <div className="p-4 flex gap-4 items-center">
-                                        <div className="w-10 h-10 rounded-full bg-slate-200 shrink-0 overflow-hidden border border-slate-100">
-                                            {pred.author.image ? (
-                                                <img src={pred.author.image} alt="Author" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center font-bold text-slate-400 text-xs">
-                                                    {pred.author.name?.charAt(0) || '?'}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[13px] font-black text-slate-800 truncate mb-0.5">{pred.title}</p>
-                                            <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                                                <span className="text-slate-600">{pred.author.name}</span>
-                                            </p>
-                                        </div>
-                                        <div className="shrink-0 flex flex-col items-end gap-1">
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded ${pred.price === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-600'
-                                                }`}>
-                                                {pred.price === 0 ? '無料' : `${pred.price} pt`}
-                                            </span>
-                                            <span className="text-[9px] font-bold text-slate-300">
-                                                👀 {pred.viewCount}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </Card>
-                            </Link>
-                        ))}
-                    </div>
+                    <MarketFeed predictions={marketPredictions} />
                 )}
             </div>
 
