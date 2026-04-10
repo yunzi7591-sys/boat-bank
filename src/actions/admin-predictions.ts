@@ -9,7 +9,7 @@ export async function getMyPredictions() {
     if ((session?.user as any)?.role !== "ADMIN") return [];
 
     return prisma.prediction.findMany({
-        where: { authorId: session.user!.id },
+        where: { authorId: session!.user!.id },
         orderBy: { createdAt: "desc" },
         select: {
             id: true,
@@ -31,7 +31,7 @@ export async function deletePrediction(predictionId: string) {
 
     // 自分の予想のみ削除可能
     const pred = await prisma.prediction.findFirst({
-        where: { id: predictionId, authorId: session.user!.id },
+        where: { id: predictionId, authorId: session!.user!.id },
     });
 
     if (!pred) return { success: false, error: "予想が見つかりません" };
