@@ -20,7 +20,7 @@ model User {
   image         String?
   // Custom fields
   points        Int       @default(5000)  // 登録時5000pt
-  dailyPoints   Int       @default(500)   // 毎日付与される500pt（翌日リセット）
+  dailyPoints   Int       @default(300)   // 毎日付与される300pt（翌日リセット）
   lastDailyReset DateTime? // 最後にdailyPointsをリセットした日
   role          String    @default("BUYER")
   bio           String?   // 自己紹介
