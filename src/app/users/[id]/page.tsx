@@ -19,7 +19,7 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
     // Fetch user profile (Public view: No points/private data exposed)
     const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, role: true, bio: true }
+        select: { id: true, name: true, role: true, bio: true, link: true }
     });
 
     if (!user) notFound();
@@ -87,11 +87,14 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
                         )}
                     </div>
 
-                    <div className="flex flex-col">
-                        <p className="text-sm text-slate-300 font-medium leading-relaxed max-w-sm">
-                            {user.bio || "自己紹介が未設定です。"}
-                        </p>
-                    </div>
+                    <p className="text-sm text-slate-300 font-medium leading-relaxed max-w-sm">
+                        {user.bio || "自己紹介が未設定です。"}
+                    </p>
+                    {user.link && (
+                        <a href={user.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#b9b9f9] hover:text-white transition-colors mt-2">
+                            🔗 {user.link.replace(/^https?:\/\//, '')}
+                        </a>
+                    )}
                 </div>
             </div>
 
