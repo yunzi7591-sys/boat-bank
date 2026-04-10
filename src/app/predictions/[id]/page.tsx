@@ -5,7 +5,7 @@ import { UnlockButton } from "@/components/predictions/UnlockButton";
 import { Formation } from "@/lib/bet-logic";
 import { parseJsonSafely } from "@/lib/utils";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Lock } from "lucide-react";
+import { Lock, ExternalLink } from "lucide-react";
 import { ShareButton } from "@/components/predictions/ShareButton";
 import { RideButton } from "@/components/predictions/RideButton";
 
@@ -122,6 +122,26 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                     </h3>
 
                     {isUnlocked ? (
+                        prediction.betsPublic === false ? (
+                            <div className="w-full bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-slate-200 shadow-sm">
+                                <div className="w-12 h-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center mb-4">
+                                    <Lock className="w-5 h-5" />
+                                </div>
+                                <p className="font-bold text-slate-700 text-sm mb-1">この予想の買い目は非公開です</p>
+                                <p className="text-xs text-slate-400 mb-4">収支管理専用の予想のため、買い目は表示されません。</p>
+                                {prediction.externalUrl && (
+                                    <a
+                                        href={prediction.externalUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 bg-indigo-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors"
+                                    >
+                                        <ExternalLink className="w-4 h-4" />
+                                        外部サイトで予想を見る
+                                    </a>
+                                )}
+                            </div>
+                        ) : (
                         <div className="flex flex-col gap-4">
                             {formations.map((f, i) => (
                                 <Card key={`form-${i}`} className="border-slate-200 shadow-sm rounded-xl overflow-hidden">
@@ -146,7 +166,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                             ))}
 
                             {/* Ride on this prediction! */}
-                            {userId && prediction.authorId !== userId && (
+                            {userId && prediction.authorId !== userId && prediction.publishType !== "external" && (
                                 <div className="mt-4 pt-4 border-t border-slate-200">
                                     <RideButton
                                         predictionId={prediction.id}
@@ -159,6 +179,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                 </div>
                             )}
                         </div>
+                        )
                     ) : (
                         <div className="w-full bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-slate-200 shadow-sm relative overflow-hidden">
                             <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(0,0,0,0.02)_25%,transparent_25%,transparent_50%,rgba(0,0,0,0.02)_50%,rgba(0,0,0,0.02)_75%,transparent_75%,transparent)] bg-[length:20px_20px]"></div>

@@ -4,6 +4,7 @@ import { VENUES } from "@/lib/constants/venues";
 import { prisma } from "@/lib/prisma";
 import PredictClient from "./PredictClient";
 import { MockRacer } from "@/components/betting/VerticalGrid";
+import { getUserPoints } from "@/actions/auth";
 
 export default async function PredictPage(props: {
     searchParams: Promise<{ placeId?: string; raceNumber?: string }>;
@@ -69,11 +70,14 @@ export default async function PredictPage(props: {
         // The instruction said: "選手名部分を空欄（または「未定」）としてレンダリングする安全なフォールバックを必ず実装してください"
     }
 
+    const userPoints = await getUserPoints();
+
     return (
         <PredictClient
             venue={venue}
             raceNumber={raceNumber}
             racers={racers}
+            userPoints={userPoints}
         />
     );
 }

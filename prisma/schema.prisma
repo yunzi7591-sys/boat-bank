@@ -97,7 +97,12 @@ model Prediction {
   predictedNumbers Json   
   
   isPrivate        Boolean  @default(false) // 自分用の賭けかどうか (Phase 12追加)
-  
+
+  publishType      String   @default("internal") // "internal" | "external"
+  externalUrl      String?                        // 他サイトURL
+  analysisComment  String?                        // 展開予想テキスト（自サイトのみ）
+  betsPublic       Boolean  @default(true)        // false=買い目非公開(収支専用)
+
   authorId         String
   author           User     @relation("Author", fields: [authorId], references: [id], onDelete: Cascade)
   
