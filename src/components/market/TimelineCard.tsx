@@ -39,6 +39,7 @@ export function TimelineCard({
                         </h3>
                         <div className="flex items-center gap-3 mt-1 text-[10px] text-[#64748d]">
                             <span className="font-bold">{prediction.author?.name}</span>
+                            <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" />{new Date(prediction.deadlineAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })}締切</span>
                             <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5" />{purchaseCount}人購入</span>
                             <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" />{prediction.viewCount}</span>
                         </div>
