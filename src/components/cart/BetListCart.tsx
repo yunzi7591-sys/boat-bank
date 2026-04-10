@@ -24,9 +24,10 @@ import { cn } from '@/lib/utils';
 interface BetListCartProps {
     deadlineAt?: Date | null;
     userPoints?: number;
+    initialPublishType?: "internal" | "external";
 }
 
-export function BetListCart({ deadlineAt, userPoints: initialUserPoints }: BetListCartProps = {}) {
+export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initialPublishType }: BetListCartProps = {}) {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { cart, updateCartItemAmount, updateCartFormationAmount, removeCombination, removeFormation, clearCart } = useBetStore();
@@ -34,8 +35,8 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints }: BetLi
     const [isBetPending, startBetTransition] = useTransition();
     const [error, setError] = useState('');
 
-    // Publish type selection (local state)
-    const [publishType, setPublishType] = useState<"internal" | "external" | null>(null);
+    // Publish type: pre-selected from parent or null
+    const [publishType, setPublishType] = useState<"internal" | "external" | null>(initialPublishType || null);
     const [externalUrl, setExternalUrl] = useState('');
     const [analysisComment, setAnalysisComment] = useState('');
     const [externalConsent, setExternalConsent] = useState(false);
@@ -243,8 +244,8 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints }: BetLi
                                         </DialogDescription>
                                     </DialogHeader>
 
-                                    {/* Step 0: Publish Type Selection */}
-                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                    {/* Step 0: Publish Type Selection (skip if pre-selected) */}
+                                    {!initialPublishType && <div className="grid grid-cols-2 gap-3 mb-4">
                                         <button
                                             type="button"
                                             onClick={() => setPublishType("internal")}
@@ -289,7 +290,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints }: BetLi
                                                 <p className="text-xs text-[#64748d] mt-1">100pt消費</p>
                                             </div>
                                         </button>
-                                    </div>
+                                    </div>}
 
                                     {/* Form appears after publishType is selected */}
                                     {publishType && (

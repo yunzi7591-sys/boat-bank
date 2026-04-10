@@ -32,6 +32,7 @@ function PredictContent() {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [raceData, setRaceData] = useState<any>(null);
+    const [publishType, setPublishType] = useState<"internal" | "external" | null>(null);
 
     useEffect(() => {
         if (!placeId || !raceNumberString) {
@@ -61,6 +62,45 @@ function PredictContent() {
                     <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-blue-600 animate-spin"></div>
                     <p className="text-slate-500 font-bold text-sm">出走表を取得中...</p>
                 </div>
+            </div>
+        );
+    }
+
+    const isPrivate = searchParams.get('isPrivate') === 'true';
+
+    // 非公開（自分の賭け）の場合はpublishType不要、直接マークシートへ
+    // 公開の場合はpublishType選択が必要
+    if (!isPrivate && !publishType) {
+        const venueName = raceData?.venue?.name || `ボートレース${placeId}`;
+        const rNum = parseInt(raceNumberString, 10);
+        return (
+            <div className="min-h-[100dvh] bg-white flex flex-col font-sans">
+                <header className="bg-white px-4 py-3 shadow-[0_2px_10px_rgba(0,0,0,0.03)] sticky top-0 z-20 border-b border-[#e5edf5]">
+                    <h1 className="text-xl font-light text-[#061b31] tracking-tight">{venueName} {rNum}R</h1>
+                </header>
+                <main className="flex-1 flex flex-col items-center justify-center p-6">
+                    <h2 className="text-lg font-bold text-[#061b31] mb-2">投稿先を選択</h2>
+                    <p className="text-sm text-[#64748d] mb-8 text-center">予想をどこに公開しますか？</p>
+                    <div className="w-full max-w-sm flex flex-col gap-3">
+                        <button
+                            onClick={() => setPublishType("internal")}
+                            className="w-full p-5 bg-white border-2 border-[#e5edf5] rounded-lg text-left hover:border-[#533afd] transition-colors"
+                            style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}
+                        >
+                            <h3 className="text-base font-bold text-[#061b31] mb-1">自サイトで販売</h3>
+                            <p className="text-xs text-[#64748d]">買い目を公開して他ユーザーに販売します</p>
+                        </button>
+                        <button
+                            onClick={() => setPublishType("external")}
+                            className="w-full p-5 bg-white border-2 border-[#e5edf5] rounded-lg text-left hover:border-[#533afd] transition-colors"
+                            style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}
+                        >
+                            <h3 className="text-base font-bold text-[#061b31] mb-1">他サイトへ誘導</h3>
+                            <p className="text-xs text-[#64748d]">外部サイトのURLを設定し、買い目は収支記録用に非公開で保存</p>
+                            <span className="inline-block mt-2 text-[10px] font-bold text-[#533afd] bg-[#533afd]/10 px-2 py-0.5 rounded">100pt消費</span>
+                        </button>
+                    </div>
+                </main>
             </div>
         );
     }
@@ -246,7 +286,7 @@ function PredictContent() {
                             </header>
                             <div className="flex-1 overflow-y-auto p-4 pb-32 custom-scrollbar">
                                 <Suspense fallback={<div className="text-center p-8 text-slate-400 font-bold animate-pulse">読み込み中...</div>}>
-                                    <BetListCart deadlineAt={schedule?.deadlineAt ? new Date(schedule.deadlineAt) : null} />
+                                    <BetListCart deadlineAt={schedule?.deadlineAt ? new Date(schedule.deadlineAt) : null} initialPublishType={publishType || "internal"} />
                                 </Suspense>
                             </div>
                         </motion.div>
