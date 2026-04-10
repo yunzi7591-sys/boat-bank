@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import { ChevronLeft, ChevronRight, ChevronDown, X } from "lucide-react";
+import { deleteBet } from "@/actions/bet";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -14,12 +15,37 @@ interface DailyPnLItem {
 }
 
 interface DailyPredictionItem {
+  id: string;
+  source: 'prediction' | 'userbet';
   placeName: string;
   raceNumber: number;
+  betType?: string;
+  combination?: string;
   betAmount: number;
   hitAmount: number;
   isSettled: boolean;
   isHit: boolean;
+}
+
+const BET_TYPE_LABELS: Record<string, string> = {
+  '3TR': '3連単',
+  '3PL': '3連複',
+  '2TR': '2連単',
+  '2PL': '2連複',
+  'WIN': '単勝',
+};
+
+interface RaceGroup {
+  key: string;
+  placeName: string;
+  raceNumber: number;
+  items: DailyPredictionItem[];
+  totalBet: number;
+  totalHit: number;
+  pnl: number;
+  allSettled: boolean;
+  anyHit: boolean;
+  anyRefund: boolean;
 }
 
 interface CalendarPnLProps {
@@ -28,6 +54,7 @@ interface CalendarPnLProps {
   currentYear: number;
   currentMonth: number; // 1-12
   onMonthChange?: (year: number, month: number) => void;
+  onRefresh?: () => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -212,16 +239,66 @@ function CalendarGrid({
   );
 }
 
+function groupByRace(predictions: DailyPredictionItem[]): RaceGroup[] {
+  const map = new Map<string, DailyPredictionItem[]>();
+  for (const p of predictions) {
+    const key = `${p.placeName}-${p.raceNumber}`;
+    const arr = map.get(key) || [];
+    arr.push(p);
+    map.set(key, arr);
+  }
+
+  return Array.from(map.entries()).map(([key, items]) => {
+    const totalBet = items.reduce((s, i) => s + i.betAmount, 0);
+    const totalHit = items.reduce((s, i) => s + i.hitAmount, 0);
+    const allSettled = items.every((i) => i.isSettled);
+    const anyHit = items.some((i) => i.isHit);
+    const anyRefund = items.some((i) => i.isSettled && !i.isHit && i.hitAmount > 0);
+    return {
+      key,
+      placeName: items[0].placeName,
+      raceNumber: items[0].raceNumber,
+      items,
+      totalBet,
+      totalHit,
+      pnl: totalHit - totalBet,
+      allSettled,
+      anyHit,
+      anyRefund,
+    };
+  });
+}
+
+function getRaceStyle(group: RaceGroup): { textColor: string; label: string } {
+  if (!group.allSettled) return { textColor: "text-[#94a3b8]", label: "結果待ち" };
+  if (group.anyHit) return { textColor: "text-[#533afd]", label: "的中" };
+  if (group.anyRefund) return { textColor: "text-[#ca8a04]", label: "返還" };
+  return { textColor: "text-[#94a3b8]", label: "" };
+}
+
+function getItemStyle(p: DailyPredictionItem): { textColor: string; label: string } {
+  const isRefund = p.isSettled && !p.isHit && p.hitAmount > 0;
+  if (!p.isSettled) return { textColor: "text-[#94a3b8]", label: "結果待ち" };
+  if (p.isHit) return { textColor: "text-[#533afd]", label: "的中" };
+  if (isRefund) return { textColor: "text-[#ca8a04]", label: "返還" };
+  return { textColor: "text-[#94a3b8]", label: "" };
+}
+
 function DailyDetail({
   dateKey,
   month,
   predictions,
+  onDelete,
 }: {
   dateKey: string;
   month: number;
   predictions: DailyPredictionItem[];
+  onDelete?: (betId: string) => void;
 }) {
   const day = parseInt(dateKey.split("-")[2], 10);
+  const [expandedRace, setExpandedRace] = useState<string | null>(null);
+
+  const raceGroups = useMemo(() => groupByRace(predictions), [predictions]);
 
   if (predictions.length === 0) {
     return (
@@ -243,47 +320,86 @@ function DailyDetail({
       </div>
       <div className="border-t border-[#e5edf5]" />
 
-      <div className="mt-2 space-y-1.5">
-        {predictions.map((p, i) => {
-          const pnl = p.hitAmount - p.betAmount;
-          // Determine if this is a refund (settled, not hit, but hitAmount > 0)
-          const isRefund = p.isSettled && !p.isHit && p.hitAmount > 0;
-
-          let textColor = "text-[#94a3b8]"; // default grey for miss
-          let label = "";
-
-          if (!p.isSettled) {
-            textColor = "text-[#94a3b8]";
-            label = "結果待ち";
-          } else if (p.isHit) {
-            textColor = "text-[#533afd]";
-            label = "的中";
-          } else if (isRefund) {
-            textColor = "text-[#ca8a04]";
-            label = "返還";
-          }
-
-          const pnlDisplay = p.isSettled
-            ? `${pnl >= 0 ? "+" : ""}${formatCurrency(pnl)}円`
-            : "";
+      <div className="mt-2 space-y-0.5">
+        {raceGroups.map((group) => {
+          const { textColor, label } = getRaceStyle(group);
+          const isExpanded = expandedRace === group.key;
 
           return (
-            <div key={`${p.placeName}-${p.raceNumber}-${i}`} className="flex items-center justify-between text-xs">
-              <span className={`font-bold ${textColor}`}>
-                {p.placeName} {p.raceNumber}R
-              </span>
-              <span className={`font-bold ${textColor}`}>
-                {!p.isSettled ? (
-                  <span className="text-[10px] text-[#94a3b8]">結果待ち</span>
-                ) : (
-                  <>
-                    {pnlDisplay}
-                    {label && (
-                      <span className="ml-1.5 text-[10px]">{label}</span>
-                    )}
-                  </>
-                )}
-              </span>
+            <div key={group.key}>
+              {/* Race row */}
+              <button
+                type="button"
+                onClick={() => setExpandedRace(isExpanded ? null : group.key)}
+                className="w-full flex items-center justify-between text-xs py-1.5 px-1 rounded hover:bg-[#e5edf5]/50 transition-colors"
+              >
+                <span className="flex items-center gap-1">
+                  <ChevronDown
+                    className={`w-3 h-3 text-[#94a3b8] transition-transform ${isExpanded ? "" : "-rotate-90"}`}
+                  />
+                  <span className={`font-bold ${textColor}`}>
+                    {group.placeName} {group.raceNumber}R
+                  </span>
+                </span>
+                <span className={`font-bold ${textColor}`}>
+                  {!group.allSettled ? (
+                    <span className="text-[10px] text-[#94a3b8]">結果待ち</span>
+                  ) : (
+                    <>
+                      {group.pnl >= 0 ? "+" : ""}{formatCurrency(group.pnl)}円
+                      {label && <span className="ml-1.5 text-[10px]">{label}</span>}
+                    </>
+                  )}
+                </span>
+              </button>
+
+              {/* Expanded: individual bets */}
+              {isExpanded && (
+                <div className="ml-4 mb-1.5 space-y-1 border-l-2 border-[#e5edf5] pl-2.5">
+                  {group.items.map((p, i) => {
+                    const itemStyle = getItemStyle(p);
+                    const betLabel = p.betType ? (BET_TYPE_LABELS[p.betType] || p.betType) : "";
+                    const combo = p.combination || "";
+                    const arrow = p.isSettled ? ` → ${formatCurrency(p.hitAmount)}円` : "";
+                    const isLast = i === group.items.length - 1;
+                    const connector = isLast ? "└" : "├";
+
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between text-[11px] group"
+                      >
+                        <span className={`${itemStyle.textColor} flex items-center gap-1`}>
+                          <span className="text-[#c0c8d4] font-mono text-[10px] w-3 shrink-0">{connector}</span>
+                          {betLabel && <span className="font-bold">{betLabel}</span>}
+                          {combo && <span>{combo}</span>}
+                          <span className="text-[#64748d]">
+                            {formatCurrency(p.betAmount)}円{arrow}
+                          </span>
+                          {itemStyle.label && (
+                            <span className={`font-bold ${itemStyle.textColor} text-[10px]`}>
+                              {itemStyle.label}
+                            </span>
+                          )}
+                        </span>
+                        {p.source === "userbet" && onDelete && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(p.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[#ea2261]/10 text-[#ea2261] transition-opacity ml-1"
+                            aria-label="削除"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
@@ -369,8 +485,10 @@ export function CalendarPnL({
   currentYear,
   currentMonth,
   onMonthChange,
+  onRefresh,
 }: CalendarPnLProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   const dailyMap = useMemo(() => {
     const m = new Map<string, DailyPnLItem>();
@@ -382,6 +500,15 @@ export function CalendarPnL({
 
   function handleDateClick(dateKey: string) {
     setSelectedDate((prev) => (prev === dateKey ? null : dateKey));
+  }
+
+  function handleDelete(betId: string) {
+    startTransition(async () => {
+      const result = await deleteBet(betId);
+      if (result.success) {
+        onRefresh?.();
+      }
+    });
   }
 
   return (
@@ -407,6 +534,7 @@ export function CalendarPnL({
           dateKey={selectedDate}
           month={currentMonth}
           predictions={dailyPredictions[selectedDate] ?? []}
+          onDelete={handleDelete}
         />
       )}
     </div>

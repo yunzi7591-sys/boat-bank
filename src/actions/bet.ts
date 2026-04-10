@@ -5,6 +5,19 @@ import { auth } from "@/auth";
 import { settleRacePredictions } from "@/lib/evaluate";
 import { revalidatePath } from "next/cache";
 
+export async function deleteBet(betId: string) {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false };
+
+    // 自分のベットのみ削除可能
+    await prisma.userBet.deleteMany({
+        where: { id: betId, userId: session.user.id },
+    });
+
+    revalidatePath("/mypage");
+    return { success: true };
+}
+
 interface BetInput {
     betType: string;
     combination: string;
