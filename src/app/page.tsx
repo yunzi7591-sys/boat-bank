@@ -78,6 +78,12 @@ export default async function DashboardPage() {
         </div>
         </div>
       </div>
+
+      <div className="mt-8 pb-4 px-4 flex items-center justify-center gap-4 text-[10px] text-[#64748d]">
+        <Link href="/privacy" className="hover:text-[#533afd]">プライバシーポリシー</Link>
+        <span>|</span>
+        <Link href="/terms" className="hover:text-[#533afd]">利用規約</Link>
+      </div>
     </div>
   );
 }
