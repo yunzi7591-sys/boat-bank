@@ -171,3 +171,53 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
 
     return { success: true, settledCount };
 }
+
+/**
+ * 結果が存在するが未精算のPrediction/UserBetを全て精算する
+ */
+export async function settleAllPending() {
+    // 未精算のPredictionがあるレースを特定
+    const unsettledPredictions = await prisma.prediction.findMany({
+        where: { isSettled: false, betAmount: { gt: 0 } },
+        select: { placeName: true, raceNumber: true, raceDate: true },
+        distinct: ['placeName', 'raceNumber', 'raceDate'],
+    });
+
+    // 未精算のUserBetがあるレースを特定
+    const unsettledBets = await prisma.userBet.findMany({
+        where: { isSettled: false, betType: { not: null }, combination: { not: null } },
+        select: { placeName: true, raceNumber: true, raceDate: true },
+        distinct: ['placeName', 'raceNumber', 'raceDate'],
+    });
+
+    // 重複排除して統合
+    const raceKeys = new Map<string, { placeName: string; raceNumber: number; raceDate: Date }>();
+    for (const p of unsettledPredictions) {
+        const key = `${p.placeName}-${p.raceNumber}-${p.raceDate.toISOString()}`;
+        raceKeys.set(key, p);
+    }
+    for (const b of unsettledBets) {
+        if (!b.placeName || !b.raceNumber || !b.raceDate) continue;
+        const key = `${b.placeName}-${b.raceNumber}-${b.raceDate.toISOString()}`;
+        raceKeys.set(key, { placeName: b.placeName, raceNumber: b.raceNumber, raceDate: b.raceDate });
+    }
+
+    let totalSettled = 0;
+    for (const race of raceKeys.values()) {
+        // 結果が存在するか確認
+        const result = await prisma.raceResult.findUnique({
+            where: { placeName_raceNumber_raceDate: { placeName: race.placeName, raceNumber: race.raceNumber, raceDate: race.raceDate } },
+        });
+        if (!result) continue;
+
+        try {
+            const stats = await settleRacePredictions(race.placeName, race.raceNumber, race.raceDate);
+            totalSettled += stats.settledCount;
+        } catch (e: any) {
+            console.error(`[SettleAll] Failed for ${race.placeName} R${race.raceNumber}: ${e.message}`);
+        }
+    }
+
+    console.log(`[SettleAll] Settled ${totalSettled} items across ${raceKeys.size} races`);
+    return { success: true, settledCount: totalSettled, racesChecked: raceKeys.size };
+}
