@@ -43,6 +43,7 @@ export default async function PlacePage(props: {
             placeName: venue.name,
             raceDate: new Date(`${localDateStr}T00:00:00.000Z`),
             isPrivate: false,
+            publishType: "internal",
         },
         include: {
             author: { select: { name: true, image: true } }

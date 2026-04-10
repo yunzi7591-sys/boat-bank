@@ -11,6 +11,7 @@ export default async function MarketPage() {
     const userId = session?.user?.id;
 
     const allPredictions = await prisma.prediction.findMany({
+        where: { isPrivate: false, publishType: "internal" },
         orderBy: { createdAt: 'desc' },
         take: 50,
         include: { author: { select: { name: true } } }
@@ -30,7 +31,7 @@ export default async function MarketPage() {
 
         if (followingIds.length > 0) {
             followingPredictions = await prisma.prediction.findMany({
-                where: { authorId: { in: followingIds } },
+                where: { authorId: { in: followingIds }, isPrivate: false, publishType: "internal" },
                 orderBy: { createdAt: 'desc' },
                 take: 50,
                 include: { author: { select: { name: true } } }

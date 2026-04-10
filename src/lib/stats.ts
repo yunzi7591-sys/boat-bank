@@ -60,7 +60,7 @@ export async function getUserVenueStats(userId: string): Promise<VenueStats[]> {
 
 export async function getPublicUserStats(userId: string): Promise<UserStats> {
     const predictions = await prisma.prediction.findMany({
-        where: { authorId: userId, isPrivate: false },
+        where: { authorId: userId, isPrivate: false, publishType: "internal" },
         select: {
             isSettled: true,
             isHit: true,
