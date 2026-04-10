@@ -192,11 +192,14 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     const predictions = await prisma.prediction.findMany({
         where: { authorId: userId },
         select: {
+            placeName: true,
+            raceNumber: true,
+            raceDate: true,
             isSettled: true,
             isHit: true,
             betAmount: true,
             hitAmount: true,
-            refundAmount: true, // fallback
+            refundAmount: true,
         },
     });
 
