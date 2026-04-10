@@ -204,6 +204,9 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     const userBets = await prisma.userBet.findMany({
         where: { userId },
         select: {
+            placeName: true,
+            raceNumber: true,
+            raceDate: true,
             betAmount: true,
             isSettled: true,
             isHit: true,
@@ -213,25 +216,36 @@ export async function getUserStats(userId: string): Promise<UserStats> {
 
     let totalInvestment = 0;
     let totalRefund = 0;
-    let hitCount = 0;
-    let totalPredictions = predictions.length + userBets.length;
+
+    // レース単位で的中判定するためのMap
+    const raceMap = new Map<string, { settled: boolean; hit: boolean }>();
 
     for (const pred of predictions) {
         totalInvestment += pred.betAmount || 0;
         if (pred.isSettled) {
             totalRefund += (pred.hitAmount || pred.refundAmount || 0);
-            if (pred.isHit) hitCount++;
         }
+        const key = `pred-${pred.placeName}-${pred.raceNumber}-${pred.raceDate.toISOString()}`;
+        const race = raceMap.get(key) || { settled: false, hit: false };
+        if (pred.isSettled) race.settled = true;
+        if (pred.isHit) race.hit = true;
+        raceMap.set(key, race);
     }
 
     for (const bet of userBets) {
         totalInvestment += bet.betAmount || 0;
         if (bet.isSettled) {
             totalRefund += bet.hitAmount || 0;
-            if (bet.isHit) hitCount++;
         }
+        const key = `bet-${bet.placeName}-${bet.raceNumber}-${bet.raceDate?.toISOString()}`;
+        const race = raceMap.get(key) || { settled: false, hit: false };
+        if (bet.isSettled) race.settled = true;
+        if (bet.isHit) race.hit = true;
+        raceMap.set(key, race);
     }
 
+    const totalPredictions = raceMap.size;
+    const hitCount = Array.from(raceMap.values()).filter(r => r.hit).length;
     const recoveryRate = totalInvestment > 0 ? (totalRefund / totalInvestment) * 100 : 0;
 
     return {
