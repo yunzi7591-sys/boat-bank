@@ -98,25 +98,7 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
                 },
             });
 
-            if (totalEarned > 0) {
-                // ユーザーのポイント残高を加算
-                await tx.user.update({
-                    where: { id: pred.authorId },
-                    data: {
-                        points: { increment: totalEarned }
-                    }
-                });
-
-                // トランザクション履歴の作成
-                await tx.transaction.create({
-                    data: {
-                        userId: pred.authorId,
-                        points: totalEarned,
-                        action: isRefunded && totalWinAmount === 0 ? "REFUND" : "WIN", // 返還のみか、的中があったか
-                        predictionId: pred.id,
-                    }
-                });
-            }
+            // ポイント加算は行わない（ポイントは予想売買専用、収支は円で別管理）
         });
 
         settledCount++;
