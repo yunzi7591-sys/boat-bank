@@ -159,7 +159,7 @@ export function RaceHubClient({
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
                     <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
                         <h3 className="text-[13px] font-extrabold text-slate-800 tracking-wider flex items-center gap-1.5">
-                            📋 出走表 <span className="text-[10px] text-slate-400 font-bold ml-1">Entry List</span>
+                            📋 出走表
                         </h3>
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -300,7 +300,7 @@ export function RaceHubClient({
             {/* 3 Main Action Hub Cards */}
             <div className={`px-4 mt-6 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 delay-100 fill-both`}>
                 <h3 className="text-[13px] font-extrabold text-slate-800 tracking-wider flex items-center gap-1.5 mb-2">
-                    <PenTool className="w-4 h-4 text-blue-600" /> TAKE ACTION
+                    <PenTool className="w-4 h-4 text-blue-600" /> アクション
                 </h3>
 
                 {isFinished ? (

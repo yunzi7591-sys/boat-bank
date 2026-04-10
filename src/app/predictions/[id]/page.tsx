@@ -80,7 +80,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
             <div className="bg-white px-5 pt-8 pb-6 border-b border-slate-200">
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex flex-col gap-1.5">
-                        <span className="text-xs font-black tracking-widest text-slate-400 uppercase">Transaction Details</span>
+                        <span className="text-xs font-black tracking-widest text-slate-400 uppercase">予想詳細</span>
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md">
                                 {prediction.placeName} {prediction.raceNumber}R
@@ -112,7 +112,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                 {/* Commentary Section */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6 relative overflow-hidden">
                     <h3 className="text-xs font-black tracking-widest text-slate-400 uppercase mb-4 flex items-center gap-2">
-                        <span className="w-1 h-3 bg-indigo-500 rounded-full"></span> Insight & Analysis
+                        <span className="w-1 h-3 bg-indigo-500 rounded-full"></span> 見解・分析
                     </h3>
 
                     <div className={`prose prose-slate prose-sm max-w-none ${!isUnlocked && "blur-[4px] opacity-40 select-none pb-12"}`}>
@@ -134,7 +134,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                 {/* Predictions Area - Financial Breakdown */}
                 <div className="relative">
                     <h3 className="text-xs font-black tracking-widest text-slate-400 uppercase mb-4 flex items-center gap-2">
-                        <span className="w-1 h-3 bg-indigo-500 rounded-full"></span> Position Details
+                        <span className="w-1 h-3 bg-indigo-500 rounded-full"></span> 買い目一覧
                     </h3>
 
                     {isUnlocked ? (
@@ -163,7 +163,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                 <Card key={`form-${i}`} className="border-slate-200 shadow-sm rounded-xl overflow-hidden">
                                     <div className="bg-slate-50 px-4 py-2 border-b border-slate-100 flex justify-between items-center">
                                         <span className="font-black text-xs text-slate-700">{f.betType}</span>
-                                        <span className="text-[10px] font-bold text-slate-400">{f.combinations.length} POs</span>
+                                        <span className="text-[10px] font-bold text-slate-400">{f.combinations.length} 点</span>
                                     </div>
                                     <CardContent className="p-0">
                                         <div className="divide-y divide-slate-100">
