@@ -17,7 +17,7 @@ export default async function RegisterPage() {
                     <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,0.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.15)_50%,rgba(255,255,255,0.15)_75%,transparent_75%,transparent)] bg-[length:20px_20px]"></div>
                     <Ship className="w-12 h-12 text-blue-900 mx-auto mb-3 relative z-10" />
                     <h1 className="text-2xl font-black text-blue-900 tracking-widest relative z-10">BOAT BANK</h1>
-                    <p className="text-blue-800 text-sm font-bold mt-1 relative z-10">新規登録ボーナス 1,000pt 付与！</p>
+                    <p className="text-blue-800 text-sm font-bold mt-1 relative z-10">新規登録ボーナス 5,000pt 付与！</p>
                 </div>
 
                 <div className="p-6">
