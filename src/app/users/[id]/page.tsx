@@ -70,17 +70,12 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
             <div className="bg-[#1c1e54] text-white p-6 pb-12 rounded-b-lg shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] relative overflow-hidden">
                 <div className="max-w-4xl mx-auto">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-4 border border-white/[0.1] p-2 pr-6 rounded-lg bg-white/[0.08] backdrop-blur-sm">
-                            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-[#061b31] font-bold text-xl shadow-inner border-2 border-[#e5edf5]">
-                                {user.name?.charAt(0) || "U"}
-                            </div>
-                            <div className="flex flex-col">
-                                <div className="flex items-center gap-2">
-                                    <h1 className="text-lg font-light tracking-tight">{user.name}</h1>
-                                    {user.role === 'ADMIN' && (
-                                        <span className="text-[9px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">ADMIN</span>
-                                    )}
-                                </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-lg font-light tracking-tight">{user.name}</h1>
+                                {user.role === 'ADMIN' && (
+                                    <span className="text-[9px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">ADMIN</span>
+                                )}
                             </div>
                         </div>
 
