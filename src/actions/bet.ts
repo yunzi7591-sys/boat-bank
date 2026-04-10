@@ -39,13 +39,6 @@ export async function submitBets(payload: SubmitBetsPayload) {
             return { success: false, error: "ベット金額は1以上で指定してください。" };
         }
 
-        // 2.6. Check point balance
-        const totalBetAmount = payload.bets.reduce((sum, bet) => sum + bet.amount, 0);
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-        if (!user || user.points < totalBetAmount) {
-            return { success: false, error: "ポイントが不足しています" };
-        }
-
         const raceDate = new Date(payload.raceDate);
 
         // 3. Build data array for createMany
@@ -59,32 +52,9 @@ export async function submitBets(payload: SubmitBetsPayload) {
             raceDate: raceDate,
         }));
 
-        // 4. Bulk insert with createMany and deduct points in a transaction
-        const result = await prisma.$transaction(async (tx) => {
-            // Re-check balance inside transaction to prevent race conditions
-            const freshUser = await tx.user.findUnique({ where: { id: userId } });
-            if (!freshUser || freshUser.points < totalBetAmount) {
-                throw new Error("ポイントが不足しています");
-            }
-
-            const created = await tx.userBet.createMany({
-                data: betDataArray,
-            });
-
-            await tx.user.update({
-                where: { id: userId },
-                data: { points: { decrement: totalBetAmount } },
-            });
-
-            await tx.transaction.create({
-                data: {
-                    userId,
-                    points: -totalBetAmount,
-                    action: "BET",
-                },
-            });
-
-            return created;
+        // 4. Bulk insert (賭け記録のみ、ポイント消費なし — 実際の舟券購入の記録)
+        const result = await prisma.userBet.createMany({
+            data: betDataArray,
         });
 
         console.log(`[Bet] User ${userId} submitted ${result.count} bets for ${payload.placeName} R${payload.raceNumber}`);
