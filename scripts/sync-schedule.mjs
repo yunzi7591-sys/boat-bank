@@ -108,8 +108,8 @@ async function main() {
     });
     const racerIdMap = new Map(racersInDb.map(r => [r.racerNumber, r.id]));
 
-    // Schedule insert
-    console.log(`[SYNC] Inserting ${parsedPrograms.length} schedules...`);
+    // Schedule insert (new) + update deadlineAt (existing)
+    console.log(`[SYNC] Inserting/updating ${parsedPrograms.length} schedules...`);
     await prisma.raceSchedule.createMany({
       data: parsedPrograms.map(pr => ({
         placeName: pr.placeName, raceNumber: pr.raceNumber,
@@ -118,6 +118,14 @@ async function main() {
       })),
       skipDuplicates: true
     });
+
+    // Update deadlineAt for existing schedules (締切時刻変更対応)
+    for (const pr of parsedPrograms) {
+      await prisma.raceSchedule.updateMany({
+        where: { placeName: pr.placeName, raceNumber: pr.raceNumber, raceDate: pr.raceDate },
+        data: { deadlineAt: pr.deadlineAt, grade: pr.grade, day: pr.day },
+      });
+    }
 
     // Entry insert (chunks of 500)
     const entriesData = [];
