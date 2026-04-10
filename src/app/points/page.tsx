@@ -11,7 +11,7 @@ export default async function PointsPage() {
     const detail = await getUserPointsDetail(session.user.id);
     const { points, dailyPoints, totalPoints, totalEarned, monthEarned } = detail;
 
-    const dailyMax = 500;
+    const dailyMax = 300;
     const dailyUsagePercent = Math.min((dailyPoints / dailyMax) * 100, 100);
 
     return (

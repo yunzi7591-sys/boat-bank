@@ -22,7 +22,7 @@ export async function GET(request: Request) {
         // 全ユーザーのdailyPointsを500にリセット
         const result = await prisma.user.updateMany({
             data: {
-                dailyPoints: 500,
+                dailyPoints: 300,
                 lastDailyReset: new Date(),
             },
         });
