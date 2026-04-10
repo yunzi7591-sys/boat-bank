@@ -71,6 +71,19 @@ export default async function PredictPage(props: {
         // The instruction said: "選手名部分を空欄（または「未定」）としてレンダリングする安全なフォールバックを必ず実装してください"
     }
 
+    // Fetch schedule for deadlineAt
+    let deadlineAt: Date | null = null;
+    if (venue) {
+        const todayStr2 = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
+        const cd2 = new Date(todayStr2);
+        const localDateStr2 = `${cd2.getFullYear()}-${String(cd2.getMonth() + 1).padStart(2, '0')}-${String(cd2.getDate()).padStart(2, '0')}`;
+        const schedule = await prisma.raceSchedule.findFirst({
+            where: { placeName: venue.name, raceNumber, raceDate: new Date(`${localDateStr2}T00:00:00.000Z`) },
+            select: { deadlineAt: true },
+        });
+        if (schedule) deadlineAt = schedule.deadlineAt;
+    }
+
     const userPoints = await getUserPoints();
 
     return (
@@ -80,6 +93,7 @@ export default async function PredictPage(props: {
             racers={racers}
             userPoints={userPoints}
             isPrivate={isPrivate}
+            deadlineAt={deadlineAt?.toISOString() || null}
         />
     );
 }

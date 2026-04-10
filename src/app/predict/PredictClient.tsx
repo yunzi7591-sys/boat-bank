@@ -25,9 +25,10 @@ interface PredictClientProps {
     racers: MockRacer[];
     userPoints?: number;
     isPrivate?: boolean;
+    deadlineAt?: string | null;
 }
 
-export default function PredictClient({ venue, raceNumber, racers, userPoints, isPrivate }: PredictClientProps) {
+export default function PredictClient({ venue, raceNumber, racers, userPoints, isPrivate, deadlineAt }: PredictClientProps) {
     const { activeBetType, setBetType, cart, clearSelections } = useBetStore();
     const [viewCart, setViewCart] = useState(false);
     const [publishType, setPublishType] = useState<"internal" | "external" | null>(isPrivate ? null : null);
@@ -148,7 +149,7 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
                                 <p className="text-sm font-bold">カートを読み込み中...</p>
                             </div>
                         }>
-                            <BetListCart userPoints={userPoints} initialPublishType={publishType || undefined} />
+                            <BetListCart deadlineAt={deadlineAt ? new Date(deadlineAt) : null} userPoints={userPoints} initialPublishType={publishType || undefined} />
                         </Suspense>
                     </div>
                 )}
