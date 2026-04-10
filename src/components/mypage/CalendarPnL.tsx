@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown, X } from "lucide-react";
-import { deleteBet } from "@/actions/bet";
+import { deleteBets } from "@/actions/bet";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -288,12 +288,12 @@ function DailyDetail({
   dateKey,
   month,
   predictions,
-  onDelete,
+  onDeleteBets,
 }: {
   dateKey: string;
   month: number;
   predictions: DailyPredictionItem[];
-  onDelete?: (betId: string) => void;
+  onDeleteBets?: (betIds: string[]) => void;
 }) {
   const day = parseInt(dateKey.split("-")[2], 10);
   const [expandedRace, setExpandedRace] = useState<string | null>(null);
@@ -325,33 +325,48 @@ function DailyDetail({
           const { textColor, label } = getRaceStyle(group);
           const isExpanded = expandedRace === group.key;
 
+          const deletableIds = group.items.filter(p => p.source === "userbet").map(p => p.id);
+          const canDelete = deletableIds.length > 0 && onDeleteBets;
+
           return (
             <div key={group.key}>
               {/* Race row */}
-              <button
-                type="button"
-                onClick={() => setExpandedRace(isExpanded ? null : group.key)}
-                className="w-full flex items-center justify-between text-xs py-1.5 px-1 rounded hover:bg-[#e5edf5]/50 transition-colors"
-              >
-                <span className="flex items-center gap-1">
-                  <ChevronDown
-                    className={`w-3 h-3 text-[#94a3b8] transition-transform ${isExpanded ? "" : "-rotate-90"}`}
-                  />
-                  <span className={`font-bold ${textColor}`}>
-                    {group.placeName} {group.raceNumber}R
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setExpandedRace(isExpanded ? null : group.key)}
+                  className="flex-1 flex items-center justify-between text-xs py-1.5 px-1 rounded hover:bg-[#e5edf5]/50 transition-colors"
+                >
+                  <span className="flex items-center gap-1">
+                    <ChevronDown
+                      className={`w-3 h-3 text-[#94a3b8] transition-transform ${isExpanded ? "" : "-rotate-90"}`}
+                    />
+                    <span className={`font-bold ${textColor}`}>
+                      {group.placeName} {group.raceNumber}R
+                    </span>
                   </span>
-                </span>
-                <span className={`font-bold ${textColor}`}>
-                  {!group.allSettled ? (
-                    <span className="text-[10px] text-[#94a3b8]">結果待ち</span>
-                  ) : (
-                    <>
-                      {group.pnl >= 0 ? "+" : ""}{formatCurrency(group.pnl)}円
-                      {label && <span className="ml-1.5 text-[10px]">{label}</span>}
-                    </>
-                  )}
-                </span>
-              </button>
+                  <span className={`font-bold ${textColor}`}>
+                    {!group.allSettled ? (
+                      <span className="text-[10px] text-[#94a3b8]">結果待ち</span>
+                    ) : (
+                      <>
+                        {group.pnl >= 0 ? "+" : ""}{formatCurrency(group.pnl)}円
+                        {label && <span className="ml-1.5 text-[10px]">{label}</span>}
+                      </>
+                    )}
+                  </span>
+                </button>
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteBets(deletableIds)}
+                    className="p-1 rounded hover:bg-[#ea2261]/10 text-[#ea2261]/40 hover:text-[#ea2261] transition-colors ml-1 shrink-0"
+                    aria-label="このレースの賭けを削除"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
 
               {/* Expanded: individual bets */}
               {isExpanded && (
@@ -367,7 +382,7 @@ function DailyDetail({
                     return (
                       <div
                         key={p.id}
-                        className="flex items-center justify-between text-[11px] group"
+                        className="flex items-center text-[11px]"
                       >
                         <span className={`${itemStyle.textColor} flex items-center gap-1`}>
                           <span className="text-[#c0c8d4] font-mono text-[10px] w-3 shrink-0">{connector}</span>
@@ -382,19 +397,6 @@ function DailyDetail({
                             </span>
                           )}
                         </span>
-                        {p.source === "userbet" && onDelete && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDelete(p.id);
-                            }}
-                            className="p-0.5 rounded hover:bg-[#ea2261]/10 text-[#ea2261]/50 hover:text-[#ea2261] transition-colors ml-1"
-                            aria-label="削除"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        )}
                       </div>
                     );
                   })}
@@ -511,11 +513,15 @@ export function CalendarPnL({
     setSelectedDate((prev) => (prev === dateKey ? null : dateKey));
   }
 
-  function handleDelete(betId: string) {
+  function handleDeleteBets(betIds: string[]) {
     // 即座にUIから消す
-    setDeletedIds(prev => new Set(prev).add(betId));
-    // バックグラウンドでサーバー削除
-    deleteBet(betId).then(() => onRefresh?.());
+    setDeletedIds(prev => {
+      const next = new Set(prev);
+      betIds.forEach(id => next.add(id));
+      return next;
+    });
+    // バックグラウンドでサーバー一括削除
+    deleteBets(betIds).then(() => onRefresh?.());
   }
 
   return (
@@ -541,7 +547,7 @@ export function CalendarPnL({
           dateKey={selectedDate}
           month={currentMonth}
           predictions={filteredPredictions[selectedDate] ?? []}
-          onDelete={handleDelete}
+          onDeleteBets={handleDeleteBets}
         />
       )}
     </div>
