@@ -13,9 +13,9 @@ export async function Header() {
     if (session?.user?.id) {
         const dbUser = await prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { points: true }
+            select: { points: true, dailyPoints: true }
         });
-        userPoints = dbUser?.points || 0;
+        userPoints = (dbUser?.points || 0) + (dbUser?.dailyPoints || 0);
     }
 
     const notifications = session?.user?.id ? await prisma.notification.findMany({

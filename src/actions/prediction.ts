@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { calculatePointDeduction } from "@/lib/points";
 import { redirect } from "next/navigation";
 import { Formation } from "@/lib/bet-logic";
 
@@ -58,14 +59,16 @@ export async function publishPrediction(data: {
         // External publish: requires 100pt, betsPublic=false forced
         const prediction = await prisma.$transaction(async (tx) => {
             const user = await tx.user.findUnique({ where: { id: userId } });
-            if (!user || user.points < 100) {
+            if (!user) throw new Error("ユーザーが見つかりません");
+            const deduction = calculatePointDeduction(user.points, user.dailyPoints, 100);
+            if (!deduction) {
                 throw new Error("ポイントが不足しています。外部サイトへの予想公開には100ptが必要です。");
             }
 
-            // 100pt deduction
+            // 100pt deduction (dailyPoints優先)
             await tx.user.update({
                 where: { id: userId },
-                data: { points: { decrement: 100 } },
+                data: { points: deduction.newPoints, dailyPoints: deduction.newDailyPoints },
             });
 
             // Transaction record
@@ -166,14 +169,16 @@ export async function ridePrediction(predictionId: string) {
 
     await prisma.$transaction(async (tx) => {
         const user = await tx.user.findUnique({ where: { id: userId } });
-        if (!user || user.points < betAmount) {
+        if (!user) throw new Error("ユーザーが見つかりません");
+        const deduction = calculatePointDeduction(user.points, user.dailyPoints, betAmount);
+        if (!deduction) {
             throw new Error(`ポイントが不足しています。相乗りには ${betAmount.toLocaleString()}pt 必要です。`);
         }
 
-        // Deduct points
+        // Deduct points (dailyPoints優先)
         await tx.user.update({
             where: { id: userId },
-            data: { points: { decrement: betAmount } },
+            data: { points: deduction.newPoints, dailyPoints: deduction.newDailyPoints },
         });
 
         // Record bet transaction

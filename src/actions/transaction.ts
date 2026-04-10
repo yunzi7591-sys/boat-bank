@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { calculatePointDeduction } from "@/lib/points";
 
 export async function unlockPrediction(predictionId: string) {
     const session = await auth();
@@ -46,25 +47,26 @@ export async function unlockPrediction(predictionId: string) {
             // 2. Get the current user points
             const user = await tx.user.findUnique({
                 where: { id: userId },
-                select: { points: true },
+                select: { points: true, dailyPoints: true },
             });
 
             if (!user) throw new Error("User not found");
 
-            // 3. Check points
-            if (user.points < prediction.price) {
-                throw new Error("Insufficient points");
+            // 3. Check points (dailyPoints + points)
+            const deduction = calculatePointDeduction(user.points, user.dailyPoints, prediction.price);
+            if (!deduction) {
+                throw new Error("ポイントが不足しています");
             }
 
             // 4. Execute transfers and logging
 
-            // Deduct from buyer
+            // Deduct from buyer (dailyPoints優先)
             await tx.user.update({
                 where: { id: userId },
-                data: { points: { decrement: prediction.price } },
+                data: { points: deduction.newPoints, dailyPoints: deduction.newDailyPoints },
             });
 
-            // Add to author (Monetization ecosystem)
+            // Add to author
             await tx.user.update({
                 where: { id: prediction.authorId },
                 data: { points: { increment: prediction.price } },
