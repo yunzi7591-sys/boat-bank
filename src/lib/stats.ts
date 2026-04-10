@@ -283,13 +283,16 @@ function buildDateRange(period: Period): { gte: Date; lt: Date } | null {
     return { gte, lt };
 }
 
+/**
+ * 公開プロフィール用: Prediction (isPrivate: false) ベース
+ */
 export async function getUserVenueStatsWithPeriod(
     userId: string,
     period: Period
 ): Promise<VenueStatsWithPeriod[]> {
     const dateRange = buildDateRange(period);
 
-    const where: Record<string, unknown> = { authorId: userId };
+    const where: Record<string, unknown> = { authorId: userId, isPrivate: false };
     if (dateRange) {
         where.raceDate = { gte: dateRange.gte, lt: dateRange.lt };
     }
@@ -306,7 +309,6 @@ export async function getUserVenueStatsWithPeriod(
         },
     });
 
-    // Aggregate by placeName
     const venueMap = new Map<string, { inv: number; ref: number; hit: number; total: number }>();
 
     for (const pred of predictions) {
@@ -320,7 +322,59 @@ export async function getUserVenueStatsWithPeriod(
         venueMap.set(pred.placeName, entry);
     }
 
-    // Return all 24 venues, filling in zeros for venues with no predictions
+    return VENUES.map((venue) => {
+        const d = venueMap.get(venue.name) || { inv: 0, ref: 0, hit: 0, total: 0 };
+        return {
+            placeName: venue.name,
+            venueId: venue.id,
+            totalInvestment: d.inv,
+            totalRefund: d.ref,
+            recoveryRate: d.inv > 0 ? (d.ref / d.inv) * 100 : 0,
+            hitCount: d.hit,
+            totalPredictions: d.total,
+        };
+    });
+}
+
+/**
+ * マイページ用: UserBet ベース
+ */
+export async function getPrivateVenueStatsWithPeriod(
+    userId: string,
+    period: Period
+): Promise<VenueStatsWithPeriod[]> {
+    const dateRange = buildDateRange(period);
+
+    const where: Record<string, unknown> = { userId };
+    if (dateRange) {
+        where.raceDate = { gte: dateRange.gte, lt: dateRange.lt };
+    }
+
+    const userBets = await prisma.userBet.findMany({
+        where,
+        select: {
+            placeName: true,
+            isSettled: true,
+            isHit: true,
+            betAmount: true,
+            hitAmount: true,
+        },
+    });
+
+    const venueMap = new Map<string, { inv: number; ref: number; hit: number; total: number }>();
+
+    for (const bet of userBets) {
+        if (!bet.placeName) continue;
+        const entry = venueMap.get(bet.placeName) || { inv: 0, ref: 0, hit: 0, total: 0 };
+        entry.inv += bet.betAmount || 0;
+        entry.total++;
+        if (bet.isSettled) {
+            entry.ref += bet.hitAmount || 0;
+            if (bet.isHit) entry.hit++;
+        }
+        venueMap.set(bet.placeName, entry);
+    }
+
     return VENUES.map((venue) => {
         const d = venueMap.get(venue.name) || { inv: 0, ref: 0, hit: 0, total: 0 };
         return {

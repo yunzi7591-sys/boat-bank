@@ -1,22 +1,27 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
-import { getPrivateVenueStatsWithPeriod } from "@/lib/stats";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { getUserVenueStatsWithPeriod } from "@/lib/stats";
 import { VenueStatsGrid } from "@/components/mypage/VenueStatsGrid";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-export default async function VenuesPage() {
-    const session = await auth();
-    if (!session?.user?.id) redirect("/login");
+export default async function UserVenuesPage(props: { params: Promise<{ id: string }> }) {
+    const params = await props.params;
+    const userId = params.id;
 
-    const userId = session.user.id;
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+    });
+
+    if (!user) notFound();
 
     const currentYear = new Date().getFullYear();
     const months = Array.from({ length: 12 }, (_, i) => `${currentYear}-${String(i + 1).padStart(2, '0')}`);
     const [allTimeVenueStats, yearVenueStats, ...monthlyResults] = await Promise.all([
-        getPrivateVenueStatsWithPeriod(userId, "all"),
-        getPrivateVenueStatsWithPeriod(userId, "year"),
-        ...months.map(m => getPrivateVenueStatsWithPeriod(userId, m)),
+        getUserVenueStatsWithPeriod(userId, "all"),
+        getUserVenueStatsWithPeriod(userId, "year"),
+        ...months.map(m => getUserVenueStatsWithPeriod(userId, m)),
     ]);
     const monthlyStats: { [key: string]: typeof allTimeVenueStats } = {};
     months.forEach((m, i) => { monthlyStats[m] = monthlyResults[i]; });
@@ -25,14 +30,14 @@ export default async function VenuesPage() {
         <div className="min-h-screen bg-white font-sans pb-24">
             <div className="max-w-4xl mx-auto px-4 pt-6">
                 <Link
-                    href="/mypage"
+                    href={`/users/${userId}`}
                     className="inline-flex items-center gap-1.5 text-sm font-bold text-[#64748d] hover:text-[#061b31] transition-colors mb-6"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    マイページに戻る
+                    {user.name}のプロフィールに戻る
                 </Link>
 
-                <h1 className="text-xl font-black text-[#061b31] mb-4">場別回収率</h1>
+                <h1 className="text-xl font-black text-[#061b31] mb-4">{user.name}の場別回収率</h1>
 
                 <VenueStatsGrid
                     allTimeStats={allTimeVenueStats}
