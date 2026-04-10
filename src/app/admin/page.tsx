@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Server, CheckCircle2, DownloadCloud, Database } from "lucide-react";
+import { AlertTriangle, Server, CheckCircle2, DownloadCloud, Database, Trash2 } from "lucide-react";
+import { AdminPredictionList } from "@/components/admin/AdminPredictionList";
 
 export default async function AdminDashboard() {
     const session = await auth();
@@ -46,17 +47,15 @@ export default async function AdminDashboard() {
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-sm border border-slate-200">
-                    <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
-                        <CardTitle className="text-sm font-black text-slate-800 flex items-center gap-2">
-                            <Server className="w-4 h-4 text-slate-400" />
-                            バッチジョブ (Batch Operations)
+                <Card className="shadow-lg border-2 border-red-100">
+                    <CardHeader className="bg-red-50 border-b border-red-100 pb-4">
+                        <CardTitle className="text-lg font-black text-red-900 flex items-center gap-2">
+                            <Trash2 className="w-5 h-5 text-red-500" />
+                            自分の予想を管理（開発用）
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-6">
-                        <p className="text-[10px] text-slate-400 mt-3 text-center">
-                            API Route <code className="bg-slate-100 px-1 rounded text-slate-500">/api/cron/sync-results</code> is active for automated scraping execution.
-                        </p>
+                        <AdminPredictionList />
                     </CardContent>
                 </Card>
             </div>
