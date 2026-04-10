@@ -2,6 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { settleRacePredictions } from "@/lib/evaluate";
+import { revalidatePath } from "next/cache";
 
 interface BetInput {
     betType: string;
@@ -58,6 +60,21 @@ export async function submitBets(payload: SubmitBetsPayload) {
         });
 
         console.log(`[Bet] User ${userId} submitted ${result.count} bets for ${payload.placeName} R${payload.raceNumber}`);
+
+        // 5. 結果が既にあれば即座に精算
+        const existingResult = await prisma.raceResult.findUnique({
+            where: { placeName_raceNumber_raceDate: { placeName: payload.placeName, raceNumber: payload.raceNumber, raceDate } },
+        });
+        if (existingResult) {
+            try {
+                await settleRacePredictions(payload.placeName, payload.raceNumber, raceDate);
+                console.log(`[Bet] Auto-settled bets for ${payload.placeName} R${payload.raceNumber}`);
+            } catch (e: any) {
+                console.warn(`[Bet] Auto-settle failed: ${e.message}`);
+            }
+        }
+
+        revalidatePath('/mypage');
         return { success: true, count: result.count };
     } catch (e: any) {
         console.error("[Bet Error] Failed to submit bets:", e);
