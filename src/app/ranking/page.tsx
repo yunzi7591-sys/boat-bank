@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Trophy, TrendingUp, Coins } from "lucide-react";
 import { RankingClient } from "@/components/ranking/RankingClient";
+import { VENUES } from "@/lib/constants/venues";
 
 export const revalidate = 60;
 
@@ -56,15 +57,11 @@ export default async function RankingPage() {
     // 全場
     const recoveryAll = buildRecoveryRanking(predictions);
 
-    // 各場
+    // 全24場（データがない場も空配列で含める）
     const recoveryByVenue: { [venue: string]: RankEntry[] } = {};
-    const venueNames = [...new Set(predictions.map(p => p.placeName))].sort();
-    for (const venue of venueNames) {
-        const venuePreds = predictions.filter(p => p.placeName === venue);
-        const ranking = buildRecoveryRanking(venuePreds);
-        if (ranking.length > 0) {
-            recoveryByVenue[venue] = ranking;
-        }
+    for (const venue of VENUES) {
+        const venuePreds = predictions.filter(p => p.placeName === venue.name);
+        recoveryByVenue[venue.name] = buildRecoveryRanking(venuePreds);
     }
 
     // --- 獲得ptランキング(通算) ---
