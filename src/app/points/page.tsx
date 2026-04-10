@@ -1,33 +1,15 @@
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { getUserPointsDetail } from "@/lib/stats";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-
-// Type for future getUserPointsDetail function
-// interface PointsDetail {
-//   points: number;
-//   dailyPoints: number;
-//   totalEarned: number;
-//   monthEarned: number;
-// }
 
 export default async function PointsPage() {
     const session = await auth();
     if (!session?.user?.id) redirect("/login");
 
-    const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { points: true, dailyPoints: true }
-    });
-
-    const points = user?.points || 0;
-    const dailyPoints = user?.dailyPoints || 0;
-    const totalPoints = points + dailyPoints;
-
-    // TODO: Replace with getUserPointsDetail when available
-    const totalEarned = points;
-    const monthEarned = 0;
+    const detail = await getUserPointsDetail(session.user.id);
+    const { points, dailyPoints, totalPoints, totalEarned, monthEarned } = detail;
 
     const dailyMax = 500;
     const dailyUsagePercent = Math.min((dailyPoints / dailyMax) * 100, 100);
