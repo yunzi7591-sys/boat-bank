@@ -7,7 +7,7 @@ import { MockRacer } from "@/components/betting/VerticalGrid";
 import { getUserPoints } from "@/actions/auth";
 
 export default async function PredictPage(props: {
-    searchParams: Promise<{ placeId?: string; raceNumber?: string }>;
+    searchParams: Promise<{ placeId?: string; raceNumber?: string; isPrivate?: string }>;
 }) {
     const session = await auth();
     if (!session?.user?.id) redirect("/login");
@@ -15,6 +15,7 @@ export default async function PredictPage(props: {
     const searchParams = await props.searchParams;
     const placeId = searchParams.placeId;
     const raceNumber = searchParams.raceNumber ? parseInt(searchParams.raceNumber, 10) : 1;
+    const isPrivate = searchParams.isPrivate === 'true';
 
     // 1. Find the venue
     const venue = VENUES.find(v => v.id === placeId) || null;
@@ -78,6 +79,7 @@ export default async function PredictPage(props: {
             raceNumber={raceNumber}
             racers={racers}
             userPoints={userPoints}
+            isPrivate={isPrivate}
         />
     );
 }

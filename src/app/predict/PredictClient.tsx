@@ -24,14 +24,54 @@ interface PredictClientProps {
     raceNumber: number;
     racers: MockRacer[];
     userPoints?: number;
+    isPrivate?: boolean;
 }
 
-export default function PredictClient({ venue, raceNumber, racers, userPoints }: PredictClientProps) {
+export default function PredictClient({ venue, raceNumber, racers, userPoints, isPrivate }: PredictClientProps) {
     const { activeBetType, setBetType, cart, clearSelections } = useBetStore();
     const [viewCart, setViewCart] = useState(false);
+    const [publishType, setPublishType] = useState<"internal" | "external" | null>(isPrivate ? null : null);
 
-    // If venue is missing, we show a fallback or simple header
     const venueName = venue?.name || '不明な会場';
+
+    // 公開予想の場合、最初に投稿先選択を表示
+    if (!isPrivate && !publishType) {
+        return (
+            <div className="min-h-screen bg-white flex flex-col font-sans">
+                <header className="bg-white px-4 py-3 border-b border-[#e5edf5] sticky top-0 z-10 flex items-center gap-2">
+                    <Link href={venue ? `/place/${venue.id}` : "/"}>
+                        <Button variant="ghost" size="icon" className="text-[#64748d] hover:bg-[#f6f8fa] h-9 w-9">
+                            <ArrowLeft className="w-5 h-5" />
+                        </Button>
+                    </Link>
+                    <h1 className="text-base font-bold text-[#061b31]">{venueName} {raceNumber}R</h1>
+                </header>
+                <main className="flex-1 flex flex-col items-center justify-center p-6">
+                    <h2 className="text-lg font-bold text-[#061b31] mb-2">投稿先を選択</h2>
+                    <p className="text-sm text-[#64748d] mb-8 text-center">予想をどこに公開しますか？</p>
+                    <div className="w-full max-w-sm flex flex-col gap-3">
+                        <button
+                            onClick={() => setPublishType("internal")}
+                            className="w-full p-5 bg-white border-2 border-[#e5edf5] rounded-lg text-left hover:border-[#533afd] transition-colors"
+                            style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}
+                        >
+                            <h3 className="text-base font-bold text-[#061b31] mb-1">自サイトで販売</h3>
+                            <p className="text-xs text-[#64748d]">買い目を公開して他ユーザーに販売します</p>
+                        </button>
+                        <button
+                            onClick={() => setPublishType("external")}
+                            className="w-full p-5 bg-white border-2 border-[#e5edf5] rounded-lg text-left hover:border-[#533afd] transition-colors"
+                            style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}
+                        >
+                            <h3 className="text-base font-bold text-[#061b31] mb-1">他サイトへ誘導</h3>
+                            <p className="text-xs text-[#64748d]">外部サイトのURLを設定し、買い目は収支記録用に非公開で保存</p>
+                            <span className="inline-block mt-2 text-[10px] font-bold text-[#533afd] bg-[#533afd]/10 px-2 py-0.5 rounded">100pt消費</span>
+                        </button>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -108,7 +148,7 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints }:
                                 <p className="text-sm font-bold">カートを読み込み中...</p>
                             </div>
                         }>
-                            <BetListCart userPoints={userPoints} />
+                            <BetListCart userPoints={userPoints} initialPublishType={publishType || undefined} />
                         </Suspense>
                     </div>
                 )}
