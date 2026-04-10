@@ -122,5 +122,52 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
         settledCount++;
     }
 
+    // === UserBet の精算 ===
+    const userBets = await prisma.userBet.findMany({
+        where: {
+            placeName,
+            raceNumber,
+            raceDate,
+            isSettled: false,
+            betType: { not: null },
+            combination: { not: null },
+        },
+    });
+
+    for (const bet of userBets) {
+        const betNumbers = bet.combination!.split(/[-=]/).map(n => parseInt(n, 10));
+        const containsRefundedBoat = betNumbers.some(n => refundedBoats.includes(n));
+
+        let hitAmount = 0;
+        let isHit = false;
+
+        if (containsRefundedBoat) {
+            // 返還: 賭け金そのまま返す
+            hitAmount = bet.betAmount;
+            isHit = true;
+        } else {
+            // 的中チェック
+            const officialPayouts = payoutsList.filter(p => p.type === bet.betType);
+            for (const payout of officialPayouts) {
+                if (bet.combination === payout.numbers) {
+                    hitAmount = Math.floor((payout.amount / 100) * bet.betAmount);
+                    isHit = true;
+                }
+            }
+        }
+
+        await prisma.userBet.update({
+            where: { id: bet.id },
+            data: {
+                isSettled: true,
+                isHit,
+                hitAmount,
+                refundAmount: containsRefundedBoat ? bet.betAmount : 0,
+            },
+        });
+
+        settledCount++;
+    }
+
     return { success: true, settledCount };
 }
