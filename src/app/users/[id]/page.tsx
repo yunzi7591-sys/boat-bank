@@ -39,7 +39,7 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
 
     // 2. Get Published Predictions (public only)
     const publishedPredictions = await prisma.prediction.findMany({
-        where: { authorId: userId, isPrivate: false },
+        where: { authorId: userId, isPrivate: false, publishType: "internal" },
         orderBy: { createdAt: 'desc' },
     });
 

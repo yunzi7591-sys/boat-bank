@@ -128,8 +128,12 @@ model Prediction {
   
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  
+
   transactions     Transaction[]
+
+  @@index([authorId, isPrivate, publishType])
+  @@index([authorId, raceDate])
+  @@index([placeName, raceNumber, raceDate])
 }
 
 // ポイント消費・予想購入履歴モデル
