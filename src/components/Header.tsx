@@ -40,11 +40,13 @@ export async function Header() {
                 <div className="flex items-center gap-3">
                     {session?.user ? (
                         <>
-                            <div className="hidden md:flex items-center gap-1.5 bg-[#f6f8fa] border border-[#e5edf5] px-3 py-1.5 rounded-lg">
-                                <Coins className="w-3.5 h-3.5 text-[#533afd]" />
-                                <span className="font-bold text-sm text-[#533afd]">{userPoints.toLocaleString()}</span>
-                                <span className="text-[10px] text-[#64748d] font-medium">pt</span>
-                            </div>
+                            <Link href="/points">
+                                <div className="flex items-center gap-1.5 bg-[#f6f8fa] border border-[#e5edf5] px-3 py-1.5 rounded-lg hover:border-[#b9b9f9] transition-colors cursor-pointer">
+                                    <Coins className="w-3.5 h-3.5 text-[#533afd]" />
+                                    <span className="font-bold text-sm text-[#533afd]">{userPoints.toLocaleString()}</span>
+                                    <span className="text-[10px] text-[#64748d] font-medium">pt</span>
+                                </div>
+                            </Link>
 
                             <HeaderNotifications notifications={notifications} />
 
