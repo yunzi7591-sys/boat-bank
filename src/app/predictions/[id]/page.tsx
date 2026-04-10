@@ -58,6 +58,22 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
         formations = [];
     }
 
+    // レース結果を取得して買い目ごとの的中判定に使う
+    let payoutsMap = new Map<string, { type: string; numbers: string; amount: number }[]>();
+    if (prediction.isSettled) {
+        const raceResult = await prisma.raceResult.findUnique({
+            where: { placeName_raceNumber_raceDate: { placeName: prediction.placeName, raceNumber: prediction.raceNumber, raceDate: prediction.raceDate } },
+        });
+        if (raceResult?.payouts) {
+            const payouts = (typeof raceResult.payouts === 'string' ? JSON.parse(raceResult.payouts) : raceResult.payouts) as { type: string; numbers: string; amount: number }[];
+            for (const p of payouts) {
+                const arr = payoutsMap.get(p.type) || [];
+                arr.push(p);
+                payoutsMap.set(p.type, arr);
+            }
+        }
+    }
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-24">
             {/* Top Details Header */}
@@ -151,19 +167,61 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                     </div>
                                     <CardContent className="p-0">
                                         <div className="divide-y divide-slate-100">
-                                            {f.combinations.map((c, j) => (
-                                                <div key={`comb-${j}`} className="flex justify-between items-center px-4 py-3 hover:bg-slate-50/50 transition-colors">
-                                                    <span className="font-mono font-bold text-lg text-slate-900 tracking-widest">{c.id}</span>
-                                                    <div className="flex flex-col items-end">
-                                                        <span className="text-[10px] font-bold text-slate-400 tracking-widest mb-0.5">ALLOCATED</span>
-                                                        <span className="font-black text-sm text-slate-800">{c.amount.toLocaleString()} <span className="text-[10px] text-slate-500">円</span></span>
+                                            {f.combinations.map((c, j) => {
+                                                // 的中判定
+                                                let combHit = false;
+                                                let combPayout = 0;
+                                                if (prediction.isSettled) {
+                                                    const officialPayouts = payoutsMap.get(f.betType) || [];
+                                                    for (const op of officialPayouts) {
+                                                        if (c.id === op.numbers) {
+                                                            combHit = true;
+                                                            combPayout = Math.floor((op.amount / 100) * c.amount);
+                                                        }
+                                                    }
+                                                }
+
+                                                return (
+                                                    <div key={`comb-${j}`} className={`flex justify-between items-center px-4 py-3 transition-colors ${combHit ? 'bg-[#533afd]/5' : 'hover:bg-slate-50/50'}`}>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`font-mono font-bold text-lg tracking-widest ${combHit ? 'text-[#533afd]' : 'text-slate-900'}`}>{c.id}</span>
+                                                            {prediction.isSettled && (
+                                                                combHit ? (
+                                                                    <span className="text-[10px] font-bold text-white bg-[#533afd] px-1.5 py-0.5 rounded">的中</span>
+                                                                ) : (
+                                                                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">不的中</span>
+                                                                )
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="font-black text-sm text-slate-800">{c.amount.toLocaleString()} <span className="text-[10px] text-slate-500">円</span></span>
+                                                            {combHit && (
+                                                                <span className="text-sm font-black text-[#533afd]">→ {combPayout.toLocaleString()} <span className="text-[10px]">円</span></span>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </CardContent>
                                 </Card>
                             ))}
+
+                            {/* Settlement Summary */}
+                            {prediction.isSettled && (
+                                <div className="bg-white rounded-lg border border-[#e5edf5] p-4" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-bold text-[#64748d]">精算結果</span>
+                                        <span className={`text-lg font-black ${prediction.hitAmount - prediction.betAmount >= 0 ? 'text-[#533afd]' : 'text-[#ea2261]'}`}>
+                                            {prediction.hitAmount - prediction.betAmount >= 0 ? '+' : ''}{(prediction.hitAmount - prediction.betAmount).toLocaleString()}円
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between mt-2 text-[11px] text-[#64748d]">
+                                        <span>投資: {prediction.betAmount.toLocaleString()}円</span>
+                                        <span>回収: {prediction.hitAmount.toLocaleString()}円</span>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Ride on this prediction! */}
                             {userId && prediction.authorId !== userId && prediction.publishType !== "external" && (
