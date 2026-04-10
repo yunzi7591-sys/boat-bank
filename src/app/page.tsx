@@ -136,23 +136,6 @@ export default async function DashboardPage() {
             </Button>
           </Link>
         </div>
-      ) : stats.totalPredictions === 0 ? (
-        <div className="mx-4 -mt-4 relative z-10 bg-white border border-slate-200/80 p-5 rounded-lg shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)]">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#533afd]/5 rounded-lg flex items-center justify-center shrink-0">
-              <Ship className="w-6 h-6 text-[#533afd]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-[15px] font-light text-[#061b31]">まだ予想がありません</h3>
-              <p className="text-xs text-slate-500 mt-0.5">最初の勝負を始めてポートフォリオを構築しよう</p>
-            </div>
-          </div>
-          <Link href="/predict/new" className="mt-4 block">
-            <Button className="w-full rounded h-11 font-light text-sm bg-[#533afd] text-white hover:bg-[#4434d4] active:scale-[0.98] transition-all">
-              最初の予想を作成する
-            </Button>
-          </Link>
-        </div>
       ) : null}
 
       {/* 3. 24 Venues Grid */}
