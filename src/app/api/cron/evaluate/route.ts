@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { syncTodayResults } from '@/lib/boatrace-api';
-import { settleRacePredictions } from '@/lib/evaluate';
+import { settleRacePredictions, settleAllPending } from '@/lib/evaluate';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -34,14 +34,20 @@ export async function GET(request: Request) {
             }
         }
 
-        console.log(`[Cron] Batch: scraped ${processedRaces.length} races, settled ${settlementCount} predictions.`);
+        // 3. 結果取得済みだが未精算の分も全て精算
+        const pendingStats = await settleAllPending();
+        settlementCount += pendingStats.settledCount;
+
+        console.log(`[Cron] Batch: scraped ${processedRaces.length} races, settled ${settlementCount} total.`);
 
         return NextResponse.json({
             success: true,
             message: `Batch completed`,
             stats: {
                 racesScraped: processedRaces.length,
-                predictionsSettled: settlementCount
+                predictionsSettled: settlementCount,
+                pendingSettled: pendingStats.settledCount,
+                pendingRacesChecked: pendingStats.racesChecked,
             }
         });
     } catch (error: any) {
