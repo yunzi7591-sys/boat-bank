@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, PenTool, Lock, Eye, Clock } from "lucide-react";
@@ -25,6 +25,17 @@ export function RaceHubClient({
 }) {
     const router = useRouter();
     const [activeRaceNumber, setActiveRaceNumber] = useState(initialActiveRace);
+    const tabsRef = useRef<HTMLDivElement>(null);
+
+    // 初期表示時にアクティブタブまでスクロール
+    useEffect(() => {
+        if (tabsRef.current) {
+            const activeBtn = tabsRef.current.children[initialActiveRace - 1] as HTMLElement;
+            if (activeBtn) {
+                activeBtn.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+            }
+        }
+    }, [initialActiveRace]);
 
     // Filter data for the active race
     const currentSchedule = schedules.find(s => s.raceNumber === activeRaceNumber);
@@ -95,7 +106,7 @@ export function RaceHubClient({
 
             {/* Race Selection Tabs (1-12) */}
             <div className="bg-white border-b shadow-sm sticky top-[60px] z-10">
-                <div className="flex overflow-x-auto gap-2 p-3 snap-x [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div ref={tabsRef} className="flex overflow-x-auto gap-2 p-3 snap-x [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {Array.from({ length: 12 }).map((_, i) => {
                         const rNum = i + 1;
                         const sched = schedules.find(s => s.raceNumber === rNum);

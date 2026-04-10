@@ -72,7 +72,17 @@ export default async function PlacePage(props: {
         }
     });
 
-    const activeRaceNumber = searchParams.race ? parseInt(searchParams.race) : 1;
+    // 最も締切が近い未終了レースを自動選択（サーバータイム基準）
+    let activeRaceNumber = 1;
+    if (searchParams.race) {
+        activeRaceNumber = parseInt(searchParams.race);
+    } else {
+        const now = new Date();
+        const upcomingRaces = schedules
+            .filter(s => new Date(s.deadlineAt) > now)
+            .sort((a, b) => new Date(a.deadlineAt).getTime() - new Date(b.deadlineAt).getTime());
+        activeRaceNumber = upcomingRaces.length > 0 ? upcomingRaces[0].raceNumber : 1;
+    }
 
     return (
         <RaceHubClient
