@@ -211,7 +211,7 @@ function PredictContent() {
                                     </div>
                                     <div className="flex flex-col items-start">
                                         <span className="text-xs text-slate-400 font-bold">カート合計金額</span>
-                                        <span className="text-lg font-black tracking-tight">{totalCartAmount.toLocaleString()} <span className="text-xs font-medium text-slate-400">pt</span></span>
+                                        <span className="text-lg font-black tracking-tight">{totalCartAmount.toLocaleString()} <span className="text-xs font-medium text-slate-400">円</span></span>
                                     </div>
                                 </div>
                                 <div className="flex items-center text-sm font-bold text-blue-400">

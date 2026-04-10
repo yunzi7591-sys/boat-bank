@@ -56,7 +56,7 @@ export function TimelineCard({
                     <div className="flex gap-2 mb-3">
                         <div className="flex-1 bg-slate-50 rounded-xl px-3 py-2 text-center">
                             <span className="text-[10px] text-slate-400 font-medium">ベット額</span>
-                            <p className="text-sm font-bold text-slate-800 tabular-nums">{(prediction.betAmount || 0).toLocaleString()}pt</p>
+                            <p className="text-sm font-bold text-slate-800 tabular-nums">{(prediction.betAmount || 0).toLocaleString()}円</p>
                         </div>
                         <div className="flex-1 bg-slate-50 rounded-xl px-3 py-2 text-center">
                             <span className="text-[10px] text-slate-400 font-medium">締切</span>

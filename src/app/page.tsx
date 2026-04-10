@@ -69,7 +69,7 @@ export default async function DashboardPage() {
           </p>
           <div className="flex items-baseline gap-2 mb-6">
             <h1 className="text-5xl font-light tracking-tighter leading-none tabular-nums">{points.toLocaleString()}</h1>
-            <span className="text-white/50 font-light text-sm">pt</span>
+            <span className="text-white/50 font-light text-sm">円</span>
           </div>
 
           {/* Stats Row */}
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
               <p className="text-[10px] text-white/50 font-medium mb-0.5">投資額</p>
               <p className="text-xl font-light tracking-tight text-slate-200">
                 {stats.totalInvestment > 9999 ? `${(stats.totalInvestment / 1000).toFixed(0)}k` : stats.totalInvestment.toLocaleString()}
-                <span className="text-xs font-light opacity-40 ml-0.5">pt</span>
+                <span className="text-xs font-light opacity-40 ml-0.5">円</span>
               </p>
             </div>
           </div>

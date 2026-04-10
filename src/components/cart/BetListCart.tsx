@@ -83,7 +83,7 @@ export function BetListCart({ deadlineAt }: BetListCartProps = {}) {
                                         value={formation.isIndividualAmount ? '' : (formation.totalExpectedAmount || '')}
                                         onChange={(e) => updateCartFormationAmount(formation.id, parseInt(e.target.value) || 0)}
                                     />
-                                    <span className="absolute right-3 top-2 text-sm text-neutral-500">pt</span>
+                                    <span className="absolute right-3 top-2 text-sm text-neutral-500">円</span>
                                 </div>
                             </div>
 
@@ -102,7 +102,7 @@ export function BetListCart({ deadlineAt }: BetListCartProps = {}) {
                                                             value={comb.amount || ''}
                                                             onChange={(e) => updateCartItemAmount(formation.id, comb.id, parseInt(e.target.value) || 0)}
                                                         />
-                                                        <span className="absolute right-2 top-1.5 text-xs text-neutral-500">pt</span>
+                                                        <span className="absolute right-2 top-1.5 text-xs text-neutral-500">円</span>
                                                     </div>
                                                 </td>
                                                 <td className="py-2 px-2 w-10 text-center">
