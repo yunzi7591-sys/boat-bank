@@ -117,7 +117,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
 
                     <div className={`prose prose-slate prose-sm max-w-none ${!isUnlocked && "blur-[4px] opacity-40 select-none pb-12"}`}>
                         <p className="whitespace-pre-wrap leading-relaxed text-slate-700 font-medium">
-                            {prediction.commentary}
+                            {isUnlocked ? prediction.commentary : "この予想の見解を閲覧するにはアンロックが必要です。"}
                         </p>
                     </div>
 

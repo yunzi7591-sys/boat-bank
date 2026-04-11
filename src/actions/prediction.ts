@@ -33,6 +33,11 @@ export async function publishPrediction(data: {
         throw new Error("Cart is empty. Please add selections before publishing.");
     }
 
+    // Validate price
+    if (!Number.isInteger(data.price) || data.price < 0 || data.price > 100_000) {
+        throw new Error("価格は0〜100,000の整数で指定してください。");
+    }
+
     // Deadline Guard
     if (new Date(data.deadlineAt) < new Date()) {
         throw new Error("締切時刻を過ぎたレースの予想は公開できません。");
@@ -46,6 +51,15 @@ export async function publishPrediction(data: {
     } else if (data.publishType === "external") {
         if (!data.externalUrl || !/^https?:\/\//.test(data.externalUrl)) {
             throw new Error("有効な外部サイトURL（http/httpsで始まる）を入力してください。");
+        }
+    }
+
+    // Validate cart amounts
+    for (const f of data.cartData) {
+        for (const c of f.combinations) {
+            if (!Number.isInteger(c.amount) || c.amount <= 0 || c.amount > 10_000_000) {
+                throw new Error("買い目の金額が不正です。");
+            }
         }
     }
 

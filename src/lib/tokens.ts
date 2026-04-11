@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 
 export async function generateVerificationToken(email: string) {
-  const token = uuidv4();
+  // UUIDv4(122bit)よりも高エントロピーな256bit暗号論的乱数トークン
+  const token = crypto.randomBytes(32).toString("hex");
   const expires = new Date(new Date().getTime() + 60 * 60 * 1000); // 1時間
 
   // 既存のトークンを削除
@@ -22,7 +23,7 @@ export async function generateVerificationToken(email: string) {
 }
 
 export async function generatePasswordResetToken(email: string) {
-  const token = uuidv4();
+  const token = crypto.randomBytes(32).toString("hex");
   const expires = new Date(new Date().getTime() + 60 * 60 * 1000); // 1時間
 
   // 既存のトークンを削除
