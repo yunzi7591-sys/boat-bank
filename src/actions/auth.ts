@@ -2,8 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { generateVerificationToken } from "@/lib/tokens";
-import { sendVerificationEmail } from "@/lib/mail";
+import { generateVerificationToken, generatePasswordResetToken, getPasswordResetTokenByToken } from "@/lib/tokens";
+import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/mail";
 
 export async function registerUser(formData: FormData) {
     const name = formData.get("name") as string;
@@ -118,6 +118,84 @@ export async function resendVerificationEmail(email: string) {
     } catch {
         return { error: "確認メールの送信に失敗しました。しばらくしてから再度お試しください。" };
     }
+
+    return { success: true };
+}
+
+export async function requestPasswordReset(email: string) {
+    if (!email) {
+        return { error: "メールアドレスを入力してください" };
+    }
+
+    const user = await prisma.user.findUnique({
+        where: { email },
+    });
+
+    if (!user) {
+        // ユーザー列挙対策: 存在しなくてもsuccessを返す
+        return { success: true };
+    }
+
+    // レート制限: 最後のトークン生成から2分以内は再送不可
+    const existingToken = await prisma.passwordResetToken.findFirst({
+        where: { email },
+    });
+    if (existingToken) {
+        const tokenAge = new Date().getTime() - new Date(existingToken.createdAt).getTime();
+        if (tokenAge < 2 * 60 * 1000) {
+            return { error: "しばらくしてから再度お試しください（2分間隔）" };
+        }
+    }
+
+    const passwordResetToken = await generatePasswordResetToken(email);
+    try {
+        await sendPasswordResetEmail(email, passwordResetToken.token);
+    } catch {
+        return { error: "メールの送信に失敗しました。しばらくしてから再度お試しください。" };
+    }
+
+    return { success: true };
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+    if (!token) {
+        return { error: "無効なリンクです" };
+    }
+
+    if (!newPassword || newPassword.length < 8) {
+        return { error: "パスワードは8文字以上で入力してください" };
+    }
+
+    const passwordResetToken = await getPasswordResetTokenByToken(token);
+
+    if (!passwordResetToken) {
+        return { error: "無効または期限切れのリンクです" };
+    }
+
+    const hasExpired = new Date(passwordResetToken.expires) < new Date();
+    if (hasExpired) {
+        return { error: "リンクの有効期限が切れています。再度リセットをお試しください。" };
+    }
+
+    const user = await prisma.user.findUnique({
+        where: { email: passwordResetToken.email },
+    });
+
+    if (!user) {
+        return { error: "ユーザーが見つかりません" };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+    });
+
+    // トークンを削除（使用後は必ず削除）
+    await prisma.passwordResetToken.delete({
+        where: { id: passwordResetToken.id },
+    });
 
     return { success: true };
 }

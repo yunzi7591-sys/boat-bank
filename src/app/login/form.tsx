@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +70,11 @@ export function LoginForm() {
                     required
                     className="bg-slate-50 border-slate-200"
                 />
+            </div>
+            <div className="flex justify-end">
+                <Link href="/forgot-password" className="text-xs text-[#533afd] hover:underline">
+                    パスワードを忘れた方
+                </Link>
             </div>
             <Button
                 type="submit"
