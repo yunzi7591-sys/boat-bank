@@ -191,7 +191,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                         if (res.success) {
                                             clearCart();
                                             toast.success('保存しました！', { position: 'top-center' });
-                                            router.push('/mypage/dashboard');
+                                            router.push('/mypage');
                                         } else {
                                             toast.error(res.error || '保存に失敗しました', { position: 'top-center' });
                                         }
