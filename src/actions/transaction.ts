@@ -30,8 +30,8 @@ export async function unlockPrediction(predictionId: string) {
                 throw new Error("この予想は既に締切時刻を過ぎているため購入できません。");
             }
 
-            // If free or user is author, return early
-            if (prediction.price === 0 || prediction.authorId === userId) {
+            // Author always has access
+            if (prediction.authorId === userId) {
                 return { success: true };
             }
 
@@ -41,6 +41,19 @@ export async function unlockPrediction(predictionId: string) {
             });
 
             if (existingTransaction) {
+                return { success: true };
+            }
+
+            // Free prediction: record transaction without point deduction
+            if (prediction.price === 0) {
+                await tx.transaction.create({
+                    data: {
+                        action: "BUY_PREDICTION",
+                        points: 0,
+                        userId,
+                        predictionId,
+                    },
+                });
                 return { success: true };
             }
 

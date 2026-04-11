@@ -36,9 +36,6 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
     if (userId) {
         if (prediction.authorId === userId) {
             isUnlocked = true;
-        } else if (prediction.price === 0) {
-            // 無料予想はログイン済みなら閲覧可能
-            isUnlocked = true;
         } else {
             const transaction = await prisma.transaction.findFirst({
                 where: {
