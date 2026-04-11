@@ -29,7 +29,12 @@ export function LoginForm() {
             });
 
             if (res?.error) {
-                toast.error("メールアドレスまたはパスワードが間違っています");
+                if (res.error.includes("EMAIL_NOT_VERIFIED") || res.code === "EMAIL_NOT_VERIFIED") {
+                    toast.error("メールアドレスが未確認です。確認メールをご確認ください。");
+                    router.push(`/check-email?email=${encodeURIComponent(email)}`);
+                } else {
+                    toast.error("メールアドレスまたはパスワードが間違っています");
+                }
                 setIsLoading(false);
             } else {
                 toast.success("ログインしました");

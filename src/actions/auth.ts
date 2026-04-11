@@ -2,6 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { generateVerificationToken } from "@/lib/tokens";
+import { sendVerificationEmail } from "@/lib/mail";
 
 export async function registerUser(formData: FormData) {
     const name = formData.get("name") as string;
@@ -22,6 +24,12 @@ export async function registerUser(formData: FormData) {
     });
 
     if (existingUser) {
+        // If the user exists but hasn't verified email, resend verification
+        if (!existingUser.emailVerified) {
+            const verificationToken = await generateVerificationToken(email);
+            await sendVerificationEmail(email, verificationToken.token);
+            return { success: true, needsVerification: true };
+        }
         return { error: "このメールアドレスは既に登録されています" };
     }
 
@@ -47,7 +55,11 @@ export async function registerUser(formData: FormData) {
         });
     });
 
-    return { success: true };
+    // Generate verification token and send email
+    const verificationToken = await generateVerificationToken(email);
+    await sendVerificationEmail(email, verificationToken.token);
+
+    return { success: true, needsVerification: true };
 }
 
 export async function getUserPoints(): Promise<number> {
@@ -61,4 +73,28 @@ export async function getUserPoints(): Promise<number> {
     });
 
     return user?.points ?? 0;
+}
+
+export async function resendVerificationEmail(email: string) {
+    if (!email) {
+        return { error: "メールアドレスが必要です" };
+    }
+
+    const user = await prisma.user.findUnique({
+        where: { email },
+    });
+
+    if (!user) {
+        // Don't reveal whether user exists
+        return { success: true };
+    }
+
+    if (user.emailVerified) {
+        return { error: "このメールアドレスは既に確認済みです" };
+    }
+
+    const verificationToken = await generateVerificationToken(email);
+    await sendVerificationEmail(email, verificationToken.token);
+
+    return { success: true };
 }
