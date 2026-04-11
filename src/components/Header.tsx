@@ -55,16 +55,6 @@ export async function Header() {
                                     マイページ
                                 </Button>
                             </Link>
-                            <form
-                                action={async () => {
-                                    "use server";
-                                    await signOut();
-                                }}
-                            >
-                                <Button type="submit" variant="ghost" className="text-[#64748d] hover:bg-[#f6f8fa] hover:text-[#533afd] text-xs h-8 px-2.5">
-                                    ログアウト
-                                </Button>
-                            </form>
                         </>
                     ) : (
                         <div className="flex items-center gap-2">
