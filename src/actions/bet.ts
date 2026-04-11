@@ -60,9 +60,13 @@ export async function submitBets(payload: SubmitBetsPayload) {
         }
 
         // 2.5. Validate individual bet amounts
-        const invalidBet = payload.bets.find(bet => bet.amount <= 0);
-        if (invalidBet) {
-            return { success: false, error: "ベット金額は1以上で指定してください。" };
+        for (const bet of payload.bets) {
+            if (!Number.isInteger(bet.amount) || bet.amount <= 0) {
+                return { success: false, error: "ベット金額は1以上の整数で指定してください。" };
+            }
+            if (bet.amount > 10_000_000) {
+                return { success: false, error: "ベット金額が上限を超えています。" };
+            }
         }
 
         const raceDate = new Date(payload.raceDate);
@@ -102,6 +106,6 @@ export async function submitBets(payload: SubmitBetsPayload) {
         return { success: true, count: result.count };
     } catch (e: any) {
         console.error("[Bet Error] Failed to submit bets:", e);
-        return { success: false, error: e.message };
+        return { success: false, error: "ベットの登録に失敗しました。" };
     }
 }

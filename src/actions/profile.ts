@@ -13,6 +13,17 @@ export async function updateProfile(data: { name: string; bio: string; link?: st
 
     const userId = session.user.id;
 
+    // Input validation
+    if (!data.name || data.name.trim().length === 0 || data.name.length > 50) {
+        return { success: false, error: "名前は1〜50文字で入力してください。" };
+    }
+    if (data.bio && data.bio.length > 500) {
+        return { success: false, error: "自己紹介は500文字以内で入力してください。" };
+    }
+    if (data.link && (data.link.length > 200 || !/^https?:\/\//.test(data.link))) {
+        return { success: false, error: "リンクは有効なURL（http/httpsで始まる200文字以内）を入力してください。" };
+    }
+
     try {
         await prisma.user.update({
             where: { id: userId },
@@ -26,7 +37,7 @@ export async function updateProfile(data: { name: string; bio: string; link?: st
         revalidatePath("/mypage");
         return { success: true };
     } catch (error: any) {
-        return { success: false, error: error.message || "Failed to update profile." };
+        return { success: false, error: "プロフィールの更新に失敗しました。" };
     }
 }
 
@@ -66,6 +77,6 @@ export async function changePassword(data: { currentPassword: string; newPasswor
 
         return { success: true };
     } catch (error: any) {
-        return { success: false, error: error.message || "パスワードの変更に失敗しました。" };
+        return { success: false, error: "パスワードの変更に失敗しました。" };
     }
 }

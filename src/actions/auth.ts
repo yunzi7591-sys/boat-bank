@@ -14,8 +14,8 @@ export async function registerUser(formData: FormData) {
         return { error: "すべての項目を入力してください" };
     }
 
-    if (password.length < 6) {
-        return { error: "パスワードは6文字以上で入力してください" };
+    if (password.length < 8) {
+        return { error: "パスワードは8文字以上で入力してください" };
     }
 
     // Check if user already exists
@@ -34,11 +34,12 @@ export async function registerUser(formData: FormData) {
             }
             return { success: true, needsVerification: true };
         }
-        return { error: "このメールアドレスは既に登録されています" };
+        // ユーザー列挙対策: 既存ユーザーにも同じレスポンスを返す
+        return { success: true, needsVerification: true };
     }
 
     // Create user and welcome bonus transaction atomically
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     await prisma.$transaction(async (tx) => {
         const user = await tx.user.create({
@@ -106,7 +107,9 @@ export async function resendVerificationEmail(email: string) {
         where: { identifier: email },
     });
     if (existingToken) {
-        const tokenAge = new Date().getTime() - new Date(existingToken.expires).getTime() + 60 * 60 * 1000;
+        // トークン生成時刻 = expires - 1時間(有効期限)
+        const createdAt = new Date(existingToken.expires).getTime() - 60 * 60 * 1000;
+        const tokenAge = Date.now() - createdAt;
         if (tokenAge < 2 * 60 * 1000) {
             return { error: "しばらくしてから再度お試しください（2分間隔）" };
         }
@@ -185,17 +188,23 @@ export async function resetPassword(token: string, newPassword: string) {
         return { error: "ユーザーが見つかりません" };
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    await prisma.user.update({
-        where: { id: user.id },
-        data: { password: hashedPassword },
-    });
-
-    // トークンを削除（使用後は必ず削除）
-    await prisma.passwordResetToken.delete({
-        where: { id: passwordResetToken.id },
-    });
+    // パスワード更新とトークン削除をアトミックに実行
+    await prisma.$transaction([
+        prisma.user.update({
+            where: { id: user.id },
+            data: { password: hashedPassword },
+        }),
+        prisma.passwordResetToken.delete({
+            where: { id: passwordResetToken.id },
+        }),
+        // 既存セッション(Account)を無効化 - JWTベースのため、
+        // セッションテーブルがあれば削除する
+        prisma.session.deleteMany({
+            where: { userId: user.id },
+        }),
+    ]);
 
     return { success: true };
 }

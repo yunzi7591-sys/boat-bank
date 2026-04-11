@@ -2,10 +2,21 @@ import { prisma } from "@/lib/prisma";
 import { getVerificationTokenByToken } from "@/lib/tokens";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("token");
+// POST: メール認証は状態変更を伴うためPOSTを使用（CSRF対策）
+export async function POST(req: NextRequest) {
+  let body: { token?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: "リクエストが不正です" },
+      { status: 400 }
+    );
+  }
 
-  if (!token) {
+  const token = body.token;
+
+  if (!token || typeof token !== "string") {
     return NextResponse.json(
       { error: "トークンが指定されていません" },
       { status: 400 }

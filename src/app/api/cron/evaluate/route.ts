@@ -8,10 +8,12 @@ export const maxDuration = 300;
 // Phase 53: This route now scrapes results from boatrace.jp, then evaluates pending predictions.
 export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization');
-    const secret = process.env.CRON_SECRET || 'dev-cron-secret';
+    const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
 
-    if (authHeader !== `Bearer ${secret}` && process.env.NODE_ENV !== 'development') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (process.env.NODE_ENV === 'production') {
+        if (authHeader !== expectedAuth) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
     }
 
     try {
