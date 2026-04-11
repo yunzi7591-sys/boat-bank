@@ -21,6 +21,37 @@ export async function generateVerificationToken(email: string) {
   return verificationToken;
 }
 
+export async function generatePasswordResetToken(email: string) {
+  const token = uuidv4();
+  const expires = new Date(new Date().getTime() + 60 * 60 * 1000); // 1時間
+
+  // 既存のトークンを削除
+  await prisma.passwordResetToken.deleteMany({
+    where: { email },
+  });
+
+  const passwordResetToken = await prisma.passwordResetToken.create({
+    data: {
+      email,
+      token,
+      expires,
+    },
+  });
+
+  return passwordResetToken;
+}
+
+export async function getPasswordResetTokenByToken(token: string) {
+  try {
+    const passwordResetToken = await prisma.passwordResetToken.findUnique({
+      where: { token },
+    });
+    return passwordResetToken;
+  } catch {
+    return null;
+  }
+}
+
 export async function getVerificationTokenByToken(token: string) {
   try {
     const verificationToken = await prisma.verificationToken.findUnique({
