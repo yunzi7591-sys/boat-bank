@@ -30,13 +30,16 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
         notFound();
     }
 
-    let isUnlocked = prediction.price === 0;
+    let isUnlocked = false;
     const isClosed = new Date(prediction.deadlineAt) < new Date();
 
     if (userId) {
         if (prediction.authorId === userId) {
             isUnlocked = true;
-        } else if (!isUnlocked) {
+        } else if (prediction.price === 0) {
+            // 無料予想はログイン済みなら閲覧可能
+            isUnlocked = true;
+        } else {
             const transaction = await prisma.transaction.findFirst({
                 where: {
                     userId,
@@ -247,15 +250,27 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                     <Lock className="w-5 h-5 -rotate-12" />
                                 </div>
 
-                                <h4 className="font-black text-slate-800 text-lg mb-1">資産情報をアンロック</h4>
-                                <p className="text-xs font-semibold text-slate-500 mb-6 max-w-[200px]">
-                                    {isClosed
-                                        ? "このレースは締切時刻を過ぎているため、購入できません。"
-                                        : "このポジションの買い目と金額配分を確認するにはポイントが必要です。"
+                                <h4 className="font-black text-slate-800 text-lg mb-1">
+                                    {!userId ? "会員登録が必要です" : "予想をアンロック"}
+                                </h4>
+                                <p className="text-xs font-semibold text-slate-500 mb-6 max-w-[220px]">
+                                    {!userId
+                                        ? "この予想を閲覧するにはログインまたは会員登録が必要です。"
+                                        : isClosed
+                                            ? "このレースは締切時刻を過ぎているため、購入できません。"
+                                            : prediction.price === 0
+                                                ? "無料予想です。ログインすると閲覧できます。"
+                                                : "買い目と金額配分を確認するにはポイントが必要です。"
                                     }
                                 </p>
 
-                                <UnlockButton predictionId={prediction.id} price={prediction.price} isClosed={isClosed} />
+                                {!userId ? (
+                                    <a href="/login" className="inline-flex items-center justify-center bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm px-6 py-3 rounded-lg transition-colors">
+                                        ログイン / 新規登録
+                                    </a>
+                                ) : (
+                                    <UnlockButton predictionId={prediction.id} price={prediction.price} isClosed={isClosed} />
+                                )}
                             </div>
                         </div>
                     )}
