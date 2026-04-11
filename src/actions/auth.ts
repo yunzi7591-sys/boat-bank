@@ -27,7 +27,11 @@ export async function registerUser(formData: FormData) {
         // If the user exists but hasn't verified email, resend verification
         if (!existingUser.emailVerified) {
             const verificationToken = await generateVerificationToken(email);
-            await sendVerificationEmail(email, verificationToken.token);
+            try {
+                await sendVerificationEmail(email, verificationToken.token);
+            } catch {
+                return { error: "確認メールの送信に失敗しました。しばらくしてから再度お試しください。" };
+            }
             return { success: true, needsVerification: true };
         }
         return { error: "このメールアドレスは既に登録されています" };
@@ -57,7 +61,11 @@ export async function registerUser(formData: FormData) {
 
     // Generate verification token and send email
     const verificationToken = await generateVerificationToken(email);
-    await sendVerificationEmail(email, verificationToken.token);
+    try {
+        await sendVerificationEmail(email, verificationToken.token);
+    } catch {
+        return { error: "確認メールの送信に失敗しました。しばらくしてから再度お試しください。" };
+    }
 
     return { success: true, needsVerification: true };
 }
@@ -93,8 +101,23 @@ export async function resendVerificationEmail(email: string) {
         return { error: "このメールアドレスは既に確認済みです" };
     }
 
+    // レート制限: 最後のトークン生成から2分以内は再送不可
+    const existingToken = await prisma.verificationToken.findFirst({
+        where: { identifier: email },
+    });
+    if (existingToken) {
+        const tokenAge = new Date().getTime() - new Date(existingToken.expires).getTime() + 60 * 60 * 1000;
+        if (tokenAge < 2 * 60 * 1000) {
+            return { error: "しばらくしてから再度お試しください（2分間隔）" };
+        }
+    }
+
     const verificationToken = await generateVerificationToken(email);
-    await sendVerificationEmail(email, verificationToken.token);
+    try {
+        await sendVerificationEmail(email, verificationToken.token);
+    } catch {
+        return { error: "確認メールの送信に失敗しました。しばらくしてから再度お試しください。" };
+    }
 
     return { success: true };
 }
