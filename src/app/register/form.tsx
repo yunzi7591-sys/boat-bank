@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { registerUser } from "@/actions/auth";
-import { signIn } from "next-auth/react";
 
 export function RegisterForm() {
     const router = useRouter();
@@ -20,7 +19,6 @@ export function RegisterForm() {
 
         const formData = new FormData(e.currentTarget);
         const email = formData.get("email") as string;
-        const password = formData.get("password") as string;
 
         try {
             const res = await registerUser(formData);
@@ -28,17 +26,9 @@ export function RegisterForm() {
             if (res.error) {
                 toast.error(res.error);
                 setIsLoading(false);
-            } else {
-                toast.success("アカウントが作成されました！自動ログインします...");
-                // Auto login after registration
-                await signIn("credentials", {
-                    email,
-                    password,
-                    redirect: false,
-                });
-
-                router.push("/mypage");
-                router.refresh();
+            } else if (res.needsVerification) {
+                // Redirect to check-email page
+                router.push(`/check-email?email=${encodeURIComponent(email)}`);
             }
         } catch (error) {
             toast.error("登録エラーが発生しました");
