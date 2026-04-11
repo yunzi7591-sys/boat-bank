@@ -6,7 +6,7 @@
 - Next.js 16 (App Router, Turbopack) / React 19 / TypeScript 5
 - Prisma 6 + SQLite (dev) / Tailwind CSS 4 / shadcn/ui 3
 - NextAuth v5 Beta / Zustand 5 / Framer Motion 12
-- デプロイ: Vercel (https://boat-bank.vercel.app/)
+- デプロイ: Vercel (https://boatbank.jp/)
 
 ## エージェントチーム
 

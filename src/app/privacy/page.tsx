@@ -95,10 +95,10 @@ export default function PrivacyPage() {
         <p className="text-xs text-slate-400 mt-8">
           URL:{" "}
           <a
-            href="https://boat-bank.vercel.app"
+            href="https://boatbank.jp"
             className="text-[#533afd]"
           >
-            https://boat-bank.vercel.app
+            https://boatbank.jp
           </a>
         </p>
       </article>

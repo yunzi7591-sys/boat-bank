@@ -4,7 +4,7 @@
 - **サービス名**: BOAT BANK
 - **コンセプト**: ガチ予想のマーケットプレイス＆収支管理アプリ
 - **技術スタック**: Next.js 16 (App Router) / React 19 / Prisma / SQLite / Tailwind CSS 4 / shadcn/ui / NextAuth v5 / Zustand / Framer Motion
-- **デプロイ先**: Vercel (https://boat-bank.vercel.app/)
+- **デプロイ先**: Vercel (https://boatbank.jp/)
 
 ## あなたの責務
 
