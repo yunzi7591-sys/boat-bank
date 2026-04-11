@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export async function generateVerificationToken(email: string) {
   const token = uuidv4();
-  const expires = new Date(new Date().getTime() + 24 * 60 * 60 * 1000); // 24時間
+  const expires = new Date(new Date().getTime() + 60 * 60 * 1000); // 1時間
 
   // 既存のトークンを削除
   await prisma.verificationToken.deleteMany({
