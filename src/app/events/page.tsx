@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { ArrowLeft, Trophy, Users, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EventBetHistory } from "@/components/events/EventBetHistory";
 
 export default async function EventsPage() {
     const session = await auth();
@@ -23,6 +24,7 @@ export default async function EventsPage() {
 
     let myPoints: number | null = null;
     let myRank: number | null = null;
+    let myBets: any[] = [];
 
     if (activeEvent && session?.user?.id) {
         const participant = await prisma.eventParticipant.findUnique({
@@ -43,6 +45,11 @@ export default async function EventsPage() {
                 },
             });
             myRank = higherCount + 1;
+
+            myBets = await prisma.eventBet.findMany({
+                where: { eventId: activeEvent.id, userId: session.user.id },
+                orderBy: [{ raceDate: 'desc' }, { raceNumber: 'desc' }],
+            });
         }
     }
 
@@ -120,48 +127,25 @@ export default async function EventsPage() {
                             </div>
                         )}
 
-                        {/* Ranking */}
-                        <div className="bg-white rounded-2xl p-5 shadow-lg border border-slate-100">
-                            <h3 className="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
-                                <Trophy className="w-4 h-4 text-amber-500" />
-                                ランキング TOP10
-                            </h3>
-                            <div className="space-y-1">
-                                {activeEvent.participants.map((p, idx) => {
-                                    const isMe = session?.user?.id === p.userId;
-                                    const rankColors = idx === 0
-                                        ? "bg-yellow-50 border-yellow-200"
-                                        : idx === 1
-                                            ? "bg-slate-50 border-slate-200"
-                                            : idx === 2
-                                                ? "bg-orange-50 border-orange-200"
-                                                : "bg-white border-slate-100";
-                                    const rankIcon = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}`;
-
-                                    return (
-                                        <div
-                                            key={p.id}
-                                            className={`flex items-center justify-between p-2.5 rounded-lg border ${rankColors} ${isMe ? "ring-2 ring-amber-400" : ""}`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <span className={`w-7 text-center font-black ${idx < 3 ? "text-base" : "text-xs text-slate-400"}`}>
-                                                    {rankIcon}
-                                                </span>
-                                                <div>
-                                                    <span className={`text-sm font-bold ${isMe ? "text-amber-700" : "text-slate-800"}`}>
-                                                        {p.user.name || "名無し"}
-                                                    </span>
-                                                    {isMe && <span className="text-[9px] ml-1 text-amber-500 font-bold">YOU</span>}
-                                                </div>
-                                            </div>
-                                            <span className="text-sm font-black text-slate-700">
-                                                {p.points.toLocaleString()}<span className="text-[10px] text-slate-400 ml-0.5">pt</span>
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                        {/* Bet History & Graph */}
+                        {session?.user && myBets.length >= 0 && (
+                            <EventBetHistory
+                                bets={myBets.map(b => ({
+                                    id: b.id,
+                                    placeName: b.placeName,
+                                    raceNumber: b.raceNumber,
+                                    raceDate: b.raceDate.toISOString(),
+                                    betType: b.betType,
+                                    combination: b.combination,
+                                    betAmount: b.betAmount,
+                                    hitAmount: b.hitAmount,
+                                    refundAmount: b.refundAmount,
+                                    isSettled: b.isSettled,
+                                    isHit: b.isHit,
+                                }))}
+                                initialPt={activeEvent.initialPt}
+                            />
+                        )}
 
                         {/* Not logged in prompt */}
                         {!session?.user && (
