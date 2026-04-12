@@ -6,7 +6,7 @@ import { VenueGrid } from "@/components/dashboard/VenueGrid";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export const revalidate = 0;
+export const revalidate = 60;
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -16,6 +16,7 @@ export default async function DashboardPage() {
   const latestResultsRaw = await prisma.raceResult.findMany({
     orderBy: { createdAt: 'desc' },
     take: 5,
+    select: { placeName: true, raceNumber: true, firstPlace: true, secondPlace: true, thirdPlace: true, payouts: true, createdAt: true },
   });
 
   const latestResults = latestResultsRaw.map(r => {

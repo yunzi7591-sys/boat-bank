@@ -15,7 +15,7 @@ export default async function MarketPage() {
     const allPredictions = await prisma.prediction.findMany({
         where: { isPrivate: false, deadlineAt: { gt: now } },
         orderBy: { createdAt: 'desc' },
-        take: 100,
+        take: 30,
         include: {
             author: { select: { name: true, role: true } },
             _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
@@ -37,7 +37,7 @@ export default async function MarketPage() {
             followingPredictions = await prisma.prediction.findMany({
                 where: { authorId: { in: followingIds }, isPrivate: false, deadlineAt: { gt: now } },
                 orderBy: { createdAt: 'desc' },
-                take: 100,
+                take: 30,
                 include: {
                     author: { select: { name: true, role: true } },
                     _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
