@@ -10,12 +10,21 @@ export async function Header() {
     const session = await auth();
 
     let userPoints = 0;
+    let eventPoints: number | null = null;
     if (session?.user?.id) {
         const dbUser = await prisma.user.findUnique({
             where: { id: session.user.id },
             select: { points: true, dailyPoints: true }
         });
         userPoints = (dbUser?.points || 0) + (dbUser?.dailyPoints || 0);
+
+        const activeEvent = await prisma.event.findFirst({ where: { isActive: true } });
+        if (activeEvent) {
+            const participant = await prisma.eventParticipant.findUnique({
+                where: { eventId_userId: { eventId: activeEvent.id, userId: session.user.id } }
+            });
+            eventPoints = participant?.points ?? null;
+        }
     }
 
     const notifications = session?.user?.id ? await prisma.notification.findMany({
@@ -47,6 +56,16 @@ export async function Header() {
                                     <span className="text-[10px] text-[#64748d] font-medium">pt</span>
                                 </div>
                             </Link>
+
+                            {eventPoints !== null && (
+                                <Link href="/events">
+                                    <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg hover:border-amber-300 transition-colors cursor-pointer">
+                                        <span className="text-[10px] font-bold text-amber-600">限定</span>
+                                        <span className="font-bold text-sm text-amber-700">{eventPoints.toLocaleString()}</span>
+                                        <span className="text-[10px] text-amber-500">pt</span>
+                                    </div>
+                                </Link>
+                            )}
 
                             <HeaderNotifications notifications={notifications} />
                         </>

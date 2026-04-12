@@ -15,14 +15,16 @@ export function RaceHubClient({
     allMarketPredictions,
     allRaceResults,
     allRaceEntries,
-    initialActiveRace
+    initialActiveRace,
+    activeEvent
 }: {
     venue: any,
     schedules: any[],
     allMarketPredictions: any[],
     allRaceResults: any[],
     allRaceEntries?: any[],
-    initialActiveRace: number
+    initialActiveRace: number,
+    activeEvent?: { id: string; name: string; placeName: string } | null
 }) {
     const router = useRouter();
     const [activeRaceNumber, setActiveRaceNumber] = useState(initialActiveRace);
@@ -320,6 +322,18 @@ export function RaceHubClient({
                     </div>
                 </Link>
             </div>
+
+            {/* Event Banner */}
+            {activeEvent && (
+                <div className="px-4 mt-3">
+                    <Link href="/events">
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center hover:border-amber-300 transition-colors">
+                            <span className="text-xs font-bold text-amber-700">🏆 {activeEvent.name} 限定ptレース</span>
+                            <p className="text-[10px] text-amber-600 mt-0.5">限定ptで賭けてランキング上位を目指そう!</p>
+                        </div>
+                    </Link>
+                </div>
+            )}
 
             {/* Market Preview */}
             <div className="px-4 mt-10">

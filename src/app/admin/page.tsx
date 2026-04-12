@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Server, CheckCircle2, DownloadCloud, Database, Trash2 } from "lucide-react";
 import { AdminPredictionList } from "@/components/admin/AdminPredictionList";
+import { EventManager } from "@/components/admin/EventManager";
+import { Trophy } from "lucide-react";
 
 export default async function AdminDashboard() {
     const session = await auth();
@@ -44,6 +46,18 @@ export default async function AdminDashboard() {
                     </CardHeader>
                     <CardContent className="p-6">
                         <ApiActionForms />
+                    </CardContent>
+                </Card>
+
+                <Card className="shadow-lg border-2 border-amber-100">
+                    <CardHeader className="bg-amber-50 border-b border-amber-100 pb-4">
+                        <CardTitle className="text-lg font-black text-amber-900 flex items-center gap-2">
+                            <Trophy className="w-5 h-5 text-amber-500" />
+                            限定ptイベント管理
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <EventManager />
                     </CardContent>
                 </Card>
 

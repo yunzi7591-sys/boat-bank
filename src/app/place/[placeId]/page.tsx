@@ -31,7 +31,7 @@ export default async function PlacePage(props: {
     const raceDateFilter = new Date(`${localDateStr}T00:00:00.000Z`);
 
     // Fetch all data in parallel
-    const [schedules, allMarketPredictions, allRaceResults, allRaceEntries] = await Promise.all([
+    const [schedules, allMarketPredictions, allRaceResults, allRaceEntries, activeEvent] = await Promise.all([
         prisma.raceSchedule.findMany({
             where: { placeName: venue.name, raceDate: raceDateFilter },
             orderBy: { raceNumber: 'asc' }
@@ -53,6 +53,10 @@ export default async function PlacePage(props: {
                 racer: true
             },
             orderBy: { boatNumber: 'asc' }
+        }),
+        prisma.event.findFirst({
+            where: { isActive: true, placeName: venue.name },
+            select: { id: true, name: true, placeName: true },
         }),
     ]);
 
@@ -76,6 +80,7 @@ export default async function PlacePage(props: {
             allRaceResults={allRaceResults}
             allRaceEntries={allRaceEntries}
             initialActiveRace={activeRaceNumber}
+            activeEvent={activeEvent}
         />
     );
 }
