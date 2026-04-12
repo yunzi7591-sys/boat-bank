@@ -11,6 +11,7 @@ export async function getMyPredictions() {
     return prisma.prediction.findMany({
         where: { authorId: session!.user!.id },
         orderBy: { createdAt: "desc" },
+        take: 5,
         select: {
             id: true,
             title: true,
