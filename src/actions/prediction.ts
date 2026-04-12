@@ -181,47 +181,22 @@ export async function ridePrediction(predictionId: string) {
         throw new Error("この予想にはベット金額が設定されていません。");
     }
 
-    await prisma.$transaction(async (tx) => {
-        const user = await tx.user.findUnique({ where: { id: userId } });
-        if (!user) throw new Error("ユーザーが見つかりません");
-        const deduction = calculatePointDeduction(user.points, user.dailyPoints, betAmount);
-        if (!deduction) {
-            throw new Error(`ポイントが不足しています。相乗りには ${betAmount.toLocaleString()}pt 必要です。`);
+    // 相乗り: ポイント消費なし、予想のコピーを作成するだけ
+    await prisma.prediction.create({
+        data: {
+            title: `[相乗り] ${original.title || '無題'}`,
+            commentary: "",
+            price: 0,
+            predictedNumbers: original.predictedNumbers as Prisma.InputJsonValue,
+            authorId: userId,
+            placeName: original.placeName,
+            raceNumber: original.raceNumber,
+            raceDate: original.raceDate,
+            deadlineAt: original.deadlineAt,
+            isPrivate: true,
+            betAmount: betAmount,
+            originalPredictionId: original.id,
         }
-
-        // Deduct points (dailyPoints優先)
-        await tx.user.update({
-            where: { id: userId },
-            data: { points: deduction.newPoints, dailyPoints: deduction.newDailyPoints },
-        });
-
-        // Record bet transaction
-        await tx.transaction.create({
-            data: {
-                userId,
-                points: -betAmount,
-                action: "RIDE_BET",
-                predictionId: original.id,
-            }
-        });
-
-        // Create private copy
-        await tx.prediction.create({
-            data: {
-                title: `[相乗り] ${original.title || '無題'}`,
-                commentary: "",
-                price: 0,
-                predictedNumbers: original.predictedNumbers as Prisma.InputJsonValue,
-                authorId: userId,
-                placeName: original.placeName,
-                raceNumber: original.raceNumber,
-                raceDate: original.raceDate,
-                deadlineAt: original.deadlineAt,
-                isPrivate: true,
-                betAmount: betAmount,
-                originalPredictionId: original.id,
-            }
-        });
     });
 
     return { success: true };
