@@ -32,18 +32,6 @@ export default async function MyPage() {
     const followerCount = user._count.followers;
     const followingCount = user._count.following;
 
-    // フォロー/フォロワー一覧
-    const [followers, following] = await Promise.all([
-        prisma.follows.findMany({
-            where: { followingId: userId },
-            include: { follower: { select: { id: true, name: true } } },
-        }),
-        prisma.follows.findMany({
-            where: { followerId: userId },
-            include: { following: { select: { id: true, name: true } } },
-        }),
-    ]);
-
     // 1. Get Calculated Stats
     const stats = await getUserStats(userId);
 
@@ -92,10 +80,10 @@ export default async function MyPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 mb-3 text-sm">
+                    <Link href="/mypage/follows" className="flex items-center gap-4 mb-3 text-sm hover:opacity-80 transition-opacity">
                         <span className="text-white"><span className="font-bold">{followingCount}</span> <span className="text-slate-400 text-xs">フォロー中</span></span>
                         <span className="text-white"><span className="font-bold">{followerCount}</span> <span className="text-slate-400 text-xs">フォロワー</span></span>
-                    </div>
+                    </Link>
 
                     <p className="text-sm text-slate-300 font-medium leading-relaxed max-w-sm mb-2">
                         {user.bio || "自己紹介が未設定です。"}
@@ -170,45 +158,6 @@ export default async function MyPage() {
                         <ChevronRight className="w-5 h-5 text-[#64748d]" />
                     </div>
                 </Link>
-            </div>
-
-            {/* Follow / Followers Lists */}
-            <div className="max-w-4xl mx-auto px-4 mb-8">
-                <div className="grid grid-cols-2 gap-3">
-                    {/* フォロー中 */}
-                    <div className="bg-white border border-[#e5edf5] rounded-lg p-4" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
-                        <h3 className="text-xs font-bold text-[#64748d] mb-3">フォロー中 ({followingCount})</h3>
-                        {following.length === 0 ? (
-                            <p className="text-xs text-[#64748d]">まだいません</p>
-                        ) : (
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                                {following.map(f => (
-                                    <Link key={f.following.id} href={`/users/${f.following.id}`} className="flex items-center gap-2 hover:bg-[#f8fafc] rounded p-1 -mx-1 transition-colors">
-                                        <div className="w-6 h-6 bg-slate-100 rounded-md flex items-center justify-center text-[10px] font-bold text-slate-600">{f.following.name?.charAt(0) || "U"}</div>
-                                        <span className="text-sm font-bold text-[#061b31] truncate">{f.following.name}</span>
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* フォロワー */}
-                    <div className="bg-white border border-[#e5edf5] rounded-lg p-4" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
-                        <h3 className="text-xs font-bold text-[#64748d] mb-3">フォロワー ({followerCount})</h3>
-                        {followers.length === 0 ? (
-                            <p className="text-xs text-[#64748d]">まだいません</p>
-                        ) : (
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                                {followers.map(f => (
-                                    <Link key={f.follower.id} href={`/users/${f.follower.id}`} className="flex items-center gap-2 hover:bg-[#f8fafc] rounded p-1 -mx-1 transition-colors">
-                                        <div className="w-6 h-6 bg-slate-100 rounded-md flex items-center justify-center text-[10px] font-bold text-slate-600">{f.follower.name?.charAt(0) || "U"}</div>
-                                        <span className="text-sm font-bold text-[#061b31] truncate">{f.follower.name}</span>
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
             </div>
 
             {/* Calendar PnL */}
