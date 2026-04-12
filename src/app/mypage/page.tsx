@@ -46,7 +46,16 @@ export default async function MyPage() {
     const publishedPredictions = await prisma.prediction.findMany({
         where: { authorId: userId },
         orderBy: { createdAt: 'desc' },
-        include: {
+        take: 30,
+        select: {
+            id: true,
+            placeName: true,
+            raceNumber: true,
+            title: true,
+            price: true,
+            isSettled: true,
+            isHit: true,
+            createdAt: true,
             _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
         },
     });
@@ -54,9 +63,18 @@ export default async function MyPage() {
     // 3. Get Purchased Predictions
     const purchases = await prisma.transaction.findMany({
         where: { userId, action: 'BUY_PREDICTION' },
-        include: {
+        take: 30,
+        select: {
             prediction: {
-                include: {
+                select: {
+                    id: true,
+                    placeName: true,
+                    raceNumber: true,
+                    title: true,
+                    price: true,
+                    isSettled: true,
+                    isHit: true,
+                    createdAt: true,
                     author: { select: { name: true } },
                     _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
                 }

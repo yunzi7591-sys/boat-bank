@@ -16,20 +16,19 @@ interface RankEntry {
 
 export default async function RankingPage() {
     // 公開予想(isPrivate: false)のみで集計
-    const predictions = await prisma.prediction.findMany({
-        where: { isSettled: true, isPrivate: false },
-        select: { authorId: true, placeName: true, betAmount: true, hitAmount: true, refundAmount: true, isHit: true, raceDate: true },
-    });
-
-    // 獲得pt: transactionsのSELL_PREDICTIONを集計
-    const sellTransactions = await prisma.transaction.findMany({
-        where: { action: "SELL_PREDICTION" },
-        select: { userId: true, points: true, createdAt: true },
-    });
-
-    const users = await prisma.user.findMany({
-        select: { id: true, name: true, role: true },
-    });
+    const [predictions, sellTransactions, users] = await Promise.all([
+        prisma.prediction.findMany({
+            where: { isSettled: true, isPrivate: false },
+            select: { authorId: true, placeName: true, betAmount: true, hitAmount: true, refundAmount: true, isHit: true, raceDate: true },
+        }),
+        prisma.transaction.findMany({
+            where: { action: "SELL_PREDICTION" },
+            select: { userId: true, points: true, createdAt: true },
+        }),
+        prisma.user.findMany({
+            select: { id: true, name: true, role: true },
+        }),
+    ]);
     const userNameMap = new Map(users.map(u => [u.id, u.name || "Unknown"]));
     const userRoleMap = new Map(users.map(u => [u.id, u.role]));
 

@@ -28,50 +28,33 @@ export default async function PlacePage(props: {
     const dd = String(currentDate.getDate()).padStart(2, '0');
     const localDateStr = `${yyyy}-${mm}-${dd}`;
 
-    // Fetch all schedules for today for this venue
-    const schedules = await prisma.raceSchedule.findMany({
-        where: {
-            placeName: venue.name,
-            raceDate: new Date(`${localDateStr}T00:00:00.000Z`)
-        },
-        orderBy: { raceNumber: 'asc' }
-    });
+    const raceDateFilter = new Date(`${localDateStr}T00:00:00.000Z`);
 
-    // Fetch all public predictions for today for this venue
-    const allMarketPredictions = await prisma.prediction.findMany({
-        where: {
-            placeName: venue.name,
-            raceDate: new Date(`${localDateStr}T00:00:00.000Z`),
-            isPrivate: false,
-        },
-        include: {
-            author: { select: { name: true, image: true } },
-            _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
-        },
-        orderBy: { createdAt: 'desc' }
-    });
-
-    // Fetch all Race Results for today for this venue
-    const allRaceResults = await prisma.raceResult.findMany({
-        where: {
-            placeName: venue.name,
-            raceDate: new Date(`${localDateStr}T00:00:00.000Z`)
-        }
-    });
-
-    // Fetch all Race Entries (with Racers) for today for this venue
-    const allRaceEntries = await prisma.raceEntry.findMany({
-        where: {
-            placeName: venue.name,
-            raceDate: new Date(`${localDateStr}T00:00:00.000Z`)
-        },
-        include: {
-            racer: true
-        },
-        orderBy: {
-            boatNumber: 'asc'
-        }
-    });
+    // Fetch all data in parallel
+    const [schedules, allMarketPredictions, allRaceResults, allRaceEntries] = await Promise.all([
+        prisma.raceSchedule.findMany({
+            where: { placeName: venue.name, raceDate: raceDateFilter },
+            orderBy: { raceNumber: 'asc' }
+        }),
+        prisma.prediction.findMany({
+            where: { placeName: venue.name, raceDate: raceDateFilter, isPrivate: false },
+            include: {
+                author: { select: { name: true, image: true } },
+                _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
+            },
+            orderBy: { createdAt: 'desc' }
+        }),
+        prisma.raceResult.findMany({
+            where: { placeName: venue.name, raceDate: raceDateFilter }
+        }),
+        prisma.raceEntry.findMany({
+            where: { placeName: venue.name, raceDate: raceDateFilter },
+            include: {
+                racer: true
+            },
+            orderBy: { boatNumber: 'asc' }
+        }),
+    ]);
 
     // 最も締切が近い未終了レースを自動選択（サーバータイム基準）
     let activeRaceNumber = 1;
