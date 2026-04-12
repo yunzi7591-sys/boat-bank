@@ -503,8 +503,8 @@ function PnLChart({ dailyStats }: { dailyStats: DailyPnLItem[] }) {
   });
 
   const W = 320;
-  const H = 120;
-  const PAD = { top: 8, right: 8, bottom: 20, left: 8 };
+  const H = 140;
+  const PAD = { top: 12, right: 8, bottom: 22, left: 42 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
   const values = [0, ...points.map(p => p.value)];
@@ -519,6 +519,27 @@ function PnLChart({ dailyStats }: { dailyStats: DailyPnLItem[] }) {
   const lastVal = points[points.length - 1]?.value || 0;
   const isPositive = lastVal >= 0;
 
+  // 縦軸ラベル生成（値に応じて3〜5本）
+  function formatYLabel(v: number): string {
+    const abs = Math.abs(v);
+    if (abs >= 10000) return `${v < 0 ? '-' : ''}${Math.round(abs / 10000)}万`;
+    if (abs >= 1000) return `${v < 0 ? '-' : ''}${(abs / 1000).toFixed(0)}千`;
+    return v.toLocaleString();
+  }
+
+  const yTicks: number[] = [];
+  const step = (() => {
+    const raw = yRange / 4;
+    if (raw >= 100000) return Math.ceil(raw / 100000) * 100000;
+    if (raw >= 10000) return Math.ceil(raw / 10000) * 10000;
+    if (raw >= 1000) return Math.ceil(raw / 1000) * 1000;
+    if (raw >= 100) return Math.ceil(raw / 100) * 100;
+    return Math.ceil(raw / 10) * 10 || 1;
+  })();
+  for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) {
+    yTicks.push(v);
+  }
+
   return (
     <div className="mt-4 pt-3 border-t border-[#e5edf5]">
       <div className="flex items-center justify-between mb-1">
@@ -528,7 +549,13 @@ function PnLChart({ dailyStats }: { dailyStats: DailyPnLItem[] }) {
         </span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
-        <line x1={PAD.left} y1={zeroY} x2={W - PAD.right} y2={zeroY} stroke="#e5edf5" strokeWidth="1" strokeDasharray="4 2" />
+        {/* 縦軸グリッド+ラベル */}
+        {yTicks.map(v => (
+          <g key={v}>
+            <line x1={PAD.left} y1={toY(v)} x2={W - PAD.right} y2={toY(v)} stroke={v === 0 ? '#c0c8d4' : '#f1f5f9'} strokeWidth={v === 0 ? 1 : 0.5} strokeDasharray={v === 0 ? '4 2' : ''} />
+            <text x={PAD.left - 4} y={toY(v) + 3} textAnchor="end" fontSize="7" fill="#94a3b8">{formatYLabel(v)}</text>
+          </g>
+        ))}
         <polygon points={fillPoints} fill={isPositive ? 'rgba(83,58,253,0.08)' : 'rgba(234,34,97,0.08)'} />
         <polyline points={linePoints} fill="none" stroke={isPositive ? '#533afd' : '#ea2261'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         {points.map((p, i) => (
