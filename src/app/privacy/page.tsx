@@ -19,7 +19,7 @@ export default function PrivacyPage() {
           プライバシーポリシー
         </h1>
 
-        <p className="text-xs text-slate-400 mb-8">最終更新日: 2026年4月8日</p>
+        <p className="text-xs text-slate-400 mb-8">最終更新日: 2026年4月12日</p>
 
         <p className="mb-4">
           BOAT BANK（以下「本サービス」）は、個人が運営するWebサービスです。本サービスの利用に際して取得する個人情報の取り扱いについて、以下のとおりプライバシーポリシーを定めます。
