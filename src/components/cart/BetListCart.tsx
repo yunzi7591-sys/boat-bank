@@ -321,7 +321,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                                 ? (formData.get('commentary') as string || '')
                                                                 : '',
                                                             price: publishType === "internal"
-                                                                ? (parseInt(formData.get('price') as string) || 0)
+                                                                ? ((parseInt(formData.get('price') as string) || 0) * 100)
                                                                 : 0,
                                                             placeName: formData.get('placeName') as string || qPlaceName,
                                                             raceNumber: parseInt(formData.get('raceNumber') as string) || parseInt(qRaceNumber),
@@ -408,8 +408,11 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-xs font-bold text-[#64748d]">販売価格 (pt) - 0なら無料</label>
-                                                        <Input name="price" type="number" defaultValue="100" min="0" required className="border-[#e5edf5]" />
+                                                        <label className="text-xs font-bold text-[#64748d]">販売価格 — 未入力で無料</label>
+                                                        <div className="flex items-center gap-1">
+                                                            <Input name="price" type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0" defaultValue="" className="border-[#e5edf5] text-right w-24" />
+                                                            <span className="text-sm font-bold text-[#64748d] whitespace-nowrap">00 pt</span>
+                                                        </div>
                                                     </div>
                                                 </>
                                             )}
