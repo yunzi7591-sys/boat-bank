@@ -7,6 +7,38 @@ import { parseJsonSafely } from "@/lib/utils";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Lock, ExternalLink } from "lucide-react";
 import { ShareButton } from "@/components/predictions/ShareButton";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+    const { id } = await params;
+    const prediction = await prisma.prediction.findUnique({
+        where: { id },
+        select: { title: true, placeName: true, raceNumber: true, author: { select: { name: true } } },
+    });
+
+    if (!prediction) return { title: 'BOAT BANK' };
+
+    const title = prediction.title || `${prediction.placeName} ${prediction.raceNumber}R 予想`;
+    const description = `${prediction.author?.name}の予想 - ${prediction.placeName} ${prediction.raceNumber}R | BOAT BANK`;
+
+    return {
+        title,
+        description,
+        openGraph: {
+            title,
+            description,
+            images: [`/api/og/prediction?id=${id}`],
+            type: 'article',
+            siteName: 'BOAT BANK',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images: [`/api/og/prediction?id=${id}`],
+        },
+    };
+}
 
 export default async function PredictionPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
