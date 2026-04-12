@@ -241,7 +241,7 @@ export async function getPublicDailyPredictions(
             betType: pn?.type ?? undefined,
             combination: pn?.combination ?? undefined,
             betAmount: pred.betAmount || 0,
-            hitAmount: pred.isSettled ? (pred.hitAmount || 0) + (pred.refundAmount || 0) : 0,
+            hitAmount: pred.isSettled ? (pred.hitAmount || 0) : 0,
             refundAmount: pred.isSettled ? (pred.refundAmount || 0) : 0,
             isSettled: pred.isSettled,
             isHit: pred.isHit,
