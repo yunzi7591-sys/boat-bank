@@ -49,12 +49,6 @@ export async function Header() {
                             </Link>
 
                             <HeaderNotifications notifications={notifications} />
-
-                            <Link href="/mypage">
-                                <Button variant="ghost" className="text-[#64748d] hover:bg-[#f6f8fa] hover:text-[#533afd] font-semibold text-sm h-9 px-3">
-                                    マイページ
-                                </Button>
-                            </Link>
                         </>
                     ) : (
                         <div className="flex items-center gap-2">
