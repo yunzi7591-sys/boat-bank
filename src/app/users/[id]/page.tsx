@@ -7,6 +7,7 @@ import { FollowButton } from "@/components/market/FollowButton";
 import { CalendarPnLWrapper } from "@/components/mypage/CalendarPnLWrapper";
 import { auth } from "@/auth";
 import { ArrowLeft, ChevronRight } from "lucide-react";
+import { PredictionList } from "@/components/mypage/PredictionList";
 
 export default async function UserProfilePage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
@@ -172,39 +173,18 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
             {/* Published Predictions */}
             <div className="max-w-4xl mx-auto px-4">
                 <h3 className="text-xs font-bold text-[#64748d] mb-3">公開した予想 ({publishedPredictions.length})</h3>
-                <div className="space-y-2">
-                    {publishedPredictions.length === 0 ? (
-                        <p className="text-center text-[#64748d] py-8 bg-white rounded-lg border border-[#e5edf5]">公開された予想はありません</p>
-                    ) : (
-                        publishedPredictions.map(pred => {
-                            const purchaseCount = pred._count?.transactions || 0;
-                            return (
-                                <Link href={`/predictions/${pred.id}`} key={pred.id}>
-                                    <div className="bg-white border border-[#e5edf5] rounded-lg p-3 hover:border-[#b9b9f9] transition-colors">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-bold bg-[#061b31] text-white px-1.5 py-0.5 rounded">{pred.placeName} {pred.raceNumber}R</span>
-                                                <span className="text-[10px] text-[#64748d]">{new Date(pred.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>
-                                            </div>
-                                            {!pred.isSettled ? (
-                                                <span className="text-[10px] text-[#64748d] bg-[#f6f8fa] px-1.5 py-0.5 rounded">結果待ち</span>
-                                            ) : pred.isHit ? (
-                                                <span className="text-[10px] font-bold text-[#533afd] bg-[#533afd]/10 px-1.5 py-0.5 rounded">的中</span>
-                                            ) : (
-                                                <span className="text-[10px] text-[#64748d] bg-[#f6f8fa] px-1.5 py-0.5 rounded">不的中</span>
-                                            )}
-                                        </div>
-                                        <p className="font-bold text-sm text-[#061b31] truncate">{pred.title || '無題'}</p>
-                                        <div className="flex items-center gap-3 mt-1 text-[10px] text-[#64748d]">
-                                            <span>{pred.price > 0 ? `${pred.price}pt` : '無料'}</span>
-                                            <span>{purchaseCount}人購入</span>
-                                        </div>
-                                    </div>
-                                </Link>
-                            );
-                        })
-                    )}
-                </div>
+                <PredictionList items={publishedPredictions.map(pred => ({
+                    id: pred.id,
+                    placeName: pred.placeName,
+                    raceNumber: pred.raceNumber,
+                    title: pred.title,
+                    price: pred.price,
+                    isSettled: pred.isSettled,
+                    isHit: pred.isHit,
+                    refundAmount: pred.refundAmount,
+                    createdAt: pred.createdAt.toISOString(),
+                    purchaseCount: pred._count?.transactions || 0,
+                }))} />
             </div>
         </div>
     );
