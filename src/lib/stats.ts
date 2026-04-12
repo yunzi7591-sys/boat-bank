@@ -393,6 +393,95 @@ export async function getUserVenueStatsWithPeriod(
 /**
  * マイページ用: UserBet ベース
  */
+/**
+ * マイページ用: 1クエリで全UserBetを取得し、通算/年/月別に分割
+ */
+export async function getPrivateVenueStatsAll(userId: string): Promise<{
+    all: VenueStatsWithPeriod[];
+    year: VenueStatsWithPeriod[];
+    monthly: { [key: string]: VenueStatsWithPeriod[] };
+}> {
+    const currentYear = new Date().getFullYear();
+
+    const userBets = await prisma.userBet.findMany({
+        where: { userId },
+        select: { placeName: true, raceDate: true, isSettled: true, isHit: true, betAmount: true, hitAmount: true },
+    });
+
+    function buildFromBets(bets: typeof userBets): VenueStatsWithPeriod[] {
+        const map = new Map<string, { inv: number; ref: number; hit: number; total: number }>();
+        for (const bet of bets) {
+            if (!bet.placeName) continue;
+            const e = map.get(bet.placeName) || { inv: 0, ref: 0, hit: 0, total: 0 };
+            e.inv += bet.betAmount || 0;
+            e.total++;
+            if (bet.isSettled) { e.ref += bet.hitAmount || 0; if (bet.isHit) e.hit++; }
+            map.set(bet.placeName, e);
+        }
+        return VENUES.map(v => {
+            const d = map.get(v.name) || { inv: 0, ref: 0, hit: 0, total: 0 };
+            return { placeName: v.name, venueId: v.id, totalInvestment: d.inv, totalRefund: d.ref, recoveryRate: d.inv > 0 ? (d.ref / d.inv) * 100 : 0, hitCount: d.hit, totalPredictions: d.total };
+        });
+    }
+
+    const allStats = buildFromBets(userBets);
+    const yearBets = userBets.filter(b => b.raceDate && b.raceDate.getUTCFullYear() === currentYear);
+    const yearStats = buildFromBets(yearBets);
+
+    const monthly: { [key: string]: VenueStatsWithPeriod[] } = {};
+    for (let m = 0; m < 12; m++) {
+        const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
+        const monthBets = yearBets.filter(b => b.raceDate && b.raceDate.getUTCMonth() === m);
+        monthly[key] = buildFromBets(monthBets);
+    }
+
+    return { all: allStats, year: yearStats, monthly };
+}
+
+/**
+ * 公開プロフィール用: 1クエリで全Predictionを取得し分割
+ */
+export async function getPublicVenueStatsAll(userId: string): Promise<{
+    all: VenueStatsWithPeriod[];
+    year: VenueStatsWithPeriod[];
+    monthly: { [key: string]: VenueStatsWithPeriod[] };
+}> {
+    const currentYear = new Date().getFullYear();
+
+    const predictions = await prisma.prediction.findMany({
+        where: { authorId: userId, isPrivate: false },
+        select: { placeName: true, raceDate: true, isSettled: true, isHit: true, betAmount: true, hitAmount: true, refundAmount: true },
+    });
+
+    function buildFromPreds(preds: typeof predictions): VenueStatsWithPeriod[] {
+        const map = new Map<string, { inv: number; ref: number; hit: number; total: number }>();
+        for (const p of preds) {
+            const e = map.get(p.placeName) || { inv: 0, ref: 0, hit: 0, total: 0 };
+            e.inv += p.betAmount || 0;
+            e.total++;
+            if (p.isSettled) { e.ref += p.hitAmount || p.refundAmount || 0; if (p.isHit) e.hit++; }
+            map.set(p.placeName, e);
+        }
+        return VENUES.map(v => {
+            const d = map.get(v.name) || { inv: 0, ref: 0, hit: 0, total: 0 };
+            return { placeName: v.name, venueId: v.id, totalInvestment: d.inv, totalRefund: d.ref, recoveryRate: d.inv > 0 ? (d.ref / d.inv) * 100 : 0, hitCount: d.hit, totalPredictions: d.total };
+        });
+    }
+
+    const allStats = buildFromPreds(predictions);
+    const yearPreds = predictions.filter(p => p.raceDate.getUTCFullYear() === currentYear);
+    const yearStats = buildFromPreds(yearPreds);
+
+    const monthly: { [key: string]: VenueStatsWithPeriod[] } = {};
+    for (let m = 0; m < 12; m++) {
+        const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
+        const monthPreds = yearPreds.filter(p => p.raceDate.getUTCMonth() === m);
+        monthly[key] = buildFromPreds(monthPreds);
+    }
+
+    return { all: allStats, year: yearStats, monthly };
+}
+
 export async function getPrivateVenueStatsWithPeriod(
     userId: string,
     period: Period
