@@ -62,7 +62,7 @@ export async function GET(request: Request) {
                 {/* メイン: レース情報 ど真ん中 */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 10 }}>
                     {/* 締切時刻 */}
-                    <div style={{ display: 'flex', background: 'linear-gradient(90deg, #ea2261, #f96bee)', color: '#fff', fontSize: '28px', fontWeight: 900, padding: '6px 28px', borderRadius: '30px', letterSpacing: '2px' }}>
+                    <div style={{ display: 'flex', color: '#ffffff', fontSize: '42px', fontWeight: 900, letterSpacing: '3px' }}>
                         {deadlineStr} 締切
                     </div>
 
@@ -79,13 +79,8 @@ export async function GET(request: Request) {
 
                 {/* 下部: 投稿者 + ドメイン */}
                 <div style={{ position: 'absolute', bottom: '40px', left: '50px', right: '50px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ display: 'flex', width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #533afd, #7c5cff)', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', fontWeight: 900 }}>
-                            {(prediction.author?.name || 'A').charAt(0)}
-                        </div>
-                        <div style={{ display: 'flex', color: '#ffffff', fontSize: '32px', fontWeight: 800 }}>
-                            {prediction.author?.name || 'Anonymous'}
-                        </div>
+                    <div style={{ display: 'flex', color: '#ffffff', fontSize: '32px', fontWeight: 800 }}>
+                        {prediction.author?.name || 'Anonymous'}
                     </div>
                     <div style={{ display: 'flex', color: '#b9b9f9', fontSize: '26px', fontWeight: 700, letterSpacing: '1px' }}>
                         boatbank.jp
