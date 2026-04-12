@@ -64,11 +64,6 @@ export async function GET(request: Request) {
                     <div style={{ display: 'flex', color: '#e2e8f0', fontSize: '36px', fontWeight: 700 }}>
                         {title}
                     </div>
-                    {prediction.isSettled && (
-                        <div style={{ display: 'flex', backgroundColor: prediction.isHit ? '#533afd' : '#475569', color: '#ffffff', fontSize: '22px', fontWeight: 800, padding: '8px 20px', borderRadius: '12px', width: 'fit-content' }}>
-                            {prediction.isHit ? '的中' : '不的中'}
-                        </div>
-                    )}
                 </div>
 
                 {/* Bottom: Author + domain */}
