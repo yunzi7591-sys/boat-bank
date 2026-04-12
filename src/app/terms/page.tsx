@@ -17,7 +17,7 @@ export default function TermsPage() {
       <article className="prose prose-sm prose-slate max-w-none">
         <h1 className="text-xl font-bold text-[#061b31] mb-6">利用規約</h1>
 
-        <p className="text-xs text-slate-400 mb-8">最終更新日: 2026年4月8日</p>
+        <p className="text-xs text-slate-400 mb-8">最終更新日: 2026年4月12日</p>
 
         <p className="mb-4">
           この利用規約（以下「本規約」）は、BOAT BANK（以下「本サービス」）の利用条件を定めるものです。ユーザーの皆様には、本規約に同意のうえ本サービスをご利用いただきます。
