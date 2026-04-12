@@ -7,6 +7,7 @@ import { TrendingUp, Coins, Trophy } from "lucide-react";
 interface RankEntry {
     id: string;
     name: string;
+    role: string;
     value: number;
     sub: string;
 }
@@ -42,7 +43,7 @@ function RankList({ list, type }: { list: RankEntry[]; type: "recovery" | "pt" }
                                     {index + 1}
                                 </div>
                                 <div>
-                                    <p className="font-bold text-[#061b31] text-[15px]">{entry.name}</p>
+                                    <p className="font-bold text-[#061b31] text-[15px] flex items-center gap-1.5">{entry.name}{entry.role === 'ADMIN' && <span className="text-[8px] font-black bg-amber-400 text-amber-900 px-1 py-0.5 rounded leading-none">公式</span>}</p>
                                     <p className="text-[11px] text-[#64748d] font-medium">{entry.sub}</p>
                                 </div>
                             </div>

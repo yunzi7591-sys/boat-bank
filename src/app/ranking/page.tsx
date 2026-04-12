@@ -9,6 +9,7 @@ export const revalidate = 60;
 interface RankEntry {
     id: string;
     name: string;
+    role: string;
     value: number;
     sub: string;
 }
@@ -27,9 +28,10 @@ export default async function RankingPage() {
     });
 
     const users = await prisma.user.findMany({
-        select: { id: true, name: true },
+        select: { id: true, name: true, role: true },
     });
     const userNameMap = new Map(users.map(u => [u.id, u.name || "Unknown"]));
+    const userRoleMap = new Map(users.map(u => [u.id, u.role]));
 
     // --- 回収率ランキング（全場+各場） ---
     function buildRecoveryRanking(preds: typeof predictions): RankEntry[] {
@@ -47,6 +49,7 @@ export default async function RankingPage() {
             ranking.push({
                 id: userId,
                 name: userNameMap.get(userId) || "Unknown",
+            role: userRoleMap.get(userId) || "BUYER",
                 value: stats.inv > 0 ? (stats.ref / stats.inv) * 100 : 0,
                 sub: `${stats.count}R`,
             });
@@ -75,6 +78,7 @@ export default async function RankingPage() {
         ptAllRanking.push({
             id: userId,
             name: userNameMap.get(userId) || "Unknown",
+            role: userRoleMap.get(userId) || "BUYER",
             value: pts,
             sub: "通算",
         });
@@ -98,6 +102,7 @@ export default async function RankingPage() {
         ptMonthRanking.push({
             id: userId,
             name: userNameMap.get(userId) || "Unknown",
+            role: userRoleMap.get(userId) || "BUYER",
             value: pts,
             sub: `${now.getMonth() + 1}月`,
         });
