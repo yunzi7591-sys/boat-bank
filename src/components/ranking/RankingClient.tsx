@@ -90,6 +90,7 @@ export function RankingClient({
     currentMonth,
     eventRanking = [],
     eventName = "",
+    eventEnded = false,
     currentUserId,
 }: {
     recoveryAll: RankEntry[];
@@ -99,10 +100,11 @@ export function RankingClient({
     currentMonth: number;
     eventRanking?: RankEntry[];
     eventName?: string;
+    eventEnded?: boolean;
     currentUserId?: string;
 }) {
     const hasEvent = eventRanking.length > 0;
-    const [activeTab, setActiveTab] = useState<"event" | "recovery" | "pt">(hasEvent ? "event" : "recovery");
+    const [activeTab, setActiveTab] = useState<"recovery" | "pt" | "event">("recovery");
     const [ptPeriod, setPtPeriod] = useState<"all" | "month">("all");
     const [selectedVenue, setSelectedVenue] = useState<string>("all");
 
@@ -111,16 +113,8 @@ export function RankingClient({
 
     return (
         <div>
-            {/* Main tabs */}
+            {/* Main tabs: 回収率 → 獲得pt → 限定pt */}
             <div className={`grid ${hasEvent ? 'grid-cols-3' : 'grid-cols-2'} mb-4 h-11 bg-white shadow-sm border border-[#e5edf5] rounded-lg p-1`}>
-                {hasEvent && (
-                    <button
-                        onClick={() => setActiveTab("event")}
-                        className={`font-semibold text-xs rounded-md transition-all flex items-center justify-center gap-1 ${activeTab === "event" ? "bg-amber-500 text-white" : "text-amber-600"}`}
-                    >
-                        🏆 限定pt
-                    </button>
-                )}
                 <button
                     onClick={() => setActiveTab("recovery")}
                     className={`font-semibold text-sm rounded-md transition-all flex items-center justify-center gap-1.5 ${activeTab === "recovery" ? "bg-[#533afd] text-white" : "text-[#64748d]"}`}
@@ -135,12 +129,21 @@ export function RankingClient({
                     <Coins className="w-3.5 h-3.5" />
                     獲得pt
                 </button>
+                {hasEvent && (
+                    <button
+                        onClick={() => setActiveTab("event")}
+                        className={`font-semibold text-xs rounded-md transition-all flex items-center justify-center gap-1 ${activeTab === "event" ? "bg-amber-500 text-white" : "text-amber-600"}`}
+                    >
+                        🏆 限定pt
+                    </button>
+                )}
             </div>
 
             {activeTab === "event" && (
                 <>
                     <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
                         <span className="text-sm font-bold text-amber-800">{eventName}</span>
+                        {eventEnded && <span className="text-[10px] text-amber-600 ml-2">（終了）</span>}
                     </div>
                     <RankList list={eventRanking} type="pt" currentUserId={currentUserId} />
                 </>
