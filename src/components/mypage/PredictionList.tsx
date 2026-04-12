@@ -33,7 +33,7 @@ export function PredictionList({ items, showAuthor = false }: { items: Predictio
             <div className="space-y-2">
                 {visible.map(pred => (
                     <Link href={`/predictions/${pred.id}`} key={pred.id}>
-                        <div className="bg-white border border-[#e5edf5] rounded-lg p-3 hover:border-[#b9b9f9] transition-colors">
+                        <div className={`border rounded-lg p-3 transition-colors ${pred.isSettled && pred.isHit ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300' : 'bg-white border-[#e5edf5] hover:border-[#b9b9f9]'}`}>
                             <div className="flex items-center justify-between mb-1">
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold bg-[#061b31] text-white px-1.5 py-0.5 rounded">{pred.placeName} {pred.raceNumber}R</span>
