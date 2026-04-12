@@ -92,9 +92,9 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
                 data: {
                     isSettled: true,
                     resultChecked: true, // 互換性のため残す
-                    isHit: isHit || isRefunded, // ユーザーから見て「ポイントが戻ってきた」ら便宜上Hit扱いまたは別途対応
-                    hitAmount: totalEarned, // 獲得総額
-                    refundAmount: totalEarned, // 互換性のため
+                    isHit: isHit, // 返還だけの場合はfalseのまま（的中率を正確に保つ）
+                    hitAmount: totalWinAmount, // 的中分のみ
+                    refundAmount: totalRefundAmount, // 返還分のみ
                 },
             });
 

@@ -12,6 +12,7 @@ interface PredictionItem {
     price: number;
     isSettled: boolean;
     isHit: boolean;
+    refundAmount?: number;
     createdAt: string;
     purchaseCount: number;
     authorName?: string;
@@ -33,7 +34,7 @@ export function PredictionList({ items, showAuthor = false }: { items: Predictio
             <div className="space-y-2">
                 {visible.map(pred => (
                     <Link href={`/predictions/${pred.id}`} key={pred.id}>
-                        <div className={`border rounded-lg p-3 transition-colors ${pred.isSettled && pred.isHit ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300' : 'bg-white border-[#e5edf5] hover:border-[#b9b9f9]'}`}>
+                        <div className={`border rounded-lg p-3 transition-colors ${pred.isSettled && pred.isHit ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300' : pred.isSettled && !pred.isHit && pred.refundAmount && pred.refundAmount > 0 ? 'bg-yellow-50/50 border-yellow-200 hover:border-yellow-300' : 'bg-white border-[#e5edf5] hover:border-[#b9b9f9]'}`}>
                             <div className="flex items-center justify-between mb-1">
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold bg-[#061b31] text-white px-1.5 py-0.5 rounded">{pred.placeName} {pred.raceNumber}R</span>
@@ -43,6 +44,8 @@ export function PredictionList({ items, showAuthor = false }: { items: Predictio
                                     <span className="text-[10px] text-[#64748d] bg-[#f6f8fa] px-1.5 py-0.5 rounded">結果待ち</span>
                                 ) : pred.isHit ? (
                                     <span className="text-[10px] font-bold text-[#533afd] bg-[#533afd]/10 px-1.5 py-0.5 rounded">的中</span>
+                                ) : pred.refundAmount && pred.refundAmount > 0 ? (
+                                    <span className="text-[10px] font-bold text-[#ca8a04] bg-[#ca8a04]/10 px-1.5 py-0.5 rounded">返還</span>
                                 ) : (
                                     <span className="text-[10px] text-[#64748d] bg-[#f6f8fa] px-1.5 py-0.5 rounded">不的中</span>
                                 )}

@@ -91,6 +91,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
 
     // レース結果を取得して買い目ごとの的中判定に使う
     let payoutsMap = new Map<string, { type: string; numbers: string; amount: number }[]>();
+    let refundedBoats: number[] = [];
     if (prediction.isSettled) {
         const raceResult = await prisma.raceResult.findUnique({
             where: { placeName_raceNumber_raceDate: { placeName: prediction.placeName, raceNumber: prediction.raceNumber, raceDate: prediction.raceDate } },
@@ -103,6 +104,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                 payoutsMap.set(p.type, arr);
             }
         }
+        refundedBoats = raceResult?.refunds as number[] || [];
     }
 
     return (
@@ -196,26 +198,36 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                     <CardContent className="p-0">
                                         <div className="divide-y divide-slate-100">
                                             {f.combinations.map((c, j) => {
-                                                // 的中判定
+                                                // 的中・返還判定
                                                 let combHit = false;
+                                                let combRefund = false;
                                                 let combPayout = 0;
                                                 if (prediction.isSettled) {
-                                                    const officialPayouts = payoutsMap.get(f.betType) || [];
-                                                    for (const op of officialPayouts) {
-                                                        if (c.id === op.numbers) {
-                                                            combHit = true;
-                                                            combPayout = Math.floor((op.amount / 100) * c.amount);
+                                                    // 返還チェック
+                                                    const betNumbers = c.id.split(/[-=]/).map(n => parseInt(n, 10));
+                                                    combRefund = betNumbers.some(n => refundedBoats.includes(n));
+
+                                                    if (!combRefund) {
+                                                        // 的中チェック（返還対象でない場合のみ）
+                                                        const officialPayouts = payoutsMap.get(f.betType) || [];
+                                                        for (const op of officialPayouts) {
+                                                            if (c.id === op.numbers) {
+                                                                combHit = true;
+                                                                combPayout = Math.floor((op.amount / 100) * c.amount);
+                                                            }
                                                         }
                                                     }
                                                 }
 
                                                 return (
-                                                    <div key={`comb-${j}`} className={`flex justify-between items-center px-4 py-3 transition-colors ${combHit ? 'bg-[#533afd]/5' : 'hover:bg-slate-50/50'}`}>
+                                                    <div key={`comb-${j}`} className={`flex justify-between items-center px-4 py-3 transition-colors ${combHit ? 'bg-[#533afd]/5' : combRefund ? 'bg-[#ca8a04]/5' : 'hover:bg-slate-50/50'}`}>
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`font-mono font-bold text-lg tracking-widest ${combHit ? 'text-[#533afd]' : 'text-slate-900'}`}>{c.id}</span>
+                                                            <span className={`font-mono font-bold text-lg tracking-widest ${combHit ? 'text-[#533afd]' : combRefund ? 'text-[#ca8a04]' : 'text-slate-900'}`}>{c.id}</span>
                                                             {prediction.isSettled && (
                                                                 combHit ? (
                                                                     <span className="text-[10px] font-bold text-white bg-[#533afd] px-1.5 py-0.5 rounded">的中</span>
+                                                                ) : combRefund ? (
+                                                                    <span className="text-[10px] font-bold text-[#ca8a04] bg-[#ca8a04]/10 px-1.5 py-0.5 rounded">返還</span>
                                                                 ) : (
                                                                     <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">不的中</span>
                                                                 )
@@ -225,6 +237,9 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                                             <span className="font-black text-sm text-slate-800">{c.amount.toLocaleString()} <span className="text-[10px] text-slate-500">円</span></span>
                                                             {combHit && (
                                                                 <span className="text-sm font-black text-[#533afd]">→ {combPayout.toLocaleString()} <span className="text-[10px]">円</span></span>
+                                                            )}
+                                                            {combRefund && (
+                                                                <span className="text-sm font-black text-[#ca8a04]">→ {c.amount.toLocaleString()} <span className="text-[10px]">円 (返還)</span></span>
                                                             )}
                                                         </div>
                                                     </div>
@@ -236,20 +251,24 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                             ))}
 
                             {/* Settlement Summary */}
-                            {prediction.isSettled && (
+                            {prediction.isSettled && (() => {
+                                const totalReturn = prediction.hitAmount + prediction.refundAmount;
+                                const pnl = totalReturn - prediction.betAmount;
+                                return (
                                 <div className="bg-white rounded-lg border border-[#e5edf5] p-4" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
                                     <div className="flex justify-between items-center">
                                         <span className="text-xs font-bold text-[#64748d]">精算結果</span>
-                                        <span className={`text-lg font-black ${prediction.hitAmount - prediction.betAmount >= 0 ? 'text-[#533afd]' : 'text-[#ea2261]'}`}>
-                                            {prediction.hitAmount - prediction.betAmount >= 0 ? '+' : ''}{(prediction.hitAmount - prediction.betAmount).toLocaleString()}円
+                                        <span className={`text-lg font-black ${pnl >= 0 ? 'text-[#533afd]' : 'text-[#ea2261]'}`}>
+                                            {pnl >= 0 ? '+' : ''}{pnl.toLocaleString()}円
                                         </span>
                                     </div>
                                     <div className="flex justify-between mt-2 text-[11px] text-[#64748d]">
                                         <span>投資: {prediction.betAmount.toLocaleString()}円</span>
-                                        <span>回収: {prediction.hitAmount.toLocaleString()}円</span>
+                                        <span>回収: {totalReturn.toLocaleString()}円{prediction.refundAmount > 0 ? ` (返還${prediction.refundAmount.toLocaleString()}円含)` : ''}</span>
                                     </div>
                                 </div>
-                            )}
+                                );
+                            })()}
 
                         </div>
                         )
