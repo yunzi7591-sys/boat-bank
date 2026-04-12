@@ -156,27 +156,23 @@ export function RaceHubClient({
 
             {/* Entry List Section */}
             <div className="px-4 mt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="bg-white rounded-2xl p-4 shadow-[0_2px_8px_rgba(50,50,93,0.08)] border border-slate-100">
-                    <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
-                        <h3 className="text-[13px] font-extrabold text-slate-800 tracking-wider flex items-center gap-1.5">
-                            📋 出走表
-                        </h3>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
+                <div className="bg-white rounded-lg p-3 shadow-[0_2px_8px_rgba(50,50,93,0.08)] border border-slate-100">
+                    <h3 className="text-[11px] font-bold text-slate-500 mb-2">出走表</h3>
+                    <div className="flex flex-col gap-1">
                         {currentRacers.length > 0 ? (
                             currentRacers.map((racer) => (
-                                <div key={racer.boatNumber} className="flex items-center bg-slate-50/80 p-2 rounded-xl border border-slate-100/60 hover:bg-slate-50 hover:border-slate-200 transition-colors">
-                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-xl shadow-sm border-2 ${racer.color}`}>
+                                <div key={racer.boatNumber} className="flex items-center p-1.5 rounded-md hover:bg-slate-50 transition-colors">
+                                    <div className={`w-7 h-7 rounded-md flex items-center justify-center font-black text-base border-2 ${racer.color}`}>
                                         {racer.boatNumber}
                                     </div>
-                                    <div className="ml-3 flex flex-col justify-center">
-                                        <span className={`text-[10px] font-bold leading-none px-1.5 py-0.5 rounded-sm w-fit mb-0.5 shadow-sm ${racer.class.includes('A1') ? "bg-gradient-to-r from-yellow-200 to-yellow-100 text-yellow-800 border border-yellow-200" :
-                                            racer.class.includes('A2') ? "bg-slate-200 text-slate-800 border border-slate-200" :
-                                                racer.class.includes('B1') ? "bg-red-100 text-red-800 border border-red-100" : "bg-blue-100 text-blue-800 border border-blue-100"
+                                    <div className="ml-2 flex items-center gap-2">
+                                        <span className={`text-[9px] font-bold px-1 py-0.5 rounded-sm ${racer.class.includes('A1') ? "bg-yellow-100 text-yellow-800" :
+                                            racer.class.includes('A2') ? "bg-slate-200 text-slate-800" :
+                                                racer.class.includes('B1') ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"
                                             }`}>
                                             {racer.class}
                                         </span>
-                                        <span className="text-[15px] font-black text-slate-800 tracking-tight leading-none mt-0.5">
+                                        <span className="text-[13px] font-bold text-slate-800 tracking-tight">
                                             {racer.name.replace(/\s+/g, '')}
                                         </span>
                                     </div>
@@ -195,7 +191,7 @@ export function RaceHubClient({
             {/* Race Result Section with All Payouts Details */}
             {raceResult && (
                 <div className="px-4 mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-2xl p-4 shadow-sm">
+                    <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3">
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="text-[13px] font-extrabold text-yellow-800 tracking-wider flex items-center gap-1.5">
                                 🏆 確定結果
@@ -271,7 +267,7 @@ export function RaceHubClient({
                                 <div className="divide-y divide-slate-100">
                                     {payoutsList.map((p: any, idx: number) => {
                                         const typeLabels: Record<string, string> = {
-                                            '3TR': '3連単', '3PL': '3連複', '2TR': '2連単', '2PL': '2連複', 'WIN': '単勝'
+                                            '3TR': '3連単', '3PL': '3連複', '2TR': '2連単', '2PL': '2連複', 'WIDE': '拡連複', 'WIN': '単勝', 'PLACE': '複勝'
                                         };
                                         const isMain = p.type === '3TR';
                                         return (
@@ -297,52 +293,23 @@ export function RaceHubClient({
                 </div>
             )}
 
-            {/* 3 Main Action Hub Cards */}
-            <div className={`px-4 mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 delay-100 fill-both`}>
-                <h3 className="text-[13px] font-extrabold text-slate-800 tracking-wider flex items-center gap-1.5 mb-2">
-                    <PenTool className="w-4 h-4 text-blue-600" /> アクション
-                </h3>
-
+            {/* Action Buttons */}
+            <div className="px-4 mt-4 flex gap-2">
                 {isFinished ? (
-                    <Card className="border-2 shadow-md opacity-50 grayscale border-slate-200">
-                        <CardContent className="p-5 flex items-center gap-4">
-                            <div className="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm">
-                                <PenTool className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <h4 className="font-black text-slate-500 text-[15px] mb-0.5">予想を販売・公開する</h4>
-                                <p className="text-[11px] font-bold text-slate-400 leading-snug">このレースは締め切りました</p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <div className="flex-1 bg-slate-100 border border-slate-200 rounded-lg p-3 opacity-50 text-center">
+                        <p className="text-xs font-bold text-slate-400">販売は締め切りました</p>
+                    </div>
                 ) : (
-                    <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=false`}>
-                        <Card className="border-2 shadow-md transition-transform hover:scale-[1.02] active:scale-95 border-blue-200 bg-gradient-to-br from-white to-blue-50">
-                            <CardContent className="p-5 flex items-center gap-4">
-                                <div className="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm">
-                                    <PenTool className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h4 className="font-black text-blue-900 text-[15px] mb-0.5">予想を販売・公開する</h4>
-                                    <p className="text-[11px] font-bold text-blue-600/80 leading-snug">自信の予想をマーケットに並べて、ポイントを稼ぎましょう！</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=false`} className="flex-1">
+                        <div className="bg-[#533afd] text-white rounded-lg p-3 text-center hover:bg-[#4434d4] active:scale-[0.98] transition-all">
+                            <p className="text-xs font-bold">予想を販売・公開</p>
+                        </div>
                     </Link>
                 )}
-
-                <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=true`}>
-                    <Card className="border shadow-sm transition-transform hover:scale-[1.02] active:scale-95 border-slate-200 bg-white">
-                        <CardContent className="p-5 flex items-center gap-4">
-                            <div className="bg-slate-800 text-white w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm">
-                                <Lock className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <h4 className="font-black text-slate-800 text-[15px] mb-0.5">自分の賭けを登録（非公開）</h4>
-                                <p className="text-[11px] font-bold text-slate-500 leading-snug">タイムラインには出さず、自身の収支ポートフォリオ用として保存します。</p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=true`} className="flex-1">
+                    <div className="bg-white border border-[#e5edf5] rounded-lg p-3 text-center hover:border-[#b9b9f9] active:scale-[0.98] transition-all">
+                        <p className="text-xs font-bold text-[#061b31]">賭けを登録（非公開）</p>
+                    </div>
                 </Link>
             </div>
 
