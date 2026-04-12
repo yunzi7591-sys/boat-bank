@@ -13,6 +13,11 @@ export default async function DashboardPage() {
 
   const userId = session?.user?.id;
 
+  const latestNews = await prisma.news.findFirst({
+    where: { isPublished: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
   const latestResultsRaw = await prisma.raceResult.findMany({
     orderBy: { createdAt: 'desc' },
     take: 5,
@@ -40,6 +45,23 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-full pb-8">
+
+      {/* Latest News */}
+      {latestNews && (
+        <div className="px-4 mt-3 mb-2">
+          <Link href="/news">
+            <div className="bg-white border border-[#e5edf5] rounded-lg p-3 hover:border-[#b9b9f9] transition-colors">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[9px] font-bold bg-[#533afd] text-white px-1.5 py-0.5 rounded">NEWS</span>
+                <span className="text-[10px] text-[#64748d]">
+                  {new Date(latestNews.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}
+                </span>
+              </div>
+              <p className="text-sm font-bold text-[#061b31] truncate">{latestNews.title}</p>
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* 2. 24 Venues Grid */}
       <div className="mt-5 px-4">
