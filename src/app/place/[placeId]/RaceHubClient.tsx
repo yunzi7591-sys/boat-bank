@@ -179,9 +179,9 @@ export function RaceHubClient({
                                                 {racer.name.replace(/\s+/g, '')}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-2 text-[9px] text-[#64748d]">
-                                            {racer.localWinRate != null && <span>当地 <span className="font-bold text-[#061b31]">{racer.localWinRate}%</span></span>}
-                                            {racer.motorRate != null && <span>モ <span className="font-bold text-[#061b31]">{racer.motorRate}%</span></span>}
+                                        <div className="flex items-center gap-3 text-[10px] text-[#64748d]">
+                                            {racer.localWinRate != null && <span>全国勝率 <span className="font-bold text-[#061b31]">{racer.localWinRate}</span></span>}
+                                            {racer.motorRate != null && <span>モーター2連率 <span className="font-bold text-[#061b31]">{racer.motorRate}</span></span>}
                                         </div>
                                     </div>
                                 </div>
