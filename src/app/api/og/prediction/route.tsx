@@ -36,42 +36,42 @@ export async function GET(request: Request) {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    backgroundColor: '#1c1e54',
-                    padding: '60px',
+                    background: 'linear-gradient(135deg, #1c1e54 0%, #0d1033 100%)',
+                    padding: '50px 60px',
                     fontFamily: 'sans-serif',
                 }}
             >
                 {/* Top: Logo */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ display: 'flex', backgroundColor: '#533afd', color: '#ffffff', fontSize: '28px', fontWeight: 900, padding: '6px 14px', borderRadius: '8px', letterSpacing: '2px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ display: 'flex', backgroundColor: '#533afd', color: '#ffffff', fontSize: '40px', fontWeight: 900, padding: '10px 22px', borderRadius: '12px', letterSpacing: '3px' }}>
                         BOAT
                     </div>
-                    <div style={{ display: 'flex', color: '#ffffff', fontSize: '28px', fontWeight: 900, letterSpacing: '2px' }}>
+                    <div style={{ display: 'flex', color: '#ffffff', fontSize: '40px', fontWeight: 900, letterSpacing: '3px' }}>
                         BANK
                     </div>
                 </div>
 
                 {/* Center: Race info + Title */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '20px' }}>
-                        <div style={{ display: 'flex', color: '#ffffff', fontSize: '72px', fontWeight: 900, letterSpacing: '4px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                        <div style={{ display: 'flex', color: '#ffffff', fontSize: '96px', fontWeight: 900, letterSpacing: '6px' }}>
                             {prediction.placeName} {prediction.raceNumber}R
                         </div>
-                        <div style={{ display: 'flex', color: '#94a3b8', fontSize: '32px', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', color: '#b9b9f9', fontSize: '40px', fontWeight: 700 }}>
                             {deadlineStr} 締切
                         </div>
                     </div>
-                    <div style={{ display: 'flex', color: '#e2e8f0', fontSize: '36px', fontWeight: 700 }}>
+                    <div style={{ display: 'flex', color: '#ffffff', fontSize: '48px', fontWeight: 800 }}>
                         {title}
                     </div>
                 </div>
 
                 {/* Bottom: Author + domain */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', color: '#b9b9f9', fontSize: '24px', fontWeight: 700 }}>
+                    <div style={{ display: 'flex', color: '#b9b9f9', fontSize: '36px', fontWeight: 800 }}>
                         {prediction.author?.name || 'Anonymous'}
                     </div>
-                    <div style={{ display: 'flex', color: '#64748b', fontSize: '22px', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', color: '#94a3b8', fontSize: '28px', fontWeight: 700 }}>
                         boatbank.jp
                     </div>
                 </div>
