@@ -169,8 +169,7 @@ export function VenueStatsGrid({
               valueText = "-";
               valueColor = "text-[#64748d]";
             } else {
-              const abs = Math.abs(profit);
-              valueText = abs >= 10000 ? `${profit >= 0 ? '+' : '-'}${Math.round(abs / 10000)}万` : `${profit >= 0 ? '+' : ''}${profit.toLocaleString()}`;
+              valueText = `${profit >= 0 ? '+' : ''}${profit.toLocaleString()}`;
               valueColor = profit >= 0 ? "text-[#533afd]" : "text-[#ea2261]";
             }
           }
