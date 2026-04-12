@@ -108,6 +108,26 @@ export default async function RankingPage() {
     }
     ptMonthRanking.sort((a, b) => b.value - a.value);
 
+    // --- イベントランキング ---
+    const activeEvent = await prisma.event.findFirst({ where: { isActive: true } });
+    let eventRanking: RankEntry[] = [];
+    let eventName = "";
+    if (activeEvent) {
+        eventName = activeEvent.name;
+        const participants = await prisma.eventParticipant.findMany({
+            where: { eventId: activeEvent.id },
+            orderBy: { points: 'desc' },
+            include: { user: { select: { name: true, role: true } } },
+        });
+        eventRanking = participants.map(p => ({
+            id: p.userId,
+            name: p.user.name || "Unknown",
+            role: p.user.role,
+            value: p.points,
+            sub: eventName,
+        }));
+    }
+
     return (
         <div className="min-h-screen pb-24">
             <div className="bg-[#1c1e54] text-white px-5 pt-7 pb-10">
@@ -125,6 +145,8 @@ export default async function RankingPage() {
                     ptAllRanking={ptAllRanking}
                     ptMonthRanking={ptMonthRanking}
                     currentMonth={now.getMonth() + 1}
+                    eventRanking={eventRanking}
+                    eventName={eventName}
                 />
             </div>
         </div>

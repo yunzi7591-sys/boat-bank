@@ -66,14 +66,19 @@ export function RankingClient({
     ptAllRanking,
     ptMonthRanking,
     currentMonth,
+    eventRanking = [],
+    eventName = "",
 }: {
     recoveryAll: RankEntry[];
     recoveryByVenue: { [venue: string]: RankEntry[] };
     ptAllRanking: RankEntry[];
     ptMonthRanking: RankEntry[];
     currentMonth: number;
+    eventRanking?: RankEntry[];
+    eventName?: string;
 }) {
-    const [activeTab, setActiveTab] = useState<"recovery" | "pt">("recovery");
+    const hasEvent = eventRanking.length > 0;
+    const [activeTab, setActiveTab] = useState<"event" | "recovery" | "pt">(hasEvent ? "event" : "recovery");
     const [ptPeriod, setPtPeriod] = useState<"all" | "month">("all");
     const [selectedVenue, setSelectedVenue] = useState<string>("all");
 
@@ -83,7 +88,15 @@ export function RankingClient({
     return (
         <div>
             {/* Main tabs */}
-            <div className="grid grid-cols-2 mb-4 h-11 bg-white shadow-sm border border-[#e5edf5] rounded-lg p-1">
+            <div className={`grid ${hasEvent ? 'grid-cols-3' : 'grid-cols-2'} mb-4 h-11 bg-white shadow-sm border border-[#e5edf5] rounded-lg p-1`}>
+                {hasEvent && (
+                    <button
+                        onClick={() => setActiveTab("event")}
+                        className={`font-semibold text-xs rounded-md transition-all flex items-center justify-center gap-1 ${activeTab === "event" ? "bg-amber-500 text-white" : "text-amber-600"}`}
+                    >
+                        🏆 限定pt
+                    </button>
+                )}
                 <button
                     onClick={() => setActiveTab("recovery")}
                     className={`font-semibold text-sm rounded-md transition-all flex items-center justify-center gap-1.5 ${activeTab === "recovery" ? "bg-[#533afd] text-white" : "text-[#64748d]"}`}
@@ -99,6 +112,15 @@ export function RankingClient({
                     獲得pt
                 </button>
             </div>
+
+            {activeTab === "event" && (
+                <>
+                    <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+                        <span className="text-sm font-bold text-amber-800">{eventName}</span>
+                    </div>
+                    <RankList list={eventRanking} type="pt" />
+                </>
+            )}
 
             {activeTab === "recovery" && (
                 <>
