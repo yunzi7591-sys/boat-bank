@@ -37,6 +37,8 @@ model User {
   
   notifications Notification[]
   userBets      UserBet[]
+  eventParticipants EventParticipant[]
+  eventBets         EventBet[]
 }
 
 model Follows {
@@ -302,4 +304,53 @@ model UserBet {
 
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+// -------------------------------------------------------------
+// Event (限定ptイベント) Models
+// -------------------------------------------------------------
+model Event {
+  id          String   @id @default(cuid())
+  name        String
+  placeName   String
+  startDate   DateTime
+  endDate     DateTime
+  initialPt   Int      @default(50000)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  participants EventParticipant[]
+  bets         EventBet[]
+}
+
+model EventParticipant {
+  id       String @id @default(cuid())
+  eventId  String
+  userId   String
+  points   Int
+
+  event    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model EventBet {
+  id           String   @id @default(cuid())
+  eventId      String
+  userId       String
+  placeName    String
+  raceNumber   Int
+  raceDate     DateTime
+  betType      String
+  combination  String
+  betAmount    Int
+  hitAmount    Int      @default(0)
+  refundAmount Int      @default(0)
+  isSettled    Boolean  @default(false)
+  isHit        Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  event    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
