@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createNews, getNewsList, deleteNews } from "@/actions/admin-news";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,14 @@ export function NewsManager() {
     const [content, setContent] = useState("");
     const [message, setMessage] = useState("");
     const [showPreview, setShowPreview] = useState(false);
+    const editorRef = useRef<HTMLDivElement>(null);
+
+    const execCmd = useCallback((command: string, value?: string) => {
+        document.execCommand(command, false, value);
+        if (editorRef.current) {
+            setContent(editorRef.current.innerHTML);
+        }
+    }, []);
 
     const fetchNews = async () => {
         const data = await getNewsList();
@@ -45,6 +53,7 @@ export function NewsManager() {
             setMessage("ニュースを投稿しました");
             setTitle("");
             setContent("");
+            if (editorRef.current) editorRef.current.innerHTML = "";
             setShowPreview(false);
             await fetchNews();
         }
@@ -78,17 +87,27 @@ export function NewsManager() {
                     />
                 </div>
                 <div>
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">本文（HTML）</label>
-                    <textarea
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="HTMLを入力してください"
-                        rows={6}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-1">
-                        HTMLを入力してください。{'<a href="...">リンク</a>'}、{'<span style="color:red">赤文字</span>'}等が使えます
-                    </p>
+                    <label className="text-xs font-bold text-slate-500 mb-1 block">本文</label>
+                    <div className="rounded-lg border border-input bg-background overflow-hidden">
+                        <div className="flex gap-1 border-b border-[#e5edf5] px-2 py-1.5">
+                            <button type="button" onClick={() => execCmd("bold")} className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded transition-colors" title="太字">B</button>
+                            <button type="button" onClick={() => execCmd("italic")} className="px-2 py-1 text-xs italic text-slate-600 hover:bg-slate-100 rounded transition-colors" title="斜体">I</button>
+                            <button type="button" onClick={() => { const url = prompt("URLを入力"); if (url) execCmd("createLink", url); }} className="px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 rounded transition-colors" title="リンク">🔗</button>
+                            <button type="button" onClick={() => { const color = prompt("色コード(例: red, #ff0000)"); if (color) execCmd("foreColor", color); }} className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded transition-colors" title="文字色">A</button>
+                            <button type="button" onClick={() => execCmd("insertUnorderedList")} className="px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 rounded transition-colors" title="リスト">•</button>
+                            <button type="button" onClick={() => execCmd("formatBlock", "h3")} className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded transition-colors" title="見出し">H</button>
+                        </div>
+                        <div
+                            ref={editorRef}
+                            contentEditable
+                            className="min-h-[120px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring prose prose-sm max-w-none"
+                            onInput={() => {
+                                if (editorRef.current) {
+                                    setContent(editorRef.current.innerHTML);
+                                }
+                            }}
+                        />
+                    </div>
                 </div>
 
                 {/* プレビュー */}
