@@ -26,7 +26,19 @@ export const metadata: Metadata = {
   },
   icons: {
     apple: "/icon-192x192.png",
-  }
+  },
+  openGraph: {
+    title: "BOAT BANK",
+    description: "ガチ予想のマーケットプレイス＆収支管理アプリ",
+    url: "https://boatbank.jp",
+    siteName: "BOAT BANK",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "BOAT BANK",
+    description: "ガチ予想のマーケットプレイス＆収支管理アプリ",
+  },
 };
 
 export const viewport = {
