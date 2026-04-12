@@ -268,28 +268,28 @@ export function RaceHubClient({
 
                         {/* All Payouts Grid UI */}
                         {payoutsList.length > 0 && (
-                            <div className="bg-white rounded-xl border border-yellow-200 overflow-hidden shadow-sm">
-                                <div className="bg-yellow-50 px-3 py-2 border-b border-yellow-100 flex items-center gap-1.5">
-                                    <span className="text-xs font-black text-yellow-800">💰 払戻金一覧</span>
+                            <div className="bg-white rounded-lg border border-yellow-200 overflow-hidden">
+                                <div className="bg-yellow-50 px-2 py-1 border-b border-yellow-100">
+                                    <span className="text-[10px] font-bold text-yellow-800">払戻金一覧</span>
                                 </div>
-                                <div className="divide-y divide-slate-100">
+                                <div className="divide-y divide-slate-50">
                                     {payoutsList.map((p: any, idx: number) => {
                                         const typeLabels: Record<string, string> = {
                                             '3TR': '3連単', '3PL': '3連複', '2TR': '2連単', '2PL': '2連複', 'WIDE': '拡連複', 'WIN': '単勝', 'PLACE': '複勝'
                                         };
                                         const isMain = p.type === '3TR';
                                         return (
-                                            <div key={idx} className={`flex items-center justify-between p-2.5 px-3 ${isMain ? 'bg-yellow-50/30' : ''}`}>
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`text-[10px] font-bold w-10 ${isMain ? 'text-yellow-700' : 'text-slate-500'}`}>
+                                            <div key={idx} className={`flex items-center justify-between px-2 py-1 ${isMain ? 'bg-yellow-50/30' : ''}`}>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-[9px] font-bold w-8 ${isMain ? 'text-yellow-700' : 'text-slate-400'}`}>
                                                         {typeLabels[p.type] || p.type}
                                                     </span>
-                                                    <span className={`font-black font-mono tracking-widest ${isMain ? 'text-base text-yellow-900' : 'text-sm text-slate-700'}`}>
+                                                    <span className={`font-bold font-mono tracking-wider ${isMain ? 'text-xs text-yellow-900' : 'text-[11px] text-slate-600'}`}>
                                                         {p.numbers}
                                                     </span>
                                                 </div>
-                                                <span className={`font-black font-mono ${isMain ? 'text-lg text-red-600' : 'text-base text-slate-800'}`}>
-                                                    <span className="text-xs mr-0.5">¥</span>{p.amount.toLocaleString()}
+                                                <span className={`font-bold font-mono ${isMain ? 'text-sm text-red-600' : 'text-xs text-slate-700'}`}>
+                                                    ¥{p.amount.toLocaleString()}
                                                 </span>
                                             </div>
                                         );
