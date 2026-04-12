@@ -7,7 +7,6 @@ import { parseJsonSafely } from "@/lib/utils";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Lock, ExternalLink } from "lucide-react";
 import { ShareButton } from "@/components/predictions/ShareButton";
-import { RideButton } from "@/components/predictions/RideButton";
 
 export default async function PredictionPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
@@ -220,19 +219,6 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                 </div>
                             )}
 
-                            {/* Ride on this prediction! */}
-                            {userId && prediction.authorId !== userId && prediction.publishType !== "external" && (
-                                <div className="mt-4 pt-4 border-t border-slate-200">
-                                    <RideButton
-                                        predictionId={prediction.id}
-                                        betAmount={prediction.betAmount}
-                                        isClosed={isClosed}
-                                    />
-                                    <p className="text-center text-xs text-slate-400 mt-2">
-                                        ※ボタンを押すと、自分のアカウントからポイントを消費して非公開の買い目（相乗り）として保存されます。
-                                    </p>
-                                </div>
-                            )}
                         </div>
                         )
                     ) : (
