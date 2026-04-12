@@ -3,9 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getUserStats, getUserDailyStats, getUserDailyPredictions } from "@/lib/stats";
 import { CalendarPnLWrapper } from "@/components/mypage/CalendarPnLWrapper";
 import { notFound, redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { DemoEvalButton } from "@/components/mypage/DemoEvalButton";
 import { ProfileEditModal } from "@/components/mypage/ProfileEditModal";
@@ -48,6 +46,9 @@ export default async function MyPage() {
     const publishedPredictions = await prisma.prediction.findMany({
         where: { authorId: userId },
         orderBy: { createdAt: 'desc' },
+        include: {
+            _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
+        },
     });
 
     // 3. Get Purchased Predictions
@@ -55,7 +56,10 @@ export default async function MyPage() {
         where: { userId, action: 'BUY_PREDICTION' },
         include: {
             prediction: {
-                include: { author: { select: { name: true } } }
+                include: {
+                    author: { select: { name: true } },
+                    _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
+                }
             }
         },
         orderBy: { createdAt: 'desc' },
@@ -180,79 +184,74 @@ export default async function MyPage() {
                     </TabsList>
 
                     <TabsContent value="published">
-                        <div className="grid gap-4">
+                        <div className="space-y-2">
                             {publishedPredictions.length === 0 ? (
-                                <p className="text-center text-neutral-500 py-8 bg-white rounded-lg border">公開した予想はありません</p>
+                                <p className="text-center text-[#64748d] py-8 bg-white rounded-lg border border-[#e5edf5]">公開した予想はありません</p>
                             ) : (
-                                publishedPredictions.map(pred => (
-                                    <Link href={`/predictions/${pred.id}`} key={pred.id}>
-                                        <Card className="hover:border-[#b9b9f9] transition-colors cursor-pointer shadow-sm relative overflow-hidden rounded-lg">
-                                            <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#533afd]"></div>
-                                            <CardContent className="p-4 pl-6 flex justify-between items-center">
-                                                <div>
-                                                    <p className="text-sm text-[#533afd] font-bold mb-1">{pred.placeName} {pred.raceNumber}R</p>
-                                                    <p className="font-bold text-lg">{pred.title}</p>
-                                                    <p className="text-xs text-neutral-400 mt-2">{new Date(pred.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</p>
-                                                </div>
-                                                <div className="text-right flex flex-col items-end gap-2">
-                                                    <span className="text-sm font-bold text-neutral-600">{pred.price} pt</span>
-
-                                                    {/* Result Badge */}
+                                publishedPredictions.map(pred => {
+                                    const purchaseCount = pred._count?.transactions || 0;
+                                    return (
+                                        <Link href={`/predictions/${pred.id}`} key={pred.id}>
+                                            <div className="bg-white border border-[#e5edf5] rounded-lg p-3 hover:border-[#b9b9f9] transition-colors">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold bg-[#061b31] text-white px-1.5 py-0.5 rounded">{pred.placeName} {pred.raceNumber}R</span>
+                                                        <span className="text-[10px] text-[#64748d]">{new Date(pred.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>
+                                                    </div>
                                                     {!pred.isSettled ? (
-                                                        <Badge variant="outline" className="text-[#64748d] border-[#e5edf5] bg-[#f6f8fa]">🕒 結果待ち</Badge>
+                                                        <span className="text-[10px] text-[#64748d] bg-[#f6f8fa] px-1.5 py-0.5 rounded">結果待ち</span>
                                                     ) : pred.isHit ? (
-                                                        <Badge className="bg-[#15be53] text-white border-[#15be53] shadow-sm animate-pulse">
-                                                            🎯 的中 (+{pred.hitAmount || pred.refundAmount} 円)
-                                                        </Badge>
-                                                    ) : pred.hitAmount && pred.hitAmount > 0 ? (
-                                                        // Point gain without hit means full refund
-                                                        <Badge className="bg-[#9b6829] text-white border-[#9b6829] shadow-sm">
-                                                            ↩️ 返還 (+{pred.hitAmount} 円)
-                                                        </Badge>
+                                                        <span className="text-[10px] font-bold text-[#533afd] bg-[#533afd]/10 px-1.5 py-0.5 rounded">的中</span>
                                                     ) : (
-                                                        <Badge variant="secondary" className="text-neutral-600">❌ 不的中</Badge>
+                                                        <span className="text-[10px] text-[#64748d] bg-[#f6f8fa] px-1.5 py-0.5 rounded">不的中</span>
                                                     )}
                                                 </div>
-                                            </CardContent>
-                                        </Card>
-                                    </Link>
-                                ))
+                                                <p className="font-bold text-sm text-[#061b31] truncate">{pred.title || '無題'}</p>
+                                                <div className="flex items-center gap-3 mt-1 text-[10px] text-[#64748d]">
+                                                    <span>{pred.price > 0 ? `${pred.price}pt` : '無料'}</span>
+                                                    <span>{purchaseCount}人購入</span>
+                                                </div>
+                                            </div>
+                                        </Link>
+                                    );
+                                })
                             )}
                         </div>
                     </TabsContent>
 
                     <TabsContent value="purchased">
-                        <div className="grid gap-4">
+                        <div className="space-y-2">
                             {purchasedPredictions.length === 0 ? (
-                                <p className="text-center text-neutral-500 py-8 bg-white rounded-lg border">購入した予想はありません</p>
+                                <p className="text-center text-[#64748d] py-8 bg-white rounded-lg border border-[#e5edf5]">購入した予想はありません</p>
                             ) : (
-                                purchasedPredictions.map(pred => (
-                                    <Link href={`/predictions/${pred.id}`} key={pred.id}>
-                                        <Card className="hover:border-[#b9b9f9] transition-colors cursor-pointer shadow-sm relative overflow-hidden rounded-lg">
-                                            <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#9b6829]"></div>
-                                            <CardContent className="p-4 pl-6 flex justify-between items-center">
-                                                <div>
-                                                    <p className="text-sm text-[#533afd] font-bold mb-1">{pred.placeName} {pred.raceNumber}R</p>
-                                                    <p className="font-bold text-lg">{pred.title}</p>
-                                                    <p className="text-xs text-[#64748d] mt-1">著者: {pred.author?.name || 'Unknown'}</p>
-                                                </div>
-                                                <div className="text-right flex flex-col items-end gap-2">
-                                                    <span className="text-sm font-bold text-[#9b6829]">購入済み</span>
-                                                    {/* Result Badge for Buyer */}
+                                purchasedPredictions.map(pred => {
+                                    const purchaseCount = pred._count?.transactions || 0;
+                                    return (
+                                        <Link href={`/predictions/${pred.id}`} key={pred.id}>
+                                            <div className="bg-white border border-[#e5edf5] rounded-lg p-3 hover:border-[#b9b9f9] transition-colors">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold bg-[#061b31] text-white px-1.5 py-0.5 rounded">{pred.placeName} {pred.raceNumber}R</span>
+                                                        <span className="text-[10px] text-[#64748d]">{new Date(pred.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>
+                                                    </div>
                                                     {!pred.isSettled ? (
-                                                        null // Wait
+                                                        <span className="text-[10px] text-[#64748d] bg-[#f6f8fa] px-1.5 py-0.5 rounded">結果待ち</span>
                                                     ) : pred.isHit ? (
-                                                        <Badge className="bg-[#15be53] text-white">🎯 的中</Badge>
-                                                    ) : pred.hitAmount && pred.hitAmount > 0 ? (
-                                                        <Badge className="bg-[#9b6829] text-white">↩️ 返還</Badge>
+                                                        <span className="text-[10px] font-bold text-[#533afd] bg-[#533afd]/10 px-1.5 py-0.5 rounded">的中</span>
                                                     ) : (
-                                                        <Badge variant="secondary">❌ 不的中</Badge>
+                                                        <span className="text-[10px] text-[#64748d] bg-[#f6f8fa] px-1.5 py-0.5 rounded">不的中</span>
                                                     )}
                                                 </div>
-                                            </CardContent>
-                                        </Card>
-                                    </Link>
-                                ))
+                                                <p className="font-bold text-sm text-[#061b31] truncate">{pred.title || '無題'}</p>
+                                                <div className="flex items-center gap-3 mt-1 text-[10px] text-[#64748d]">
+                                                    <span>{pred.author?.name}</span>
+                                                    <span>{pred.price > 0 ? `${pred.price}pt` : '無料'}</span>
+                                                    <span>{purchaseCount}人購入</span>
+                                                </div>
+                                            </div>
+                                        </Link>
+                                    );
+                                })
                             )}
                         </div>
                     </TabsContent>
