@@ -18,7 +18,7 @@ export function TimelineCard({
 
     return (
         <Link href={`/predictions/${prediction.id}`} className="block group">
-            <div className="bg-white border border-[#dde5ef] hover:border-[#b9b9f9] hover:shadow-[0_4px_12px_rgba(50,50,93,0.12)] transition-shadow rounded-lg overflow-hidden mb-2">
+            <div className={`border hover:shadow-[0_4px_12px_rgba(50,50,93,0.12)] transition-shadow rounded-lg overflow-hidden mb-2 ${prediction.isSettled && prediction.isHit ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300' : 'bg-white border-[#dde5ef] hover:border-[#b9b9f9]'}`}>
                 <div className="px-3 py-2.5 flex items-center gap-3">
                     {/* Content */}
                     <div className="flex-1 min-w-0">
