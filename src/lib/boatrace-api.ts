@@ -78,7 +78,7 @@ export async function syncTodayScheduleChunk(offset: number = 0, limit: number =
                 const rGrade = extractRacerClass(b.racer_class_number);
                 if (rNum && rName && rName !== "undefined undefined") {
                     uniqueRacers.set(rNum, { name: rName, grade: rGrade });
-                    entriesData.push({ boatNumber: b.racer_boat_number, racerNumber: rNum });
+                    entriesData.push({ boatNumber: b.racer_boat_number, racerNumber: rNum, localWinRate: b.racer_local_top_1_percent || null, motorRate: b.racer_assigned_motor_top_2_percent || null });
                 }
             }
             parsedPrograms.push({ placeName, raceNumber, raceDate, deadlineAt, grade, day, entriesData });
@@ -125,7 +125,8 @@ export async function syncTodayScheduleChunk(offset: number = 0, limit: number =
                 if (racerId) {
                     entriesData.push({
                         placeName: pr.placeName, raceNumber: pr.raceNumber,
-                        raceDate: pr.raceDate, boatNumber: entry.boatNumber, racerId
+                        raceDate: pr.raceDate, boatNumber: entry.boatNumber, racerId,
+                        localWinRate: entry.localWinRate, motorRate: entry.motorRate,
                     });
                 }
             }
@@ -213,7 +214,7 @@ export async function syncTodaySchedule() {
 
                 if (rNum && rName && rName !== "undefined undefined") {
                     uniqueRacers.set(rNum, { name: rName, grade: rGrade });
-                    entriesData.push({ boatNumber: b.racer_boat_number, racerNumber: rNum });
+                    entriesData.push({ boatNumber: b.racer_boat_number, racerNumber: rNum, localWinRate: b.racer_local_top_1_percent || null, motorRate: b.racer_assigned_motor_top_2_percent || null });
                 }
             }
 
@@ -296,7 +297,9 @@ export async function syncTodaySchedule() {
                         raceNumber: pr.raceNumber,
                         raceDate: pr.raceDate,
                         boatNumber: entry.boatNumber,
-                        racerId: racerId
+                        racerId: racerId,
+                        localWinRate: entry.localWinRate,
+                        motorRate: entry.motorRate,
                     });
                 }
             }
