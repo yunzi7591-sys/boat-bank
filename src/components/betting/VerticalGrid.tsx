@@ -13,6 +13,8 @@ export type MockRacer = {
     name: string;
     class: string;
     color: string;
+    localWinRate?: number;
+    motorRate?: number;
 };
 
 interface VerticalGridProps {
