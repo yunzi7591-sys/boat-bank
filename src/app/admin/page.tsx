@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Server, CheckCircle2, DownloadCloud, Database, Trash2 } from "lucide-react";
 import { AdminPredictionList } from "@/components/admin/AdminPredictionList";
 import { EventManager } from "@/components/admin/EventManager";
-import { Trophy } from "lucide-react";
+import { NewsManager } from "@/components/admin/NewsManager";
+import { Trophy, Megaphone } from "lucide-react";
 
 export default async function AdminDashboard() {
     const session = await auth();
@@ -58,6 +59,18 @@ export default async function AdminDashboard() {
                     </CardHeader>
                     <CardContent className="p-6">
                         <EventManager />
+                    </CardContent>
+                </Card>
+
+                <Card className="shadow-lg border-2 border-green-100">
+                    <CardHeader className="bg-green-50 border-b border-green-100 pb-4">
+                        <CardTitle className="text-lg font-black text-green-900 flex items-center gap-2">
+                            <Megaphone className="w-5 h-5 text-green-500" />
+                            ニュース管理
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <NewsManager />
                     </CardContent>
                 </Card>
 

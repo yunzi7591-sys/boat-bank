@@ -354,3 +354,15 @@ model EventBet {
   event    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+// -------------------------------------------------------------
+// News Model
+// -------------------------------------------------------------
+model News {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
