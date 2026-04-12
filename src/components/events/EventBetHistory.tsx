@@ -88,34 +88,52 @@ export function EventBetHistory({ bets, initialPt }: { bets: EventBetItem[]; ini
 
     return (
         <div className="space-y-4">
-            {/* 日別累計グラフ */}
-            {dailyData.length > 0 && (
-                <div className="bg-white rounded-lg border border-[#e5edf5] p-4" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
-                    <h3 className="text-xs font-bold text-[#64748d] mb-3">累計損益</h3>
-                    <div className="flex items-end gap-1 h-32">
-                        {dailyData.map((d, i) => {
-                            const height = Math.abs(d.cumulative) / range * 100;
-                            const isPositive = d.cumulative >= 0;
-                            return (
-                                <div key={d.date} className="flex-1 flex flex-col items-center justify-end h-full relative">
-                                    <div className="w-full flex flex-col items-center justify-end" style={{ height: '80%' }}>
-                                        <div
-                                            className={`w-full max-w-[24px] rounded-t ${isPositive ? 'bg-[#533afd]' : 'bg-[#ea2261]'}`}
-                                            style={{ height: `${Math.max(height, 4)}%` }}
-                                        />
-                                    </div>
-                                    <span className="text-[8px] text-[#64748d] mt-1">{d.label}</span>
-                                </div>
-                            );
-                        })}
+            {/* 日別累計 折れ線グラフ */}
+            {dailyData.length > 0 && (() => {
+                const W = 320;
+                const H = 140;
+                const PAD = { top: 10, right: 10, bottom: 24, left: 10 };
+                const chartW = W - PAD.left - PAD.right;
+                const chartH = H - PAD.top - PAD.bottom;
+                const allValues = [0, ...dailyData.map(d => d.cumulative)];
+                const yMax = Math.max(...allValues);
+                const yMin = Math.min(...allValues);
+                const yRange = yMax - yMin || 1;
+                const toX = (i: number) => PAD.left + (i / Math.max(dailyData.length - 1, 1)) * chartW;
+                const toY = (v: number) => PAD.top + chartH - ((v - yMin) / yRange) * chartH;
+                const zeroY = toY(0);
+                const points = dailyData.map((d, i) => `${toX(i)},${toY(d.cumulative)}`).join(' ');
+                const fillPoints = `${toX(0)},${zeroY} ${points} ${toX(dailyData.length - 1)},${zeroY}`;
+                const lastVal = dailyData[dailyData.length - 1]?.cumulative || 0;
+                const isPositive = lastVal >= 0;
+
+                return (
+                    <div className="bg-white rounded-lg border border-[#e5edf5] p-4" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-xs font-bold text-[#64748d]">累計損益</h3>
+                            <span className={`text-sm font-bold ${isPositive ? 'text-[#533afd]' : 'text-[#ea2261]'}`}>
+                                {isPositive ? '+' : ''}{lastVal.toLocaleString()}円
+                            </span>
+                        </div>
+                        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
+                            {/* ゼロライン */}
+                            <line x1={PAD.left} y1={zeroY} x2={W - PAD.right} y2={zeroY} stroke="#e5edf5" strokeWidth="1" strokeDasharray="4 2" />
+                            {/* 塗り */}
+                            <polygon points={fillPoints} fill={isPositive ? 'rgba(83,58,253,0.1)' : 'rgba(234,34,97,0.1)'} />
+                            {/* 線 */}
+                            <polyline points={points} fill="none" stroke={isPositive ? '#533afd' : '#ea2261'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                            {/* ドット */}
+                            {dailyData.map((d, i) => (
+                                <circle key={d.date} cx={toX(i)} cy={toY(d.cumulative)} r="3.5" fill="white" stroke={d.cumulative >= 0 ? '#533afd' : '#ea2261'} strokeWidth="2" />
+                            ))}
+                            {/* 日付ラベル */}
+                            {dailyData.map((d, i) => (
+                                <text key={`l-${d.date}`} x={toX(i)} y={H - 4} textAnchor="middle" fontSize="8" fill="#64748d">{d.label}</text>
+                            ))}
+                        </svg>
                     </div>
-                    <div className="flex justify-between mt-2 text-[10px] text-[#64748d]">
-                        <span>累計: <span className={`font-bold ${dailyData[dailyData.length - 1]?.cumulative >= 0 ? 'text-[#533afd]' : 'text-[#ea2261]'}`}>
-                            {dailyData[dailyData.length - 1]?.cumulative >= 0 ? '+' : ''}{dailyData[dailyData.length - 1]?.cumulative.toLocaleString()}円
-                        </span></span>
-                    </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* レースごとの収支 */}
             <div className="bg-white rounded-lg border border-[#e5edf5] p-4" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
