@@ -54,6 +54,7 @@ export function VenueStatsGrid({
     null,
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [displayMode, setDisplayMode] = useState<"recovery" | "profit">("recovery");
 
   const stats: VenueStatsItem[] =
     period === "allTime"
@@ -114,11 +115,65 @@ export function VenueStatsGrid({
         </div>
       )}
 
+      {/* 表示切替 */}
+      <div className="flex gap-1 mb-3 bg-[#f1f5f9] rounded-md p-0.5 w-fit">
+        <button onClick={() => setDisplayMode("recovery")} className={`text-[10px] font-bold px-2.5 py-1 rounded ${displayMode === "recovery" ? "bg-white text-[#533afd] shadow-sm" : "text-[#64748d]"}`}>
+          回収率
+        </button>
+        <button onClick={() => setDisplayMode("profit")} className={`text-[10px] font-bold px-2.5 py-1 rounded ${displayMode === "profit" ? "bg-white text-[#533afd] shadow-sm" : "text-[#64748d]"}`}>
+          利益
+        </button>
+      </div>
+
+      {/* 全場合計 */}
+      {(() => {
+        const totalInv = stats.reduce((s, i) => s + i.totalInvestment, 0);
+        const totalRef = stats.reduce((s, i) => s + i.totalRefund, 0);
+        const totalProfit = totalRef - totalInv;
+        const totalRate = totalInv > 0 ? (totalRef / totalInv) * 100 : 0;
+        const totalRaces = stats.reduce((s, i) => s + i.totalPredictions, 0);
+        return (
+          <div className="bg-white border border-[#e5edf5] rounded-lg p-3 mb-3" style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-[#061b31]">全場合計</span>
+                <span className="text-[10px] text-[#64748d] ml-2">{totalRaces}R</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`text-sm font-bold tabular-nums ${totalRate >= 100 ? 'text-[#533afd]' : 'text-[#061b31]'}`}>
+                  {totalInv > 0 ? `${totalRate.toFixed(1)}%` : '-%'}
+                </span>
+                <span className={`text-sm font-bold tabular-nums ${totalProfit >= 0 ? 'text-[#533afd]' : 'text-[#ea2261]'}`}>
+                  {totalProfit >= 0 ? '+' : ''}{totalProfit.toLocaleString()}円
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 24場グリッド */}
       <div className="grid grid-cols-4 gap-1.5">
         {stats.map((item) => {
           const hasData = item.totalPredictions > 0;
-          const isProfit = item.recoveryRate >= 100;
+          const profit = item.totalRefund - item.totalInvestment;
+
+          let valueText: string;
+          let valueColor: string;
+
+          if (displayMode === "recovery") {
+            valueText = hasData ? `${Math.round(item.recoveryRate)}%` : "-%";
+            valueColor = !hasData ? "text-[#64748d]" : item.recoveryRate >= 100 ? "text-[#533afd]" : "text-[#061b31]";
+          } else {
+            if (!hasData) {
+              valueText = "-";
+              valueColor = "text-[#64748d]";
+            } else {
+              const abs = Math.abs(profit);
+              valueText = abs >= 10000 ? `${profit >= 0 ? '+' : '-'}${Math.round(abs / 10000)}万` : `${profit >= 0 ? '+' : ''}${profit.toLocaleString()}`;
+              valueColor = profit >= 0 ? "text-[#533afd]" : "text-[#ea2261]";
+            }
+          }
 
           return (
             <button
@@ -130,16 +185,8 @@ export function VenueStatsGrid({
               <div className="text-[10px] font-bold text-[#061b31] truncate leading-tight">
                 {item.placeName}
               </div>
-              <div
-                className={`text-sm font-black leading-tight mt-0.5 ${
-                  !hasData
-                    ? "text-[#64748d]"
-                    : isProfit
-                      ? "text-[#533afd]"
-                      : "text-[#061b31]"
-                }`}
-              >
-                {hasData ? `${Math.round(item.recoveryRate)}%` : "-%"}
+              <div className={`text-sm font-black leading-tight mt-0.5 ${valueColor}`}>
+                {valueText}
               </div>
             </button>
           );
