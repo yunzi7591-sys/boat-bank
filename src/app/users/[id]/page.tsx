@@ -19,10 +19,15 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
     // Fetch user profile (Public view: No points/private data exposed)
     const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, role: true, bio: true, link: true }
+        select: { id: true, name: true, role: true, bio: true, link: true,
+            _count: { select: { followers: true, following: true } },
+        }
     });
 
     if (!user) notFound();
+
+    const followerCount = user._count.followers;
+    const followingCount = user._count.following;
 
     // 1. Get Calculated Stats for this user (public predictions only)
     const stats = await getPublicUserStats(userId);
@@ -88,6 +93,11 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
                                 <FollowButton targetUserId={userId} initialIsFollowing={isFollowing} />
                             </div>
                         )}
+                    </div>
+
+                    <div className="flex items-center gap-4 mb-2 text-sm">
+                        <span className="text-white"><span className="font-bold">{followingCount}</span> <span className="text-slate-400 text-xs">フォロー中</span></span>
+                        <span className="text-white"><span className="font-bold">{followerCount}</span> <span className="text-slate-400 text-xs">フォロワー</span></span>
                     </div>
 
                     <p className="text-sm text-slate-300 font-medium leading-relaxed max-w-sm">
