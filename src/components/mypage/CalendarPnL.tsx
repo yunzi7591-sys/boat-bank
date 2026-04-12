@@ -23,6 +23,7 @@ interface DailyPredictionItem {
   combination?: string;
   betAmount: number;
   hitAmount: number;
+  refundAmount?: number;
   isSettled: boolean;
   isHit: boolean;
 }
@@ -250,10 +251,10 @@ function groupByRace(predictions: DailyPredictionItem[]): RaceGroup[] {
 
   return Array.from(map.entries()).map(([key, items]) => {
     const totalBet = items.reduce((s, i) => s + i.betAmount, 0);
-    const totalHit = items.reduce((s, i) => s + i.hitAmount, 0);
+    const totalHit = items.reduce((s, i) => s + i.hitAmount + (i.refundAmount || 0), 0);
     const allSettled = items.every((i) => i.isSettled);
     const anyHit = items.some((i) => i.isHit);
-    const anyRefund = items.some((i) => i.isSettled && !i.isHit && i.hitAmount > 0);
+    const anyRefund = items.some((i) => i.isSettled && !i.isHit && (i.refundAmount || 0) > 0);
     return {
       key,
       placeName: items[0].placeName,
@@ -277,7 +278,7 @@ function getRaceStyle(group: RaceGroup): { textColor: string; label: string } {
 }
 
 function getItemStyle(p: DailyPredictionItem): { textColor: string; label: string } {
-  const isRefund = p.isSettled && !p.isHit && p.hitAmount > 0;
+  const isRefund = p.isSettled && !p.isHit && (p.refundAmount || 0) > 0;
   if (!p.isSettled) return { textColor: "text-[#94a3b8]", label: "結果待ち" };
   if (p.isHit) return { textColor: "text-[#533afd]", label: "的中" };
   if (isRefund) return { textColor: "text-[#ca8a04]", label: "返還" };
@@ -310,7 +311,7 @@ function DailyDetail({
 
   const total = predictions.reduce((sum, p) => {
     if (!p.isSettled) return sum;
-    return sum + (p.hitAmount - p.betAmount);
+    return sum + (p.hitAmount + (p.refundAmount || 0) - p.betAmount);
   }, 0);
 
   return (
@@ -375,7 +376,7 @@ function DailyDetail({
                     const itemStyle = getItemStyle(p);
                     const betLabel = p.betType ? (BET_TYPE_LABELS[p.betType] || p.betType) : "";
                     const combo = p.combination || "";
-                    const arrow = p.isSettled ? ` → ${formatCurrency(p.hitAmount)}円` : "";
+                    const arrow = p.isSettled ? ` → ${formatCurrency(p.hitAmount + (p.refundAmount || 0))}円` : "";
                     const isLast = i === group.items.length - 1;
                     const connector = isLast ? "└" : "├";
 

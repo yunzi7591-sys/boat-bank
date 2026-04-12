@@ -133,7 +133,7 @@ export async function getPublicUserStats(userId: string): Promise<UserStats> {
     for (const pred of predictions) {
         totalInvestment += pred.betAmount || 0;
         if (pred.isSettled) {
-            totalRefund += (pred.hitAmount || pred.refundAmount || 0);
+            totalRefund += (pred.hitAmount || 0) + (pred.refundAmount || 0);
             if (pred.isHit) hitCount++;
         }
     }
@@ -179,7 +179,7 @@ export async function getPublicDailyStats(
         const entry = dayMap.get(dateStr) || { inv: 0, ref: 0, count: 0 };
         entry.inv += pred.betAmount || 0;
         if (pred.isSettled) {
-            entry.ref += pred.hitAmount || pred.refundAmount || 0;
+            entry.ref += (pred.hitAmount || 0) + (pred.refundAmount || 0);
         }
         entry.count++;
         dayMap.set(dateStr, entry);
@@ -241,7 +241,8 @@ export async function getPublicDailyPredictions(
             betType: pn?.type ?? undefined,
             combination: pn?.combination ?? undefined,
             betAmount: pred.betAmount || 0,
-            hitAmount: pred.isSettled ? (pred.hitAmount || pred.refundAmount || 0) : 0,
+            hitAmount: pred.isSettled ? (pred.hitAmount || 0) + (pred.refundAmount || 0) : 0,
+            refundAmount: pred.isSettled ? (pred.refundAmount || 0) : 0,
             isSettled: pred.isSettled,
             isHit: pred.isHit,
         });
@@ -370,7 +371,7 @@ export async function getUserVenueStatsWithPeriod(
         entry.inv += pred.betAmount || 0;
         entry.total++;
         if (pred.isSettled) {
-            entry.ref += pred.hitAmount || pred.refundAmount || 0;
+            entry.ref += (pred.hitAmount || 0) + (pred.refundAmount || 0);
             if (pred.isHit) entry.hit++;
         }
         venueMap.set(pred.placeName, entry);
@@ -459,7 +460,7 @@ export async function getPublicVenueStatsAll(userId: string): Promise<{
             const e = map.get(p.placeName) || { inv: 0, ref: 0, hit: 0, total: 0 };
             e.inv += p.betAmount || 0;
             e.total++;
-            if (p.isSettled) { e.ref += p.hitAmount || p.refundAmount || 0; if (p.isHit) e.hit++; }
+            if (p.isSettled) { e.ref += (p.hitAmount || 0) + (p.refundAmount || 0); if (p.isHit) e.hit++; }
             map.set(p.placeName, e);
         }
         return VENUES.map(v => {
@@ -543,6 +544,7 @@ export interface DailyPredictionItem {
     combination?: string;
     betAmount: number;
     hitAmount: number;
+    refundAmount?: number;
     isSettled: boolean;
     isHit: boolean;
 }
@@ -561,7 +563,7 @@ export async function getUserDailyPredictions(
     // マイページ: UserBetのみ
     const userBets = await prisma.userBet.findMany({
         where: { userId, raceDate: { gte, lt } },
-        select: { id: true, raceDate: true, placeName: true, raceNumber: true, betType: true, combination: true, betAmount: true, hitAmount: true, isSettled: true, isHit: true },
+        select: { id: true, raceDate: true, placeName: true, raceNumber: true, betType: true, combination: true, betAmount: true, hitAmount: true, refundAmount: true, isSettled: true, isHit: true },
         orderBy: [{ raceDate: "asc" }, { placeName: "asc" }, { raceNumber: "asc" }],
     });
 
@@ -580,6 +582,7 @@ export async function getUserDailyPredictions(
             combination: bet.combination ?? undefined,
             betAmount: bet.betAmount || 0,
             hitAmount: bet.isSettled ? (bet.hitAmount || 0) : 0,
+            refundAmount: bet.isSettled ? (bet.refundAmount || 0) : 0,
             isSettled: bet.isSettled,
             isHit: bet.isHit,
         });
@@ -672,7 +675,7 @@ export async function getUserMonthlyPnL(
         const entry = monthMap.get(monthStr) || { inv: 0, ref: 0, count: 0 };
         entry.inv += pred.betAmount || 0;
         if (pred.isSettled) {
-            entry.ref += pred.hitAmount || pred.refundAmount || 0;
+            entry.ref += (pred.hitAmount || 0) + (pred.refundAmount || 0);
         }
         entry.count++;
         monthMap.set(monthStr, entry);
