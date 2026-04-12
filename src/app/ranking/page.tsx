@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
+import { auth } from "@/auth";
 import { Trophy, TrendingUp, Coins } from "lucide-react";
 import { RankingClient } from "@/components/ranking/RankingClient";
 import { VENUES } from "@/lib/constants/venues";
@@ -15,6 +15,9 @@ interface RankEntry {
 }
 
 export default async function RankingPage() {
+    const session = await auth();
+    const currentUserId = session?.user?.id;
+
     // 公開予想(isPrivate: false)のみで集計
     const [predictions, sellTransactions, users] = await Promise.all([
         prisma.prediction.findMany({
@@ -147,6 +150,7 @@ export default async function RankingPage() {
                     currentMonth={now.getMonth() + 1}
                     eventRanking={eventRanking}
                     eventName={eventName}
+                    currentUserId={currentUserId}
                 />
             </div>
         </div>

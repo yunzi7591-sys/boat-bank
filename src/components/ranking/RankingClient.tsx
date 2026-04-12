@@ -12,7 +12,38 @@ interface RankEntry {
     sub: string;
 }
 
-function RankList({ list, type }: { list: RankEntry[]; type: "recovery" | "pt" }) {
+function RankRow({ entry, rank, type, isYou }: { entry: RankEntry; rank: number; type: "recovery" | "pt"; isYou?: boolean }) {
+    const medalColors = [
+        "bg-amber-50 text-amber-600 ring-1 ring-amber-200",
+        "bg-[#f6f8fa] text-[#64748d] ring-1 ring-[#e5edf5]",
+        "bg-orange-50 text-orange-500 ring-1 ring-orange-200",
+    ];
+    const medalColor = rank <= 3 ? medalColors[rank - 1] : "bg-[#f6f8fa] text-[#64748d]";
+
+    return (
+        <Link href={`/users/${entry.id}`}>
+            <div className={`border rounded-lg p-3 flex items-center justify-between transition-colors hover:border-[#b9b9f9] ${rank === 1 ? 'border-amber-200 shadow-sm' : 'border-[#e5edf5]'} ${isYou ? 'bg-[#533afd]/5 border-[#533afd]/30' : 'bg-white'}`}>
+                <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-md flex items-center justify-center font-bold text-sm ${isYou ? 'bg-[#533afd] text-white' : medalColor}`}>
+                        {rank}
+                    </div>
+                    <div>
+                        <p className="font-bold text-[#061b31] text-sm flex items-center gap-1.5">
+                            {entry.name}
+                            {entry.role === 'ADMIN' && <span className="text-[8px] font-black bg-amber-400 text-amber-900 px-1 py-0.5 rounded leading-none">公式</span>}
+                            {isYou && <span className="text-[8px] font-black bg-[#533afd] text-white px-1 py-0.5 rounded leading-none">YOU</span>}
+                        </p>
+                    </div>
+                </div>
+                <p className={`text-base font-light tabular-nums ${type === "recovery" && entry.value >= 100 ? 'text-[#533afd]' : 'text-[#061b31]'}`}>
+                    {type === "recovery" ? `${entry.value.toFixed(1)}%` : `${entry.value.toLocaleString()}pt`}
+                </p>
+            </div>
+        </Link>
+    );
+}
+
+function RankList({ list, type, currentUserId }: { list: RankEntry[]; type: "recovery" | "pt"; currentUserId?: string }) {
     if (list.length === 0) {
         return (
             <div className="text-center py-16 px-4">
@@ -25,37 +56,28 @@ function RankList({ list, type }: { list: RankEntry[]; type: "recovery" | "pt" }
         );
     }
 
-    return (
-        <div className="flex flex-col gap-2">
-            {list.map((entry, index) => {
-                const medalColors = [
-                    "bg-amber-50 text-amber-600 ring-1 ring-amber-200",
-                    "bg-[#f6f8fa] text-[#64748d] ring-1 ring-[#e5edf5]",
-                    "bg-orange-50 text-orange-500 ring-1 ring-orange-200",
-                ];
-                const medalColor = index < 3 ? medalColors[index] : "bg-[#f6f8fa] text-[#64748d]";
+    const top10 = list.slice(0, 10);
+    const myIndex = currentUserId ? list.findIndex(e => e.id === currentUserId) : -1;
+    const inTop10 = myIndex >= 0 && myIndex < 10;
 
-                return (
-                    <Link href={`/users/${entry.id}`} key={entry.id}>
-                        <div className={`bg-white border rounded-lg p-4 flex items-center justify-between transition-colors hover:border-[#b9b9f9] ${index === 0 ? 'border-amber-200 shadow-sm' : 'border-[#e5edf5]'}`}>
-                            <div className="flex items-center gap-3">
-                                <div className={`w-9 h-9 rounded-md flex items-center justify-center font-bold text-sm ${medalColor}`}>
-                                    {index + 1}
-                                </div>
-                                <div>
-                                    <p className="font-bold text-[#061b31] text-[15px] flex items-center gap-1.5">{entry.name}{entry.role === 'ADMIN' && <span className="text-[8px] font-black bg-amber-400 text-amber-900 px-1 py-0.5 rounded leading-none">公式</span>}</p>
-                                    <p className="text-[11px] text-[#64748d] font-medium">{entry.sub}</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className={`text-lg font-light tabular-nums ${type === "recovery" && entry.value >= 100 ? 'text-[#533afd]' : 'text-[#061b31]'}`}>
-                                    {type === "recovery" ? `${entry.value.toFixed(1)}%` : `${entry.value.toLocaleString()}pt`}
-                                </p>
-                            </div>
-                        </div>
-                    </Link>
-                );
-            })}
+    return (
+        <div className="flex flex-col gap-1.5">
+            {top10.map((entry, index) => (
+                <RankRow key={entry.id} entry={entry} rank={index + 1} type={type} isYou={currentUserId === entry.id} />
+            ))}
+
+            {currentUserId && myIndex >= 0 && !inTop10 && (
+                <>
+                    <div className="text-center text-[10px] text-[#64748d] py-1">・・・</div>
+                    <RankRow entry={list[myIndex]} rank={myIndex + 1} type={type} isYou />
+                </>
+            )}
+
+            {currentUserId && myIndex < 0 && (
+                <div className="mt-2 text-center text-xs text-[#64748d] bg-[#f8fafc] rounded-lg p-3">
+                    あなたはまだランキングに入っていません
+                </div>
+            )}
         </div>
     );
 }
@@ -68,6 +90,7 @@ export function RankingClient({
     currentMonth,
     eventRanking = [],
     eventName = "",
+    currentUserId,
 }: {
     recoveryAll: RankEntry[];
     recoveryByVenue: { [venue: string]: RankEntry[] };
@@ -76,6 +99,7 @@ export function RankingClient({
     currentMonth: number;
     eventRanking?: RankEntry[];
     eventName?: string;
+    currentUserId?: string;
 }) {
     const hasEvent = eventRanking.length > 0;
     const [activeTab, setActiveTab] = useState<"event" | "recovery" | "pt">(hasEvent ? "event" : "recovery");
@@ -118,7 +142,7 @@ export function RankingClient({
                     <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
                         <span className="text-sm font-bold text-amber-800">{eventName}</span>
                     </div>
-                    <RankList list={eventRanking} type="pt" />
+                    <RankList list={eventRanking} type="pt" currentUserId={currentUserId} />
                 </>
             )}
 
@@ -134,7 +158,7 @@ export function RankingClient({
                             <option key={v} value={v}>{v}</option>
                         ))}
                     </select>
-                    <RankList list={currentRecovery} type="recovery" />
+                    <RankList list={currentRecovery} type="recovery" currentUserId={currentUserId} />
                 </>
             )}
 
@@ -155,7 +179,7 @@ export function RankingClient({
                         </button>
                     </div>
 
-                    <RankList list={ptPeriod === "all" ? ptAllRanking : ptMonthRanking} type="pt" />
+                    <RankList list={ptPeriod === "all" ? ptAllRanking : ptMonthRanking} type="pt" currentUserId={currentUserId} />
                 </>
             )}
         </div>
