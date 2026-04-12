@@ -264,7 +264,19 @@ export async function syncTodaySchedule() {
                 });
                 if (result.count > 0) updatedCount++;
             }
-            console.log(`[API] Schedules already synced (${existingCount} races). Updated deadlineAt for ${updatedCount} races.`);
+            // エントリの当地勝率・モーター2連率も更新
+            for (const pr of parsedPrograms) {
+                for (const entry of pr.entriesData) {
+                    if (entry.localWinRate != null || entry.motorRate != null) {
+                        await prisma.raceEntry.updateMany({
+                            where: { placeName: pr.placeName, raceNumber: pr.raceNumber, raceDate: pr.raceDate, boatNumber: entry.boatNumber },
+                            data: { localWinRate: entry.localWinRate, motorRate: entry.motorRate },
+                        });
+                    }
+                }
+            }
+
+            console.log(`[API] Schedules already synced (${existingCount} races). Updated deadlineAt + entry stats for ${updatedCount} races.`);
             return { success: true, count: existingCount, updated: updatedCount, skipped: true };
         }
 
