@@ -485,6 +485,63 @@ function SummaryCell({ label, value }: { label: string; value: string }) {
   );
 }
 
+// ─── PnL Chart ──────────────────────────────────────────────────────────────
+
+function PnLChart({ dailyStats }: { dailyStats: DailyPnLItem[] }) {
+  const sorted = useMemo(() =>
+    [...dailyStats].sort((a, b) => a.date.localeCompare(b.date)),
+    [dailyStats]
+  );
+
+  if (sorted.length < 2) return null;
+
+  let cumulative = 0;
+  const points = sorted.map(d => {
+    cumulative += d.pnl;
+    const md = new Date(d.date);
+    return { label: `${md.getMonth() + 1}/${md.getDate()}`, value: cumulative };
+  });
+
+  const W = 320;
+  const H = 120;
+  const PAD = { top: 8, right: 8, bottom: 20, left: 8 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+  const values = [0, ...points.map(p => p.value)];
+  const yMax = Math.max(...values);
+  const yMin = Math.min(...values);
+  const yRange = yMax - yMin || 1;
+  const toX = (i: number) => PAD.left + (i / Math.max(points.length - 1, 1)) * chartW;
+  const toY = (v: number) => PAD.top + chartH - ((v - yMin) / yRange) * chartH;
+  const zeroY = toY(0);
+  const linePoints = points.map((p, i) => `${toX(i)},${toY(p.value)}`).join(' ');
+  const fillPoints = `${toX(0)},${zeroY} ${linePoints} ${toX(points.length - 1)},${zeroY}`;
+  const lastVal = points[points.length - 1]?.value || 0;
+  const isPositive = lastVal >= 0;
+
+  return (
+    <div className="mt-4 pt-3 border-t border-[#e5edf5]">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] font-bold text-[#64748d]">収益推移</span>
+        <span className={`text-xs font-bold ${isPositive ? 'text-[#533afd]' : 'text-[#ea2261]'}`}>
+          {isPositive ? '+' : ''}{lastVal.toLocaleString()}円
+        </span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
+        <line x1={PAD.left} y1={zeroY} x2={W - PAD.right} y2={zeroY} stroke="#e5edf5" strokeWidth="1" strokeDasharray="4 2" />
+        <polygon points={fillPoints} fill={isPositive ? 'rgba(83,58,253,0.08)' : 'rgba(234,34,97,0.08)'} />
+        <polyline points={linePoints} fill="none" stroke={isPositive ? '#533afd' : '#ea2261'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {points.map((p, i) => (
+          <circle key={i} cx={toX(i)} cy={toY(p.value)} r="3" fill="white" stroke={p.value >= 0 ? '#533afd' : '#ea2261'} strokeWidth="1.5" />
+        ))}
+        {points.map((p, i) => (
+          <text key={`l${i}`} x={toX(i)} y={H - 3} textAnchor="middle" fontSize="7" fill="#94a3b8">{p.label}</text>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function CalendarPnL({
@@ -556,6 +613,9 @@ export function CalendarPnL({
           onDeleteBets={handleDeleteBets}
         />
       )}
+
+      {/* 収益推移グラフ */}
+      <PnLChart dailyStats={dailyStats} />
     </div>
   );
 }
