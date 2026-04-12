@@ -10,9 +10,10 @@ export default async function MarketPage() {
     const session = await auth();
     const userId = session?.user?.id;
 
-    // internal + external の公開予想を全て取得
+    // internal + external の公開予想（締切前のみ）
+    const now = new Date();
     const allPredictions = await prisma.prediction.findMany({
-        where: { isPrivate: false },
+        where: { isPrivate: false, deadlineAt: { gt: now } },
         orderBy: { createdAt: 'desc' },
         take: 100,
         include: {
@@ -34,7 +35,7 @@ export default async function MarketPage() {
 
         if (followingIds.length > 0) {
             followingPredictions = await prisma.prediction.findMany({
-                where: { authorId: { in: followingIds }, isPrivate: false },
+                where: { authorId: { in: followingIds }, isPrivate: false, deadlineAt: { gt: now } },
                 orderBy: { createdAt: 'desc' },
                 take: 100,
                 include: {
