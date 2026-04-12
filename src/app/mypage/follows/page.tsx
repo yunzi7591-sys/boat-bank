@@ -1,8 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 import { FollowTabs } from "./FollowTabs";
 
 export default async function FollowsPage() {
@@ -37,13 +36,7 @@ export default async function FollowsPage() {
     return (
         <div className="min-h-screen bg-white font-sans pb-24">
             <div className="max-w-4xl mx-auto px-4 pt-6">
-                <Link
-                    href="/mypage"
-                    className="inline-flex items-center gap-1.5 text-sm font-bold text-[#64748d] hover:text-[#061b31] transition-colors mb-6"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    マイページに戻る
-                </Link>
+                <BackButton label="マイページに戻る" />
 
                 <FollowTabs followingList={followingList} followerList={followerList} />
             </div>
