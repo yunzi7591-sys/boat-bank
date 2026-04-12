@@ -26,9 +26,11 @@ interface PredictClientProps {
     userPoints?: number;
     isPrivate?: boolean;
     deadlineAt?: string | null;
+    eventId?: string | null;
+    eventPoints?: number | null;
 }
 
-export default function PredictClient({ venue, raceNumber, racers, userPoints, isPrivate, deadlineAt }: PredictClientProps) {
+export default function PredictClient({ venue, raceNumber, racers, userPoints, isPrivate, deadlineAt, eventId, eventPoints }: PredictClientProps) {
     const { activeBetType, setBetType, cart, clearSelections } = useBetStore();
     const [viewCart, setViewCart] = useState(false);
     const [publishType, setPublishType] = useState<"internal" | "external" | null>(isPrivate ? null : null);
@@ -84,10 +86,17 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
                         </Button>
                     </Link>
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 leading-none mb-0.5 tracking-wider">VOTING UI</span>
+                        <span className="text-[10px] font-bold text-slate-400 leading-none mb-0.5 tracking-wider">
+                            {eventId ? 'EVENT BETTING' : 'VOTING UI'}
+                        </span>
                         <h1 className="text-sm font-black tracking-tight leading-none">
                             {venueName} {raceNumber}R
                         </h1>
+                        {eventId && eventPoints != null && (
+                            <span className="text-[10px] font-bold text-amber-400 leading-none mt-0.5">
+                                限定pt残高: {eventPoints.toLocaleString()}pt
+                            </span>
+                        )}
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -149,7 +158,7 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
                                 <p className="text-sm font-bold">カートを読み込み中...</p>
                             </div>
                         }>
-                            <BetListCart deadlineAt={deadlineAt ? new Date(deadlineAt) : null} userPoints={userPoints} initialPublishType={publishType || undefined} />
+                            <BetListCart deadlineAt={deadlineAt ? new Date(deadlineAt) : null} userPoints={userPoints} initialPublishType={publishType || undefined} eventId={eventId || undefined} eventPoints={eventPoints ?? undefined} />
                         </Suspense>
                     </div>
                 )}

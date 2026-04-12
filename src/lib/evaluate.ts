@@ -104,6 +104,9 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
         settledCount++;
     }
 
+    // === EventBet の精算 ===
+    await settleEventBets(placeName, raceNumber, raceDate);
+
     // === UserBet の精算 ===
     const userBets = await prisma.userBet.findMany({
         where: {
@@ -155,6 +158,87 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
 }
 
 /**
+ * 限定ptイベントベットの精算
+ */
+export async function settleEventBets(placeName: string, raceNumber: number, raceDate: Date) {
+    const raceResult = await prisma.raceResult.findUnique({
+        where: { placeName_raceNumber_raceDate: { placeName, raceNumber, raceDate } },
+    });
+
+    if (!raceResult) return { success: false, settledCount: 0 };
+
+    let payoutsList: PayoutData[] = [];
+    try {
+        payoutsList = parseJsonSafely<PayoutData[]>(raceResult.payouts) || [];
+    } catch (e) {
+        console.error("Failed to parse payouts JSON for EventBet settle", e);
+        return { success: false, settledCount: 0 };
+    }
+
+    const refundedBoats: number[] = raceResult.refunds || [];
+
+    const eventBets = await prisma.eventBet.findMany({
+        where: {
+            placeName,
+            raceNumber,
+            raceDate,
+            isSettled: false,
+        },
+    });
+
+    let settledCount = 0;
+
+    for (const bet of eventBets) {
+        const betNumbers = bet.combination.split(/[-=]/).map(n => parseInt(n, 10));
+        const containsRefundedBoat = betNumbers.some(n => refundedBoats.includes(n));
+
+        let hitAmount = 0;
+        let refundAmount = 0;
+        let isHit = false;
+
+        if (containsRefundedBoat) {
+            // 返還: 賭け金をそのまま返す
+            refundAmount = bet.betAmount;
+        } else {
+            // 的中チェック
+            const officialPayouts = payoutsList.filter(p => p.type === bet.betType);
+            for (const payout of officialPayouts) {
+                if (bet.combination === payout.numbers) {
+                    hitAmount = Math.floor((payout.amount / 100) * bet.betAmount);
+                    isHit = true;
+                }
+            }
+        }
+
+        const totalEarned = hitAmount + refundAmount;
+
+        await prisma.$transaction(async (tx) => {
+            await tx.eventBet.update({
+                where: { id: bet.id },
+                data: {
+                    isSettled: true,
+                    isHit,
+                    hitAmount,
+                    refundAmount,
+                },
+            });
+
+            // ポイントをEventParticipantに加算
+            if (totalEarned > 0) {
+                await tx.eventParticipant.updateMany({
+                    where: { eventId: bet.eventId, userId: bet.userId },
+                    data: { points: { increment: totalEarned } },
+                });
+            }
+        });
+
+        settledCount++;
+    }
+
+    return { success: true, settledCount };
+}
+
+/**
  * 結果が存在するが未精算のPrediction/UserBetを全て精算する
  */
 export async function settleAllPending() {
@@ -172,6 +256,13 @@ export async function settleAllPending() {
         distinct: ['placeName', 'raceNumber', 'raceDate'],
     });
 
+    // 未精算のEventBetがあるレースを特定
+    const unsettledEventBets = await prisma.eventBet.findMany({
+        where: { isSettled: false },
+        select: { placeName: true, raceNumber: true, raceDate: true },
+        distinct: ['placeName', 'raceNumber', 'raceDate'],
+    });
+
     // 重複排除して統合
     const raceKeys = new Map<string, { placeName: string; raceNumber: number; raceDate: Date }>();
     for (const p of unsettledPredictions) {
@@ -180,6 +271,10 @@ export async function settleAllPending() {
     }
     for (const b of unsettledBets) {
         if (!b.placeName || !b.raceNumber || !b.raceDate) continue;
+        const key = `${b.placeName}-${b.raceNumber}-${b.raceDate.toISOString()}`;
+        raceKeys.set(key, { placeName: b.placeName, raceNumber: b.raceNumber, raceDate: b.raceDate });
+    }
+    for (const b of unsettledEventBets) {
         const key = `${b.placeName}-${b.raceNumber}-${b.raceDate.toISOString()}`;
         raceKeys.set(key, { placeName: b.placeName, raceNumber: b.raceNumber, raceDate: b.raceDate });
     }

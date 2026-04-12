@@ -7,7 +7,7 @@ import { MockRacer } from "@/components/betting/VerticalGrid";
 import { getUserPoints } from "@/actions/auth";
 
 export default async function PredictPage(props: {
-    searchParams: Promise<{ placeId?: string; raceNumber?: string; isPrivate?: string }>;
+    searchParams: Promise<{ placeId?: string; raceNumber?: string; isPrivate?: string; eventId?: string }>;
 }) {
     const session = await auth();
     if (!session?.user?.id) redirect("/login");
@@ -16,6 +16,7 @@ export default async function PredictPage(props: {
     const placeId = searchParams.placeId;
     const raceNumber = searchParams.raceNumber ? parseInt(searchParams.raceNumber, 10) : 1;
     const isPrivate = searchParams.isPrivate === 'true';
+    const eventId = searchParams.eventId || null;
 
     // 1. Find the venue
     const venue = VENUES.find(v => v.id === placeId) || null;
@@ -86,6 +87,16 @@ export default async function PredictPage(props: {
 
     const userPoints = await getUserPoints();
 
+    // Fetch event participant points if eventId is present
+    let eventPoints: number | null = null;
+    if (eventId && session?.user?.id) {
+        const participant = await prisma.eventParticipant.findUnique({
+            where: { eventId_userId: { eventId, userId: session.user.id } },
+            select: { points: true },
+        });
+        eventPoints = participant?.points ?? null;
+    }
+
     return (
         <PredictClient
             venue={venue}
@@ -94,6 +105,8 @@ export default async function PredictPage(props: {
             userPoints={userPoints}
             isPrivate={isPrivate}
             deadlineAt={deadlineAt?.toISOString() || null}
+            eventId={eventId}
+            eventPoints={eventPoints}
         />
     );
 }

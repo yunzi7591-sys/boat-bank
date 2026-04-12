@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { publishPrediction } from '@/actions/prediction';
 import { submitBets } from '@/actions/bet';
+import { submitEventBets } from '@/actions/event-bet';
 import { getUserPoints } from '@/actions/auth';
 import { useState, useTransition, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -25,9 +26,11 @@ interface BetListCartProps {
     deadlineAt?: Date | null;
     userPoints?: number;
     initialPublishType?: "internal" | "external";
+    eventId?: string;
+    eventPoints?: number;
 }
 
-export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initialPublishType }: BetListCartProps = {}) {
+export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initialPublishType, eventId, eventPoints }: BetListCartProps = {}) {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { cart, updateCartItemAmount, updateCartFormationAmount, removeCombination, removeFormation, clearCart } = useBetStore();
@@ -156,6 +159,55 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                 {/* Global Cart Footer */}
                 <div className="flex gap-2 w-full mt-2">
                     {!isPublic ? (
+                        eventId ? (
+                            // Event betting mode (限定pt)
+                            <Button
+                                size="lg"
+                                disabled={isBetPending || totalAmount === 0}
+                                className="flex-1 font-bold shadow-sm transition-all text-white bg-amber-500 hover:bg-amber-600"
+                                onClick={() => {
+                                    startBetTransition(async () => {
+                                        try {
+                                            const allBets = cart.flatMap(formation =>
+                                                formation.combinations.map(comb => ({
+                                                    betType: formation.betType,
+                                                    combination: comb.id,
+                                                    amount: comb.amount,
+                                                }))
+                                            );
+                                            const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
+                                            const currentDate = new Date(todayStr);
+                                            const yyyy = currentDate.getFullYear();
+                                            const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+                                            const dd = String(currentDate.getDate()).padStart(2, '0');
+
+                                            const res = await submitEventBets({
+                                                eventId,
+                                                placeName: qPlaceName,
+                                                raceNumber: parseInt(qRaceNumber),
+                                                raceDate: `${yyyy}-${mm}-${dd}T00:00:00.000Z`,
+                                                bets: allBets,
+                                            });
+                                            if (res.success) {
+                                                clearCart();
+                                                toast.success('限定ptで賭けました!', { position: 'top-center' });
+                                                router.push('/events');
+                                            } else {
+                                                toast.error(res.error || '賭けに失敗しました', { position: 'top-center' });
+                                            }
+                                        } catch (err: any) {
+                                            toast.error(err.message || 'エラーが発生しました', { position: 'top-center' });
+                                        }
+                                    });
+                                }}
+                            >
+                                {isBetPending ? (
+                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 処理中...</>
+                                ) : (
+                                    `限定ptで賭ける（${totalAmount.toLocaleString()}pt）`
+                                )}
+                            </Button>
+                        ) : (
                         // Private (isPrivate === true)
                         <Button
                             size="lg"
@@ -207,6 +259,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                 isClosed ? '収支登録' : '投票する（非公開）'
                             )}
                         </Button>
+                        )
                     ) : (
                         // Public (isPublic === true)
                         isClosed ? (

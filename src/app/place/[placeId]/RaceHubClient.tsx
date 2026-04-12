@@ -326,7 +326,7 @@ export function RaceHubClient({
             {/* Event Banner */}
             {activeEvent && (
                 <div className="px-4 mt-3">
-                    <Link href="/events">
+                    <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=true&eventId=${activeEvent.id}`}>
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center hover:border-amber-300 transition-colors">
                             <span className="text-xs font-bold text-amber-700">🏆 {activeEvent.name} 限定ptレース</span>
                             <p className="text-[10px] text-amber-600 mt-0.5">限定ptで賭けてランキング上位を目指そう!</p>
