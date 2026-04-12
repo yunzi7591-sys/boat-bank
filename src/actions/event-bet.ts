@@ -54,6 +54,16 @@ export async function submitEventBets(payload: SubmitEventBetsPayload) {
             return { success: false, error: "このイベントは現在開催されていません。" };
         }
 
+        // 3.5. Check race deadline
+        const raceDate = new Date(payload.raceDate);
+        const schedule = await prisma.raceSchedule.findFirst({
+            where: { placeName: payload.placeName, raceNumber: payload.raceNumber, raceDate },
+            select: { deadlineAt: true },
+        });
+        if (schedule && new Date(schedule.deadlineAt) < new Date()) {
+            return { success: false, error: "このレースは締め切りを過ぎています。" };
+        }
+
         // 4. Check participant balance
         const participant = await prisma.eventParticipant.findUnique({
             where: { eventId_userId: { eventId: payload.eventId, userId } },
@@ -66,8 +76,6 @@ export async function submitEventBets(payload: SubmitEventBetsPayload) {
         if (totalBetAmount > participant.points) {
             return { success: false, error: `限定ptが不足しています。（残高: ${participant.points}pt / 必要: ${totalBetAmount}pt）` };
         }
-
-        const raceDate = new Date(payload.raceDate);
 
         // 5. Transaction: create bets + deduct points
         const betDataArray = payload.bets.map(bet => ({
