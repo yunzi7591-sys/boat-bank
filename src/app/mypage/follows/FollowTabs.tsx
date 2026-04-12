@@ -25,12 +25,7 @@ function UserList({ users, emptyMessage }: { users: UserItem[]; emptyMessage: st
             {users.map(user => (
                 <Link key={user.id} href={`/users/${user.id}`}>
                     <div className="flex items-center justify-between p-3 rounded-lg hover:bg-[#f8fafc] transition-colors">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center font-bold text-sm text-slate-600">
-                                {user.name.charAt(0)}
-                            </div>
-                            <span className="font-bold text-[#061b31]">{user.name}</span>
-                        </div>
+                        <span className="font-bold text-[#061b31]">{user.name}</span>
                         <span className="text-xs text-[#64748d]">{user.followerCount} フォロワー</span>
                     </div>
                 </Link>

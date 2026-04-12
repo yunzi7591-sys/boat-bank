@@ -96,9 +96,6 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                 <h1 className="text-2xl font-black text-slate-900 leading-tight mb-4">{prediction.title || `渾身の勝負レース`}</h1>
 
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-700 shadow-inner text-xs border border-slate-200">
-                        {prediction.author?.name?.charAt(0) || "U"}
-                    </div>
                     <div className="flex flex-col">
                         <span className="font-extrabold text-[13px] text-slate-800">{prediction.author?.name || "Anonymous"}</span>
                         <span className="text-[10px] text-slate-400 font-medium">{new Date(prediction.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>
