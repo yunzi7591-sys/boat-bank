@@ -69,7 +69,7 @@ async function main() {
         const rNum = typeof b.racer_number === 'number' ? b.racer_number : null;
         if (rNum && rName && rName !== "undefined undefined") {
           uniqueRacers.set(rNum, { name: rName, grade: extractRacerClass(b.racer_class_number) });
-          entriesData.push({ boatNumber: b.racer_boat_number, racerNumber: rNum, localWinRate: b.racer_local_top_1_percent || null, motorRate: b.racer_assigned_motor_top_2_percent || null });
+          entriesData.push({ boatNumber: b.racer_boat_number, racerNumber: rNum, localWinRate: b.racer_national_top_1_percent || null, motorRate: b.racer_assigned_motor_top_2_percent || null });
         }
       }
 
