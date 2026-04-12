@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Eye, Lock, Unlock, Users, Clock } from "lucide-react";
+import { Eye, Users, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
+import { FollowButton } from "@/components/market/FollowButton";
 
 export function TimelineCard({
     prediction,
@@ -37,10 +38,13 @@ export function TimelineCard({
                         <h3 className="font-bold text-sm text-[#061b31] leading-tight truncate group-hover:text-[#533afd] transition-colors">
                             {prediction.title || `${prediction.placeName}勝負レース`}
                         </h3>
-                        <div className="flex items-center gap-3 mt-1 text-[10px] text-[#64748d]">
+                        <div className="flex items-center gap-2 mt-1 text-[10px] text-[#64748d]">
                             <span className="font-bold">{prediction.author?.name}</span>
-                            <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" />{new Date(prediction.deadlineAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })}締切</span>
-                            <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5" />{purchaseCount}人購入</span>
+                            {currentUserId && currentUserId !== prediction.authorId && (
+                                <FollowButton targetUserId={prediction.authorId} initialIsFollowing={isFollowingAuthor} />
+                            )}
+                            <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" />{new Date(prediction.deadlineAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })}</span>
+                            <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5" />{purchaseCount}</span>
                             <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" />{prediction.viewCount}</span>
                         </div>
                     </div>
