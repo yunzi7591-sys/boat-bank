@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     title: "BOAT BANK",
   },
   icons: {
-    apple: "/icon-192x192.png",
+    apple: "/IMG_5433.jpg",
   },
   openGraph: {
     title: "BOAT BANK",
