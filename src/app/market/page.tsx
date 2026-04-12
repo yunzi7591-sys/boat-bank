@@ -17,7 +17,7 @@ export default async function MarketPage() {
         orderBy: { createdAt: 'desc' },
         take: 100,
         include: {
-            author: { select: { name: true } },
+            author: { select: { name: true, role: true } },
             _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
         }
     });
@@ -39,7 +39,7 @@ export default async function MarketPage() {
                 orderBy: { createdAt: 'desc' },
                 take: 100,
                 include: {
-                    author: { select: { name: true } },
+                    author: { select: { name: true, role: true } },
                     _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
                 }
             });

@@ -83,7 +83,7 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
                             <div className="flex items-center gap-2">
                                 <h1 className="text-lg font-light tracking-tight">{user.name}</h1>
                                 {user.role === 'ADMIN' && (
-                                    <span className="text-[9px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">ADMIN</span>
+                                    <span className="text-[9px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">公式</span>
                                 )}
                             </div>
                         </div>

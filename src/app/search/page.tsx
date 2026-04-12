@@ -7,6 +7,7 @@ import { searchUsers } from "@/actions/search";
 type UserResult = {
     id: string;
     name: string | null;
+    role: string;
     followerCount: number;
 };
 
@@ -80,8 +81,9 @@ export default function SearchPage() {
                                     onClick={() => router.push(`/users/${user.id}`)}
                                     className="flex w-full items-center justify-between rounded-lg px-3 py-3.5 text-left transition-colors active:bg-[#f8fafc]"
                                 >
-                                    <span className="font-bold text-[#061b31]">
+                                    <span className="font-bold text-[#061b31] flex items-center gap-1.5">
                                         {user.name ?? "名前未設定"}
+                                        {user.role === 'ADMIN' && <span className="text-[8px] font-black bg-amber-400 text-amber-900 px-1 py-0.5 rounded leading-none">公式</span>}
                                     </span>
                                     <span className="text-xs text-[#64748d]">
                                         {user.followerCount} フォロワー

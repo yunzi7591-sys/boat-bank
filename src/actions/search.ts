@@ -15,6 +15,7 @@ export async function searchUsers(query: string) {
         select: {
             id: true,
             name: true,
+            role: true,
             _count: {
                 select: {
                     followers: true,
@@ -31,6 +32,7 @@ export async function searchUsers(query: string) {
     return users.map((user) => ({
         id: user.id,
         name: user.name,
+        role: user.role,
         followerCount: user._count.followers,
     }));
 }
