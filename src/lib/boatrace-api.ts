@@ -29,9 +29,10 @@ function normalizeGradeLabel(label: string | undefined): string {
 // v3 day_label → 内部日目文字列のマッピング
 function normalizeDayLabel(label: string | undefined): string {
     if (!label) return "開催中";
-    // day_label は "初日", "2日目", "最終日" などがそのまま入っている
+    // 全角数字を半角に変換（APIが"２日目"等の全角で返す場合がある）
+    const normalized = label.replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0));
     const validDays = ["初日", "2日目", "3日目", "4日目", "5日目", "6日目", "7日目", "最終日"];
-    if (validDays.includes(label)) return label;
+    if (validDays.includes(normalized)) return normalized;
     return "開催中";
 }
 
