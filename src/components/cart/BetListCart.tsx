@@ -148,7 +148,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                 <span className="ml-1.5 text-[10px] font-bold text-amber-600">{oddsVal.toFixed(1)}倍</span>
                                             )}
                                         </div>
-                                        <div className="relative w-20">
+                                        <div className="relative w-24 shrink-0">
                                             <Input
                                                 type="number"
                                                 className="h-7 pr-5 text-right font-bold text-xs"
