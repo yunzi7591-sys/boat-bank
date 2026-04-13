@@ -120,15 +120,15 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                             <div className="flex items-center gap-1.5">
                                 <span className="font-bold text-[10px] bg-blue-100 text-blue-800 px-1.5 py-px rounded">{formation.betType}</span>
                                 <span className="text-[10px] font-semibold text-slate-500">{formation.combinations.length}点</span>
-                                <div className="relative w-16">
+                                <div className="relative w-20">
                                     <Input
                                         type="number"
                                         placeholder="一括"
-                                        className="h-6 pr-4 text-right font-bold text-[11px] px-1.5"
+                                        className="h-6 pr-6 text-right font-bold text-[11px] px-1.5"
                                         value={formation.isIndividualAmount ? '' : (formation.totalExpectedAmount || '')}
                                         onChange={(e) => updateCartFormationAmount(formation.id, parseInt(e.target.value) || 0)}
                                     />
-                                    <span className="absolute right-1 top-1 text-[9px] text-slate-400">円</span>
+                                    <span className="absolute right-1.5 top-1 text-[9px] text-slate-400">円</span>
                                 </div>
                             </div>
                             <button onClick={() => removeFormation(formation.id)} className="text-slate-300 hover:text-red-500 p-0.5">
@@ -151,7 +151,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                         <div className="relative w-24 shrink-0">
                                             <Input
                                                 type="number"
-                                                className="h-7 pr-5 text-right font-bold text-xs"
+                                                className="h-7 pr-6 text-right font-bold text-xs"
                                                 value={comb.amount || ''}
                                                 onChange={(e) => updateCartItemAmount(formation.id, comb.id, parseInt(e.target.value) || 0)}
                                             />
