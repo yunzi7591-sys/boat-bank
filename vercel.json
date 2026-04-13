@@ -22,6 +22,10 @@
             "schedule": "0 1 * * *"
         },
         {
+            "path": "/api/cron/sync-odds",
+            "schedule": "*/2 * * * *"
+        },
+        {
             "path": "/api/cron/daily-points",
             "schedule": "0 15 * * *"
         }
