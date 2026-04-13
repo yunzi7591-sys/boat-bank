@@ -199,7 +199,7 @@ export function VenueStatsGrid({
           let valueColor: string;
 
           if (displayMode === "recovery") {
-            valueText = hasData ? `${Math.round(item.recoveryRate)}%` : "-%";
+            valueText = hasData ? `${item.recoveryRate.toFixed(1)}%` : "-%";
             valueColor = !hasData ? "text-[#64748d]" : item.recoveryRate >= 100 ? "text-[#533afd]" : "text-[#061b31]";
           } else {
             if (!hasData) {
@@ -259,7 +259,7 @@ export function VenueStatsGrid({
                     }`}
                   >
                     {selectedVenue.totalPredictions > 0
-                      ? `${Math.round(selectedVenue.recoveryRate)}%`
+                      ? `${selectedVenue.recoveryRate.toFixed(1)}%`
                       : "-%"}
                   </div>
                 </div>
