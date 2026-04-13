@@ -60,7 +60,10 @@ export async function submitEventBets(payload: SubmitEventBetsPayload) {
             where: { placeName: payload.placeName, raceNumber: payload.raceNumber, raceDate },
             select: { deadlineAt: true },
         });
-        if (schedule && new Date(schedule.deadlineAt) < new Date()) {
+        if (!schedule) {
+            return { success: false, error: "レーススケジュールが見つかりません。" };
+        }
+        if (new Date(schedule.deadlineAt) < new Date()) {
             return { success: false, error: "このレースは締め切りを過ぎています。" };
         }
 

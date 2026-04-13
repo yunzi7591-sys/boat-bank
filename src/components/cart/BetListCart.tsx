@@ -83,7 +83,12 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
         return sum + f.combinations.reduce((sub, c) => sub + c.amount, 0);
     }, 0);
 
-    const now = new Date();
+    // 締切チェック: 30秒ごとに更新
+    const [now, setNow] = useState(() => new Date());
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 30_000);
+        return () => clearInterval(timer);
+    }, []);
     const isClosed = deadlineAt ? now > deadlineAt : false;
     const isPublic = !isPrivate;
 
@@ -198,6 +203,11 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                     {!isPublic ? (
                         eventId ? (
                             // Event betting mode (限定pt)
+                            isClosed ? (
+                                <Button size="lg" disabled className="flex-1 font-bold bg-slate-400 text-slate-100 cursor-not-allowed">
+                                    締切終了
+                                </Button>
+                            ) :
                             <Button
                                 size="lg"
                                 disabled={isBetPending || totalAmount === 0}
