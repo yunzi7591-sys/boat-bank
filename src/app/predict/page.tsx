@@ -60,7 +60,8 @@ export default async function PredictPage(props: {
                     boatNumber: entry.boatNumber,
                     name: entry.racer?.name || "選手情報なし",
                     class: entry.racer?.grade || "B1",
-                    color: colorClasses
+                    color: colorClasses,
+                    isAbsent: entry.isAbsent || false,
                 };
             });
         }

@@ -15,6 +15,7 @@ export type MockRacer = {
     color: string;
     localWinRate?: number;
     motorRate?: number;
+    isAbsent?: boolean;
 };
 
 interface VerticalGridProps {
@@ -50,7 +51,7 @@ export function VerticalGrid({ racers = [] }: VerticalGridProps) {
                         {/* Boat Number & Racer Col */}
                         <div className={cn(
                             "w-[120px] sm:w-[150px] flex flex-col justify-center px-1.5 py-1 rounded-l-md border shadow-sm relative overflow-hidden",
-                            racer ? racer.color : colorCls
+                            racer?.isAbsent ? "bg-slate-100 text-slate-400 border-slate-200" : racer ? racer.color : colorCls
                         )}>
                             <div className="flex items-center gap-1.5 sm:gap-2">
                                 <span className={cn(
@@ -81,7 +82,7 @@ export function VerticalGrid({ racers = [] }: VerticalGridProps) {
                         {cols.map((col) => {
                             const isSelected = selections[col].includes(no);
 
-                            const isDisabled = false;
+                            const isDisabled = racer?.isAbsent || false;
 
                             return (
                                 <div

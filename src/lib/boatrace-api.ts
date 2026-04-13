@@ -878,6 +878,89 @@ export async function syncTodayResults(options: { limit?: number } = {}) {
 }
 
 // =============================================================
+// 欠場情報の取得
+// =============================================================
+
+/**
+ * boatrace.jpの出走表から欠場艇を取得して更新する
+ */
+export async function syncAbsentBoats() {
+    const now = new Date();
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const todayStr = jstNow.toISOString().split('T')[0];
+    const todayStart = new Date(todayStr + 'T00:00:00.000Z');
+    const todayEnd = new Date(todayStr + 'T23:59:59.999Z');
+    const hdParam = todayStr.replace(/-/g, '');
+
+    // 本日開催中の場を取得
+    const schedules = await prisma.raceSchedule.findMany({
+        where: { raceDate: { gte: todayStart, lte: todayEnd } },
+        select: { placeName: true },
+        distinct: ['placeName'],
+    });
+
+    let updated = 0;
+
+    for (const { placeName } of schedules) {
+        const venue = VENUES.find(v => v.name === placeName);
+        if (!venue) continue;
+
+        // 各レースの出走表をチェック
+        // 結果未確定のレース全て（締切前後問わず）
+        const venueSchedules = await prisma.raceSchedule.findMany({
+            where: { placeName, raceDate: { gte: todayStart, lte: todayEnd }, resultSynced: false },
+            select: { raceNumber: true, raceDate: true },
+        });
+
+        for (const sched of venueSchedules) {
+            try {
+                const url = `https://www.boatrace.jp/owpc/pc/race/racelist?rno=${sched.raceNumber}&jcd=${venue.id}&hd=${hdParam}`;
+                const res = await fetch(url, {
+                    cache: 'no-store',
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+                });
+                if (!res.ok) continue;
+
+                const html = await res.text();
+                const $ = cheerio.load(html);
+
+                // is-miss クラスを持つ tbody から欠場艇の番号を取得
+                const absentBoats: number[] = [];
+                $('tbody.is-miss').each((_, tbody) => {
+                    const boatCell = $(tbody).find('td[class*="is-boatColor"]').first();
+                    const boatNum = parseInt(boatCell.text().trim().replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0)));
+                    if (!isNaN(boatNum) && boatNum >= 1 && boatNum <= 6) {
+                        absentBoats.push(boatNum);
+                    }
+                });
+
+                if (absentBoats.length > 0) {
+                    // 欠場艇をマーク
+                    for (const boatNum of absentBoats) {
+                        const result = await prisma.raceEntry.updateMany({
+                            where: { placeName, raceNumber: sched.raceNumber, raceDate: sched.raceDate, boatNumber: boatNum, isAbsent: false },
+                            data: { isAbsent: true },
+                        });
+                        if (result.count > 0) {
+                            console.log(`[ABSENT] ${placeName} R${sched.raceNumber} ${boatNum}号艇 欠場`);
+                            updated++;
+                        }
+                    }
+                }
+            } catch (e: any) {
+                console.warn(`[ABSENT] ${placeName} R${sched.raceNumber} チェック失敗: ${e.message}`);
+            }
+        }
+
+        // 負荷軽減
+        await new Promise(r => setTimeout(r, 300));
+    }
+
+    console.log(`[ABSENT] 完了: ${updated}件更新`);
+    return { success: true, updated };
+}
+
+// =============================================================
 // オッズ取得 (参考オッズ)
 // =============================================================
 
