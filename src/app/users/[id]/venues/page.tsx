@@ -15,14 +15,14 @@ export default async function UserVenuesPage(props: { params: Promise<{ id: stri
 
     if (!user) notFound();
 
-    const { all, year, monthly } = await getPublicVenueStatsAll(userId);
+    const { all, year, monthly, byRaceType } = await getPublicVenueStatsAll(userId);
 
     return (
         <div className="min-h-screen bg-white font-sans pb-24">
             <div className="max-w-4xl mx-auto px-4 pt-6">
                 <BackButton label={`${user.name}のプロフィールに戻る`} />
                 <h1 className="text-xl font-black text-[#061b31] mb-4">{user.name}の詳細成績</h1>
-                <VenueStatsGrid allTimeStats={all} yearStats={year} monthlyStats={monthly} />
+                <VenueStatsGrid allTimeStats={all} yearStats={year} monthlyStats={monthly} byRaceType={byRaceType} />
             </div>
         </div>
     );
