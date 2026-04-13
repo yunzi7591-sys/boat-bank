@@ -27,7 +27,7 @@ export default async function EventsPage() {
     let myBets: any[] = [];
 
     if (activeEvent && session?.user?.id) {
-        const participant = await prisma.eventParticipant.findUnique({
+        let participant = await prisma.eventParticipant.findUnique({
             where: {
                 eventId_userId: {
                     eventId: activeEvent.id,
@@ -35,9 +35,15 @@ export default async function EventsPage() {
                 },
             },
         });
-        myPoints = participant?.points ?? null;
+        // 途中参加: 未参加なら自動登録
+        if (!participant) {
+            participant = await prisma.eventParticipant.create({
+                data: { eventId: activeEvent.id, userId: session.user.id, points: activeEvent.initialPt },
+            });
+        }
+        myPoints = participant.points;
 
-        if (participant) {
+        {
             const higherCount = await prisma.eventParticipant.count({
                 where: {
                     eventId: activeEvent.id,
