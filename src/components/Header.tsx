@@ -20,10 +20,15 @@ export async function Header() {
 
         const activeEvent = await prisma.event.findFirst({ where: { isActive: true } });
         if (activeEvent) {
-            const participant = await prisma.eventParticipant.findUnique({
+            let participant = await prisma.eventParticipant.findUnique({
                 where: { eventId_userId: { eventId: activeEvent.id, userId: session.user.id } }
             });
-            eventPoints = participant?.points ?? null;
+            if (!participant) {
+                participant = await prisma.eventParticipant.create({
+                    data: { eventId: activeEvent.id, userId: session.user.id, points: activeEvent.initialPt },
+                });
+            }
+            eventPoints = participant.points;
         }
     }
 
