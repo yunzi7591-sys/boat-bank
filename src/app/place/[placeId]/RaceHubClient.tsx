@@ -40,9 +40,16 @@ export function RaceHubClient({
         }
     }, [initialActiveRace]);
 
+    // 締切チェック用: 30秒ごとに現在時刻を更新
+    const [now, setNow] = useState(() => new Date());
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 30_000);
+        return () => clearInterval(timer);
+    }, []);
+
     // Filter data for the active race
     const currentSchedule = schedules.find(s => s.raceNumber === activeRaceNumber);
-    const isFinished = currentSchedule ? new Date(currentSchedule.deadlineAt) < new Date() : false;
+    const isFinished = currentSchedule ? new Date(currentSchedule.deadlineAt) < now : false;
 
     const marketPredictions = allMarketPredictions.filter(p => p.raceNumber === activeRaceNumber);
     const raceResult = allRaceResults.find(r => r.raceNumber === activeRaceNumber);
@@ -323,8 +330,8 @@ export function RaceHubClient({
                 </Link>
             </div>
 
-            {/* Event Banner */}
-            {activeEvent && (
+            {/* Event Banner - 締切前のみ表示 */}
+            {activeEvent && !isFinished && (
                 <div className="px-4 mt-3">
                     <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=true&eventId=${activeEvent.id}`}>
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center hover:border-amber-300 transition-colors">
