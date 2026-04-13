@@ -18,10 +18,13 @@ interface VenueStatsItem {
   totalPredictions: number;
 }
 
+type RaceType = "morning" | "day" | "nighter" | "midnight";
+
 interface VenueStatsGridProps {
   allTimeStats: VenueStatsItem[];
   yearStats: VenueStatsItem[];
   monthlyStats: { [key: string]: VenueStatsItem[] };
+  byRaceType: { [K in RaceType]: VenueStatsItem[] };
 }
 
 type Period = "allTime" | "year" | "monthly";
@@ -30,6 +33,16 @@ const PERIOD_LABELS: Record<Period, string> = {
   allTime: "通算",
   year: "2026年",
   monthly: "月別",
+};
+
+type RaceTypeFilter = "all" | RaceType;
+
+const RACE_TYPE_LABELS: Record<RaceTypeFilter, string> = {
+  all: "全て",
+  morning: "モーニング",
+  day: "デイ",
+  nighter: "ナイター",
+  midnight: "ミッドナイト",
 };
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -46,6 +59,7 @@ export function VenueStatsGrid({
   allTimeStats,
   yearStats,
   monthlyStats,
+  byRaceType,
 }: VenueStatsGridProps) {
   const currentMonth = new Date().getMonth() + 1;
   const [period, setPeriod] = useState<Period>("allTime");
@@ -55,20 +69,25 @@ export function VenueStatsGrid({
   );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [displayMode, setDisplayMode] = useState<"recovery" | "profit">("recovery");
+  const [raceTypeFilter, setRaceTypeFilter] = useState<RaceTypeFilter>("all");
 
   const stats: VenueStatsItem[] =
-    period === "allTime"
-      ? allTimeStats
-      : period === "year"
-        ? yearStats
-        : (monthlyStats[getMonthKey(selectedMonth)] ?? []);
+    raceTypeFilter !== "all"
+      ? byRaceType[raceTypeFilter]
+      : period === "allTime"
+        ? allTimeStats
+        : period === "year"
+          ? yearStats
+          : (monthlyStats[getMonthKey(selectedMonth)] ?? []);
 
   const periodLabel =
-    period === "allTime"
-      ? "通算"
-      : period === "year"
-        ? "2026年"
-        : `2026年${selectedMonth}月`;
+    raceTypeFilter !== "all"
+      ? `通算 / ${RACE_TYPE_LABELS[raceTypeFilter]}`
+      : period === "allTime"
+        ? "通算"
+        : period === "year"
+          ? "2026年"
+          : `2026年${selectedMonth}月`;
 
   function handleCellClick(item: VenueStatsItem) {
     setSelectedVenue(item);
@@ -77,15 +96,33 @@ export function VenueStatsGrid({
 
   return (
     <div className="w-full">
-      {/* 期間切り替えタブ */}
+      {/* 開催形態フィルタ */}
       <div className="flex gap-1 mb-3 bg-[#f1f5f9] rounded-lg p-1">
+        {(Object.keys(RACE_TYPE_LABELS) as RaceTypeFilter[]).map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setRaceTypeFilter(key)}
+            className={`flex-1 text-[10px] font-bold py-2 rounded-md transition-colors ${
+              raceTypeFilter === key
+                ? "bg-white text-[#061b31] shadow-sm"
+                : "text-[#64748d] hover:text-[#061b31]"
+            }`}
+          >
+            {RACE_TYPE_LABELS[key]}
+          </button>
+        ))}
+      </div>
+
+      {/* 期間切り替えタブ */}
+      <div className={`flex gap-1 mb-3 bg-[#f1f5f9] rounded-lg p-1 ${raceTypeFilter !== "all" ? "opacity-40 pointer-events-none" : ""}`}>
         {(Object.keys(PERIOD_LABELS) as Period[]).map((key) => (
           <button
             key={key}
             type="button"
             onClick={() => setPeriod(key)}
             className={`flex-1 text-xs font-bold py-2 rounded-md transition-colors ${
-              period === key
+              period === key && raceTypeFilter === "all"
                 ? "bg-white text-[#061b31] shadow-sm"
                 : "text-[#64748d] hover:text-[#061b31]"
             }`}
