@@ -241,6 +241,7 @@ export function UserManager() {
                                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                                 >
                                     <option value="BUYER">BUYER</option>
+                                    <option value="MONITOR">MONITOR</option>
                                     <option value="ADMIN">ADMIN</option>
                                 </select>
                             </div>
