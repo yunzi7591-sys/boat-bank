@@ -198,6 +198,14 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                     </div>
                 )}
 
+                {/* Total Summary */}
+                <div className="bg-white border border-slate-200 rounded-lg px-4 py-3">
+                    <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold text-slate-600">合計 {totalCombinations}点</span>
+                        <span className="text-lg font-black text-[#061b31]">¥{totalAmount.toLocaleString()}</span>
+                    </div>
+                </div>
+
                 {/* Global Cart Footer */}
                 <div className="flex gap-2 w-full mt-2">
                     {!isPublic ? (
