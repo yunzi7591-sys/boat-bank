@@ -167,21 +167,9 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
                     </div>
                 ) : (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300 w-full flex flex-col h-full">
-                        <div className="mb-6">
-                            <div className="flex items-center gap-2">
-                                <h2 className="text-xl font-black text-slate-900 tracking-tight">ベットリスト</h2>
-                                <span className="bg-slate-200 text-slate-600 text-[10px] font-black px-2 py-0.5 rounded-full">{cart.length}件</span>
-                            </div>
-                            {cart.length > 0 && (() => {
-                                const totalCombs = cart.reduce((sum, f) => sum + f.combinations.length, 0);
-                                const totalAmt = cart.reduce((sum, f) => sum + f.combinations.reduce((s, c) => s + c.amount, 0), 0);
-                                return (
-                                    <div className="mt-3 bg-slate-900 rounded-lg px-4 py-3 flex justify-between items-center">
-                                        <span className="text-xs font-bold text-slate-400">合計 {totalCombs}点</span>
-                                        <span className="text-lg font-black text-white">¥{totalAmt.toLocaleString()}</span>
-                                    </div>
-                                );
-                            })()}
+                        <div className="flex items-center gap-2 mb-4">
+                            <h2 className="text-xl font-black text-slate-900 tracking-tight">ベットリスト</h2>
+                            <span className="bg-slate-200 text-slate-600 text-[10px] font-black px-2 py-0.5 rounded-full">{cart.length}件</span>
                         </div>
                         <Suspense fallback={
                             <div className="flex flex-col items-center justify-center p-12 text-slate-400">
