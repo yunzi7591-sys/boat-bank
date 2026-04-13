@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Server, CheckCircle2, DownloadCloud, Database, Trash2 } from "lucide-react";
+import { AlertTriangle, Server, CheckCircle2, DownloadCloud, Database, Trash2, Users } from "lucide-react";
 import { AdminPredictionList } from "@/components/admin/AdminPredictionList";
 import { EventManager } from "@/components/admin/EventManager";
 import { NewsManager } from "@/components/admin/NewsManager";
+import { UserManager } from "@/components/admin/UserManager";
 import { Trophy, Megaphone } from "lucide-react";
 
 export default async function AdminDashboard() {
@@ -71,6 +72,19 @@ export default async function AdminDashboard() {
                     </CardHeader>
                     <CardContent className="p-6">
                         <NewsManager />
+                    </CardContent>
+                </Card>
+
+                {/* User Management */}
+                <Card className="shadow-lg border-2 border-blue-100">
+                    <CardHeader className="bg-blue-50 border-b border-blue-100 pb-4">
+                        <CardTitle className="text-lg font-black text-blue-900 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-blue-500" />
+                            ユーザー管理
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <UserManager />
                     </CardContent>
                 </Card>
 
