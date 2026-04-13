@@ -408,7 +408,7 @@ function classifyRaceType(deadlineAt: Date): RaceType {
     const timeInMinutes = adjustedHour * 60 + minutes;
 
     if (timeInMinutes <= 540) return "morning";       // 〜9:00
-    if (timeInMinutes <= 720) return "day";            // 〜12:00
+    if (timeInMinutes <= 780) return "day";            // 〜13:00
     if (timeInMinutes <= 960) return "nighter";        // 〜16:00
     return "midnight";                                 // 16:00〜
 }
