@@ -85,6 +85,9 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
                                 {user.role === 'ADMIN' && (
                                     <span className="text-[9px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">公式</span>
                                 )}
+                                {user.role === 'MONITOR' && (
+                                    <span className="text-[9px] font-black bg-sky-400 text-sky-900 px-1.5 py-0.5 rounded">モニター</span>
+                                )}
                             </div>
                         </div>
 

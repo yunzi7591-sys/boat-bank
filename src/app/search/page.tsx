@@ -84,6 +84,7 @@ export default function SearchPage() {
                                     <span className="font-bold text-[#061b31] flex items-center gap-1.5">
                                         {user.name ?? "名前未設定"}
                                         {user.role === 'ADMIN' && <span className="text-[8px] font-black bg-amber-400 text-amber-900 px-1 py-0.5 rounded leading-none">公式</span>}
+                                        {user.role === 'MONITOR' && <span className="text-[8px] font-black bg-sky-400 text-sky-900 px-1 py-0.5 rounded leading-none">モニター</span>}
                                     </span>
                                     <span className="text-xs text-[#64748d]">
                                         {user.followerCount} フォロワー

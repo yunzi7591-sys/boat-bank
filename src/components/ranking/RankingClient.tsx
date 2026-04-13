@@ -31,6 +31,7 @@ function RankRow({ entry, rank, type, isYou }: { entry: RankEntry; rank: number;
                         <p className="font-bold text-[#061b31] text-sm flex items-center gap-1.5">
                             {entry.name}
                             {entry.role === 'ADMIN' && <span className="text-[8px] font-black bg-amber-400 text-amber-900 px-1 py-0.5 rounded leading-none">公式</span>}
+                            {entry.role === 'MONITOR' && <span className="text-[8px] font-black bg-sky-400 text-sky-900 px-1 py-0.5 rounded leading-none">モニター</span>}
                             {isYou && <span className="text-[8px] font-black bg-[#533afd] text-white px-1 py-0.5 rounded leading-none">YOU</span>}
                         </p>
                     </div>

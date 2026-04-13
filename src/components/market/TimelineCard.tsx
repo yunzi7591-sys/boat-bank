@@ -36,6 +36,7 @@ export function TimelineCard({
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-[#64748d]">
                             <span className="font-bold">{prediction.author?.name}</span>
                             {prediction.author?.role === 'ADMIN' && <span className="text-[8px] font-black bg-amber-400 text-amber-900 px-1 py-0.5 rounded leading-none">公式</span>}
+                            {prediction.author?.role === 'MONITOR' && <span className="text-[8px] font-black bg-sky-400 text-sky-900 px-1 py-0.5 rounded leading-none">モニター</span>}
                             {currentUserId && currentUserId !== prediction.authorId && (
                                 <FollowButton targetUserId={prediction.authorId} initialIsFollowing={isFollowingAuthor} />
                             )}
