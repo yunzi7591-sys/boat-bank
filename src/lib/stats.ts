@@ -407,10 +407,10 @@ function classifyRaceType(deadlineAt: Date): RaceType {
     const minutes = deadlineAt.getUTCMinutes();
     const timeInMinutes = adjustedHour * 60 + minutes;
 
-    if (timeInMinutes <= 630) return "morning";       // 10:30
-    if (timeInMinutes <= 900) return "day";            // 15:00
-    if (timeInMinutes <= 1140) return "nighter";       // 19:00
-    return "midnight";
+    if (timeInMinutes <= 540) return "morning";       // 〜9:00
+    if (timeInMinutes <= 720) return "day";            // 〜12:00
+    if (timeInMinutes <= 960) return "nighter";        // 〜16:00
+    return "midnight";                                 // 16:00〜
 }
 
 async function buildRaceTypeMap(placeNameDates: { placeName: string; raceDate: Date }[]): Promise<Map<string, RaceType>> {
