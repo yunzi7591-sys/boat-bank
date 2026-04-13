@@ -64,12 +64,14 @@ export async function submitEventBets(payload: SubmitEventBetsPayload) {
             return { success: false, error: "このレースは締め切りを過ぎています。" };
         }
 
-        // 4. Check participant balance
-        const participant = await prisma.eventParticipant.findUnique({
+        // 4. Check participant balance (途中参加も可能)
+        let participant = await prisma.eventParticipant.findUnique({
             where: { eventId_userId: { eventId: payload.eventId, userId } },
         });
         if (!participant) {
-            return { success: false, error: "このイベントに参加していません。" };
+            participant = await prisma.eventParticipant.create({
+                data: { eventId: payload.eventId, userId, points: event.initialPt },
+            });
         }
 
         const totalBetAmount = payload.bets.reduce((sum, b) => sum + b.amount, 0);
