@@ -97,6 +97,7 @@ export function RaceHubClient({
             color: colorClasses,
             localWinRate: entry.localWinRate || undefined,
             motorRate: entry.motorRate || undefined,
+            isAbsent: entry.isAbsent || false,
         };
     }).sort((a, b) => a.boatNumber - b.boatNumber);
 
@@ -172,26 +173,30 @@ export function RaceHubClient({
                     <div className="flex flex-col gap-1">
                         {currentRacers.length > 0 ? (
                             currentRacers.map((racer) => (
-                                <div key={racer.boatNumber} className="flex items-center p-1.5 rounded-md hover:bg-slate-50 transition-colors">
-                                    <div className={`w-7 h-7 rounded-md flex items-center justify-center font-black text-base border-2 ${racer.color}`}>
+                                <div key={racer.boatNumber} className={`flex items-center p-1.5 rounded-md transition-colors ${racer.isAbsent ? 'opacity-40' : 'hover:bg-slate-50'}`}>
+                                    <div className={`w-7 h-7 rounded-md flex items-center justify-center font-black text-base border-2 ${racer.isAbsent ? 'bg-slate-200 text-slate-400 border-slate-300' : racer.color}`}>
                                         {racer.boatNumber}
                                     </div>
                                     <div className="ml-2 flex-1 flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span className={`text-[9px] font-bold px-1 py-0.5 rounded-sm ${racer.class.includes('A1') ? "bg-yellow-100 text-yellow-800" :
+                                            <span className={`text-[9px] font-bold px-1 py-0.5 rounded-sm ${racer.isAbsent ? 'bg-slate-100 text-slate-400' :
+                                                racer.class.includes('A1') ? "bg-yellow-100 text-yellow-800" :
                                                 racer.class.includes('A2') ? "bg-slate-200 text-slate-800" :
                                                     racer.class.includes('B1') ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"
                                                 }`}>
                                                 {racer.class}
                                             </span>
-                                            <span className="text-[13px] font-bold text-slate-800 tracking-tight">
+                                            <span className={`text-[13px] font-bold tracking-tight ${racer.isAbsent ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
                                                 {racer.name.replace(/\s+/g, '')}
                                             </span>
+                                            {racer.isAbsent && <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">欠場</span>}
                                         </div>
+                                        {!racer.isAbsent && (
                                         <div className="flex items-center gap-3 text-[10px] text-[#64748d]">
                                             {racer.localWinRate != null && <span>全国勝率 <span className="font-bold text-[#061b31]">{racer.localWinRate}</span></span>}
                                             {racer.motorRate != null && <span>モーター2連率 <span className="font-bold text-[#061b31]">{racer.motorRate}</span></span>}
                                         </div>
+                                        )}
                                     </div>
                                 </div>
                             ))

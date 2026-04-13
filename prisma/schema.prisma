@@ -259,6 +259,7 @@ model RaceEntry {
   boatNumber   Int      // 枠番 (1~6)
   localWinRate Float?   // 当地勝率
   motorRate    Float?   // モーター2連率
+  isAbsent     Boolean  @default(false) // 欠場フラグ
 
   racerId      String
   racer        Racer    @relation(fields: [racerId], references: [id], onDelete: Cascade)

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { syncOdds } from '@/lib/boatrace-api';
+import { syncOdds, syncAbsentBoats } from '@/lib/boatrace-api';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -15,8 +15,11 @@ export async function GET(request: Request) {
             }
         }
 
-        const result = await syncOdds();
-        return NextResponse.json(result);
+        const [oddsResult, absentResult] = await Promise.all([
+            syncOdds(),
+            syncAbsentBoats(),
+        ]);
+        return NextResponse.json({ odds: oddsResult, absent: absentResult });
     } catch (e: any) {
         console.error('[ODDS CRON ERROR]', e);
         return NextResponse.json({ success: false, error: e.message }, { status: 500 });
