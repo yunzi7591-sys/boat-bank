@@ -22,15 +22,31 @@ import { toast } from 'sonner';
 import { VENUES } from '@/lib/constants/venues';
 import { cn } from '@/lib/utils';
 
+interface OddsMap {
+    [oddsType: string]: { data: Record<string, number>; fetchedAt: string };
+}
+
 interface BetListCartProps {
     deadlineAt?: Date | null;
     userPoints?: number;
     initialPublishType?: "internal" | "external";
     eventId?: string;
     eventPoints?: number;
+    odds?: OddsMap;
 }
 
-export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initialPublishType, eventId, eventPoints }: BetListCartProps = {}) {
+function getOddsForCombination(odds: OddsMap | undefined, betType: string, combination: string): number | null {
+    if (!odds) return null;
+    // betType: 3TR, 3PL, 2TR, 2PL, WIN
+    const oddsEntry = odds[betType];
+    if (!oddsEntry?.data) return null;
+
+    // combinationは "1-2-3" 形式
+    const val = oddsEntry.data[combination];
+    return val && val > 0 ? val : null;
+}
+
+export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initialPublishType, eventId, eventPoints, odds }: BetListCartProps = {}) {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { cart, updateCartItemAmount, updateCartFormationAmount, removeCombination, removeFormation, clearCart } = useBetStore();
@@ -128,9 +144,16 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                             <div className="max-h-[300px] overflow-y-auto">
                                 <table className="w-full text-sm">
                                     <tbody>
-                                        {formation.combinations.map((comb) => (
+                                        {formation.combinations.map((comb) => {
+                                            const oddsVal = getOddsForCombination(odds, formation.betType, comb.id);
+                                            return (
                                             <tr key={comb.id} className="border-b last:border-0 hover:bg-neutral-50 transition-colors">
-                                                <td className="py-2 px-4 font-mono font-bold text-lg">{comb.id}</td>
+                                                <td className="py-2 px-4">
+                                                    <span className="font-mono font-bold text-lg">{comb.id}</span>
+                                                    {oddsVal && (
+                                                        <span className="ml-2 text-xs font-bold text-amber-600">{oddsVal.toFixed(1)}倍</span>
+                                                    )}
+                                                </td>
                                                 <td className="py-2 px-2 text-right">
                                                     <div className="relative w-24 ml-auto">
                                                         <Input
@@ -148,13 +171,27 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                     </Button>
                                                 </td>
                                             </tr>
-                                        ))}
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
                         </CardContent>
                     </Card>
                 ))}
+
+                {/* Odds notice */}
+                {odds && Object.keys(odds).length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center">
+                        <p className="text-[11px] font-bold text-amber-700">
+                            参考オッズ
+                            <span className="font-normal text-amber-600 ml-1">
+                                (更新: {new Date(Object.values(odds)[0].fetchedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}時点)
+                            </span>
+                        </p>
+                        <p className="text-[10px] text-amber-500 mt-0.5">確定オッズとは異なります</p>
+                    </div>
+                )}
 
                 {/* Global Cart Footer */}
                 <div className="flex gap-2 w-full mt-2">

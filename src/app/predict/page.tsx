@@ -97,6 +97,11 @@ export default async function PredictPage(props: {
         eventPoints = participant?.points ?? null;
     }
 
+    // raceDate (JST当日のUTC midnight)
+    const todayStr3 = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
+    const cd3 = new Date(todayStr3);
+    const raceDateStr = `${cd3.getFullYear()}-${String(cd3.getMonth() + 1).padStart(2, '0')}-${String(cd3.getDate()).padStart(2, '0')}T00:00:00.000Z`;
+
     return (
         <PredictClient
             venue={venue}
@@ -107,6 +112,7 @@ export default async function PredictPage(props: {
             deadlineAt={deadlineAt?.toISOString() || null}
             eventId={eventId}
             eventPoints={eventPoints}
+            raceDate={raceDateStr}
         />
     );
 }

@@ -19,6 +19,10 @@ const BET_TYPES: { type: BetType; label: string }[] = [
     { type: 'WIN', label: '単勝' },
 ];
 
+interface OddsMap {
+    [oddsType: string]: { data: Record<string, number>; fetchedAt: string };
+}
+
 interface PredictClientProps {
     venue: { id: string; name: string } | null;
     raceNumber: number;
@@ -28,12 +32,27 @@ interface PredictClientProps {
     deadlineAt?: string | null;
     eventId?: string | null;
     eventPoints?: number | null;
+    raceDate?: string | null;
 }
 
-export default function PredictClient({ venue, raceNumber, racers, userPoints, isPrivate, deadlineAt, eventId, eventPoints }: PredictClientProps) {
+export default function PredictClient({ venue, raceNumber, racers, userPoints, isPrivate, deadlineAt, eventId, eventPoints, raceDate }: PredictClientProps) {
     const { activeBetType, setBetType, cart, clearSelections } = useBetStore();
     const [viewCart, setViewCart] = useState(false);
     const [publishType, setPublishType] = useState<"internal" | "external" | null>(isPrivate ? null : null);
+    const [odds, setOdds] = useState<OddsMap>({});
+
+    useEffect(() => {
+        if (!venue || !raceDate) return;
+        const fetchOdds = () => {
+            fetch(`/api/odds?placeName=${encodeURIComponent(venue.name)}&raceNumber=${raceNumber}&raceDate=${encodeURIComponent(raceDate)}`)
+                .then(r => r.json())
+                .then(data => { if (data && !data.error) setOdds(data); })
+                .catch(() => {});
+        };
+        fetchOdds();
+        const timer = setInterval(fetchOdds, 60_000);
+        return () => clearInterval(timer);
+    }, [venue, raceNumber, raceDate]);
 
     const venueName = venue?.name || '不明な会場';
 
@@ -158,7 +177,7 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
                                 <p className="text-sm font-bold">カートを読み込み中...</p>
                             </div>
                         }>
-                            <BetListCart deadlineAt={deadlineAt ? new Date(deadlineAt) : null} userPoints={userPoints} initialPublishType={publishType || undefined} eventId={eventId || undefined} eventPoints={eventPoints ?? undefined} />
+                            <BetListCart deadlineAt={deadlineAt ? new Date(deadlineAt) : null} userPoints={userPoints} initialPublishType={publishType || undefined} eventId={eventId || undefined} eventPoints={eventPoints ?? undefined} odds={odds} />
                         </Suspense>
                     </div>
                 )}

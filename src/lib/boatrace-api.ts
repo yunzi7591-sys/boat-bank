@@ -876,3 +876,319 @@ export async function syncTodayResults(options: { limit?: number } = {}) {
         return { success: false, error: e.message };
     }
 }
+
+// =============================================================
+// オッズ取得 (参考オッズ)
+// =============================================================
+
+const ODDS_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+
+/**
+ * boatrace.jpから3連単オッズをスクレイピング
+ *
+ * odds3t ページの構造:
+ * - テーブル(table.is-w495)にtbodyが1つ
+ * - ヘッダーは6列 (1着=1号艇〜6号艇)
+ * - 各列は3セル: [rowspan付き2着番号], [3着番号], [oddsPoint]
+ * - rowspan=4 なので4行で1つの2着候補グループ
+ * - 5つの2着候補 × 4行の3着候補 = 20行
+ */
+async function scrapeOdds3TR(venueId: string, raceNumber: number, hdParam: string): Promise<Record<string, number>> {
+    const url = `https://www.boatrace.jp/owpc/pc/race/odds3t?rno=${raceNumber}&jcd=${venueId}&hd=${hdParam}`;
+    const res = await fetch(url, {
+        cache: 'no-store',
+        headers: { 'User-Agent': ODDS_UA }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const html = await res.text();
+    const $ = cheerio.load(html);
+    const odds: Record<string, number> = {};
+
+    // テーブル内のtbody (is-p3-0 クラス)
+    const tbody = $('tbody.is-p3-0');
+    if (!tbody.length) return odds;
+
+    const rows = tbody.find('tr');
+
+    // 各1着の現在の2着を追跡
+    // ヘッダーから1着の順番を取得（常に1,2,3,4,5,6）
+    const firstBoats = [1, 2, 3, 4, 5, 6];
+
+    // 各列の現在の2着番号を追跡
+    const currentSecond: number[] = [0, 0, 0, 0, 0, 0]; // index=列(0-5)
+    let rowInGroup = 0; // 0-3のカウント
+
+    rows.each((rowIdx, row) => {
+        const cells = $(row).find('td');
+        if (cells.length === 0) return;
+
+        // 各列を処理
+        // rowspan=4のセルがある行は新しい2着グループの開始
+        let cellIdx = 0;
+
+        for (let col = 0; col < 6; col++) {
+            if (cellIdx >= cells.length) break;
+
+            const cell = cells[cellIdx];
+            const $cell = $(cell);
+            const rowspan = parseInt($cell.attr('rowspan') || '0');
+
+            if (rowspan === 4) {
+                // 2着番号（rowspan付きのセル）
+                const secondNum = parseInt($cell.text().trim());
+                if (!isNaN(secondNum)) {
+                    currentSecond[col] = secondNum;
+                }
+                cellIdx++;
+
+                // 次のセルが3着番号
+                if (cellIdx < cells.length) {
+                    const thirdNum = parseInt($(cells[cellIdx]).text().trim());
+                    cellIdx++;
+
+                    // その次がオッズ
+                    if (cellIdx < cells.length) {
+                        const oddsText = $(cells[cellIdx]).text().trim();
+                        const oddsVal = parseFloat(oddsText);
+                        if (!isNaN(oddsVal) && oddsVal > 0 && !isNaN(thirdNum)) {
+                            odds[`${firstBoats[col]}-${secondNum}-${thirdNum}`] = oddsVal;
+                        }
+                        cellIdx++;
+                    }
+                }
+            } else {
+                // rowspan無しのセル: 3着番号 + オッズ
+                const thirdNum = parseInt($cell.text().trim());
+                cellIdx++;
+
+                if (cellIdx < cells.length) {
+                    const oddsText = $(cells[cellIdx]).text().trim();
+                    const oddsVal = parseFloat(oddsText);
+                    if (!isNaN(oddsVal) && oddsVal > 0 && !isNaN(thirdNum) && currentSecond[col]) {
+                        odds[`${firstBoats[col]}-${currentSecond[col]}-${thirdNum}`] = oddsVal;
+                    }
+                    cellIdx++;
+                }
+            }
+        }
+    });
+
+    return odds;
+}
+
+/**
+ * boatrace.jpから2連単オッズをスクレイピング
+ * odds2tf ページ: 上部テーブルが2連単、下部が2連複
+ */
+async function scrapeOdds2TR(venueId: string, raceNumber: number, hdParam: string): Promise<Record<string, number>> {
+    const url = `https://www.boatrace.jp/owpc/pc/race/odds2tf?rno=${raceNumber}&jcd=${venueId}&hd=${hdParam}`;
+    const res = await fetch(url, {
+        cache: 'no-store',
+        headers: { 'User-Agent': ODDS_UA }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const html = await res.text();
+    const $ = cheerio.load(html);
+    const odds: Record<string, number> = {};
+
+    // 2連単テーブル: 最初のgrid_unit内のtable
+    const firstTable = $('div.grid_unit').first().find('table.is-w495');
+    if (!firstTable.length) return odds;
+
+    firstTable.find('tbody tr').each((_, row) => {
+        const cells = $(row).find('td');
+        if (cells.length < 2) return;
+
+        let cellIdx = 0;
+        while (cellIdx + 1 < cells.length) {
+            const $numCell = $(cells[cellIdx]);
+            const $oddsCell = $(cells[cellIdx + 1]);
+
+            // 番号セル (is-boatColor* クラス)
+            const classAttr = $numCell.attr('class') || '';
+            if (classAttr.includes('is-boatColor') || classAttr.includes('oddsPoint')) {
+                const boatNum = parseInt($numCell.text().trim());
+                if ($oddsCell.hasClass('oddsPoint')) {
+                    const oddsVal = parseFloat($oddsCell.text().trim());
+                    const rowspan = $numCell.attr('rowspan');
+                    // rowspanがある場合、1着番号
+                    // ない場合、2着番号
+                    if (!isNaN(oddsVal) && oddsVal > 0 && !isNaN(boatNum)) {
+                        // 組合せキーの構築はテーブル構造に依存するため、
+                        // ここではセル位置からの推定は困難。
+                        // 代替: セルのdata属性やrowspan構造から推定
+                    }
+                }
+            }
+            cellIdx += 2;
+        }
+    });
+
+    return odds;
+}
+
+/**
+ * boatrace.jpから単勝オッズをスクレイピング
+ * oddstf ページ: 上部が単勝、下部が複勝
+ */
+async function scrapeOddsWin(venueId: string, raceNumber: number, hdParam: string): Promise<Record<string, number>> {
+    const url = `https://www.boatrace.jp/owpc/pc/race/oddstf?rno=${raceNumber}&jcd=${venueId}&hd=${hdParam}`;
+    const res = await fetch(url, {
+        cache: 'no-store',
+        headers: { 'User-Agent': ODDS_UA }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const html = await res.text();
+    const $ = cheerio.load(html);
+    const win: Record<string, number> = {};
+
+    // 単勝テーブル: 最初のgrid_unit内のtable
+    $('div.grid_unit').first().find('table.is-w495 tbody tr').each((_, row) => {
+        const boatCell = $(row).find('td[class*="is-boatColor"]').first();
+        const oddsCell = $(row).find('td.oddsPoint').first();
+
+        if (boatCell.length && oddsCell.length) {
+            const boatNum = boatCell.text().trim();
+            const oddsVal = parseFloat(oddsCell.text().trim());
+            if (boatNum && !isNaN(oddsVal) && oddsVal > 0) {
+                win[boatNum] = oddsVal;
+            }
+        }
+    });
+
+    return win;
+}
+
+/**
+ * 指定レースの全オッズを取得してDBに保存する
+ */
+export async function fetchAndSaveOdds(placeName: string, raceNumber: number, raceDate: Date) {
+    const venue = VENUES.find(v => v.name === placeName);
+    if (!venue) throw new Error(`会場名不明: ${placeName}`);
+
+    const jstRaceDate = new Date(raceDate.getTime() + 9 * 60 * 60 * 1000);
+    const hdParam = jstRaceDate.toISOString().split('T')[0].replace(/-/g, '');
+
+    console.log(`[ODDS] Fetching odds for ${placeName} R${raceNumber} (${hdParam})...`);
+
+    const oddsTypes: { type: string; fn: () => Promise<Record<string, number>> }[] = [
+        { type: '3TR', fn: () => scrapeOdds3TR(venue.id, raceNumber, hdParam) },
+        { type: 'WIN', fn: () => scrapeOddsWin(venue.id, raceNumber, hdParam) },
+    ];
+
+    for (const { type, fn } of oddsTypes) {
+        try {
+            const data = await fn();
+            if (Object.keys(data).length > 0) {
+                await prisma.raceOdds.upsert({
+                    where: { placeName_raceNumber_raceDate_oddsType: { placeName, raceNumber, raceDate, oddsType: type } },
+                    update: { oddsData: data, fetchedAt: new Date() },
+                    create: { placeName, raceNumber, raceDate, oddsType: type, oddsData: data },
+                });
+                console.log(`[ODDS] ${type}: ${Object.keys(data).length}件`);
+            }
+        } catch (e: any) {
+            console.warn(`[ODDS] ${type}取得失敗: ${e.message}`);
+        }
+    }
+
+    console.log(`[ODDS] ✅ ${placeName} R${raceNumber} オッズ保存完了`);
+}
+
+/**
+ * オッズ取得対象のレースを判定して取得する
+ * - 前のレースの締め切り時刻にそのレースのオッズを取得
+ * - 締め切り15分前にもオッズを取得
+ * - 締切後のレースのオッズは削除
+ */
+export async function syncOdds() {
+    const now = new Date();
+
+    // JST基準で当日の範囲
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const todayStr = jstNow.toISOString().split('T')[0];
+    const todayStart = new Date(todayStr + 'T00:00:00.000Z');
+    const todayEnd = new Date(todayStr + 'T23:59:59.999Z');
+
+    // 当日の全スケジュールを取得
+    const schedules = await prisma.raceSchedule.findMany({
+        where: { raceDate: { gte: todayStart, lte: todayEnd } },
+        orderBy: [{ placeName: 'asc' }, { raceNumber: 'asc' }],
+    });
+
+    if (schedules.length === 0) {
+        console.log('[ODDS] No schedules for today');
+        return { success: true, fetched: 0, cleaned: 0 };
+    }
+
+    // 場ごとにグループ化
+    const byVenue = new Map<string, typeof schedules>();
+    for (const s of schedules) {
+        const arr = byVenue.get(s.placeName) || [];
+        arr.push(s);
+        byVenue.set(s.placeName, arr);
+    }
+
+    let fetched = 0;
+    let cleaned = 0;
+
+    for (const [placeName, venueSchedules] of byVenue) {
+        // raceNumberで昇順ソート
+        venueSchedules.sort((a, b) => a.raceNumber - b.raceNumber);
+
+        for (let i = 0; i < venueSchedules.length; i++) {
+            const race = venueSchedules[i];
+            const deadline = new Date(race.deadlineAt);
+
+            // 締切済みのレースのオッズを削除
+            if (now > deadline) {
+                const deleted = await prisma.raceOdds.deleteMany({
+                    where: { placeName, raceNumber: race.raceNumber, raceDate: race.raceDate },
+                });
+                if (deleted.count > 0) {
+                    cleaned += deleted.count;
+                    console.log(`[ODDS] 🗑 ${placeName} R${race.raceNumber} オッズ削除 (締切済み)`);
+                }
+                continue;
+            }
+
+            // まだ締め切ってないレース: オッズ取得タイミング判定
+            const msUntilDeadline = deadline.getTime() - now.getTime();
+            const fifteenMin = 15 * 60 * 1000;
+
+            // 条件1: 締切15分前以内
+            const isWithin15Min = msUntilDeadline <= fifteenMin && msUntilDeadline > 0;
+
+            // 条件2: 前のレースが締切済み（前のレースの締切〜このレースの締切15分前の間）
+            const prevRace = i > 0 ? venueSchedules[i - 1] : null;
+            const prevDeadlinePassed = prevRace ? now >= new Date(prevRace.deadlineAt) : false;
+
+            if (isWithin15Min || prevDeadlinePassed) {
+                // 直近3分以内に既に取得済みなら再取得しない
+                const existing = await prisma.raceOdds.findFirst({
+                    where: { placeName, raceNumber: race.raceNumber, raceDate: race.raceDate },
+                    select: { fetchedAt: true },
+                    orderBy: { fetchedAt: 'desc' },
+                });
+
+                const threeMinAgo = new Date(now.getTime() - 3 * 60 * 1000);
+                if (existing && existing.fetchedAt > threeMinAgo) {
+                    continue; // 最近取得済み、スキップ
+                }
+
+                try {
+                    await fetchAndSaveOdds(placeName, race.raceNumber, race.raceDate);
+                    fetched++;
+                } catch (e: any) {
+                    console.error(`[ODDS] ${placeName} R${race.raceNumber} 取得エラー: ${e.message}`);
+                }
+            }
+        }
+    }
+
+    console.log(`[ODDS] 完了: 取得=${fetched}, 削除=${cleaned}`);
+    return { success: true, fetched, cleaned };
+}
