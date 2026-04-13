@@ -26,6 +26,10 @@
             "schedule": "*/2 * * * *"
         },
         {
+            "path": "/api/cron/sync-absent",
+            "schedule": "*/20 * * * *"
+        },
+        {
             "path": "/api/cron/daily-points",
             "schedule": "0 15 * * *"
         }
