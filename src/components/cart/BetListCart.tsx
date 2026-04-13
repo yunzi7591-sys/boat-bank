@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Trash2, Loader2, AlertTriangle, ExternalLink, Store } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -114,75 +113,63 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
 
     return (
         <div className="w-full flex justify-center">
-            <div className="w-full max-w-md flex flex-col gap-4">
+            <div className="w-full max-w-md flex flex-col gap-2">
                 {cart.map((formation) => (
-                    <Card key={formation.id} className="w-full shadow-sm">
-                        <CardHeader className="py-3 px-4 bg-neutral-50 flex flex-row items-center justify-between border-b space-y-0">
-                            <div className="flex gap-2 items-center">
-                                <span className="font-bold text-sm bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                    <div key={formation.id} className="w-full bg-white rounded-lg border border-slate-200 overflow-hidden">
+                        {/* Header */}
+                        <div className="px-3 py-2 bg-slate-50 flex items-center justify-between border-b">
+                            <div className="flex gap-1.5 items-center">
+                                <span className="font-bold text-[11px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
                                     {formation.betType}
                                 </span>
-                                <span className="text-sm font-semibold">{formation.combinations.length}点買い</span>
+                                <span className="text-xs font-semibold text-slate-600">{formation.combinations.length}点</span>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => removeFormation(formation.id)} className="text-red-600 h-8 px-2">
-                                削除
-                            </Button>
-                        </CardHeader>
-
-                        <CardContent className="p-0">
-                            {/* Formation Amount Input (Batch) */}
-                            <div className="flex items-center gap-2 p-3 border-b bg-white">
-                                <span className="text-sm font-medium w-24 flex-shrink-0">一括金額入力</span>
-                                <div className="relative flex-1">
+                            <div className="flex items-center gap-1">
+                                <div className="relative w-20">
                                     <Input
                                         type="number"
-                                        placeholder="100"
-                                        className="pr-6 text-right font-bold w-full"
+                                        placeholder="一括"
+                                        className="h-7 pr-5 text-right font-bold text-xs"
                                         value={formation.isIndividualAmount ? '' : (formation.totalExpectedAmount || '')}
                                         onChange={(e) => updateCartFormationAmount(formation.id, parseInt(e.target.value) || 0)}
                                     />
-                                    <span className="absolute right-3 top-2 text-sm text-neutral-500">円</span>
+                                    <span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400">円</span>
                                 </div>
+                                <Button variant="ghost" size="icon" onClick={() => removeFormation(formation.id)} className="text-red-500 h-7 w-7">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
                             </div>
+                        </div>
 
-                            {/* Individual Combinations */}
-                            <div className="max-h-[300px] overflow-y-auto">
-                                <table className="w-full text-sm">
-                                    <tbody>
-                                        {formation.combinations.map((comb) => {
-                                            const oddsVal = getOddsForCombination(odds, formation.betType, comb.id);
-                                            return (
-                                            <tr key={comb.id} className="border-b last:border-0 hover:bg-neutral-50 transition-colors">
-                                                <td className="py-2 px-4">
-                                                    <span className="font-mono font-bold text-lg">{comb.id}</span>
-                                                    {oddsVal && (
-                                                        <span className="ml-2 text-xs font-bold text-amber-600">{oddsVal.toFixed(1)}倍</span>
-                                                    )}
-                                                </td>
-                                                <td className="py-2 px-2 text-right">
-                                                    <div className="relative w-24 ml-auto">
-                                                        <Input
-                                                            type="number"
-                                                            className="h-8 pr-6 text-right font-bold"
-                                                            value={comb.amount || ''}
-                                                            onChange={(e) => updateCartItemAmount(formation.id, comb.id, parseInt(e.target.value) || 0)}
-                                                        />
-                                                        <span className="absolute right-2 top-1.5 text-xs text-neutral-500">円</span>
-                                                    </div>
-                                                </td>
-                                                <td className="py-2 px-2 w-10 text-center">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-neutral-400 hover:text-red-600" onClick={() => removeCombination(formation.id, comb.id)}>
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </CardContent>
-                    </Card>
+                        {/* Combinations */}
+                        <div className="max-h-[200px] overflow-y-auto divide-y divide-slate-100">
+                            {formation.combinations.map((comb) => {
+                                const oddsVal = getOddsForCombination(odds, formation.betType, comb.id);
+                                return (
+                                    <div key={comb.id} className="flex items-center px-3 py-1.5 gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <span className="font-mono font-bold text-sm">{comb.id}</span>
+                                            {oddsVal && (
+                                                <span className="ml-1.5 text-[10px] font-bold text-amber-600">{oddsVal.toFixed(1)}倍</span>
+                                            )}
+                                        </div>
+                                        <div className="relative w-20">
+                                            <Input
+                                                type="number"
+                                                className="h-7 pr-5 text-right font-bold text-xs"
+                                                value={comb.amount || ''}
+                                                onChange={(e) => updateCartItemAmount(formation.id, comb.id, parseInt(e.target.value) || 0)}
+                                            />
+                                            <span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400">円</span>
+                                        </div>
+                                        <button onClick={() => removeCombination(formation.id, comb.id)} className="text-slate-300 hover:text-red-500 p-0.5">
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 ))}
 
                 {/* Odds notice */}
