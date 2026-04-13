@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth, signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
-import { Coins } from "lucide-react";
+import { Coins, HelpCircle } from "lucide-react";
 
 import { HeaderNotifications } from "./HeaderNotifications";
 
@@ -52,6 +52,9 @@ export async function Header() {
 
                 {/* Auth / Nav Actions */}
                 <div className="flex items-center gap-3">
+                    <Link href="/guide" className="text-[#64748d] hover:text-[#533afd] transition-colors">
+                        <HelpCircle className="w-4 h-4" />
+                    </Link>
                     {session?.user ? (
                         <>
                             <Link href="/points">
