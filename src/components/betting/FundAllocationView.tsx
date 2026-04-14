@@ -5,11 +5,14 @@ import { Button } from '@/components/ui/button';
 import { unrollCombinations, BOAT_COLORS } from '@/lib/bet-logic';
 import { memo, useMemo, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+
+interface OddsMap {
+    [oddsType: string]: { data: Record<string, number>; fetchedAt: string };
+}
 
 /**
- * 金額入力だけを担当する子コンポーネント。
- * selections / activeBetType を subscribe しないので、
- * マークシート操作時に再レンダーされず input のフォーカスが維持される。
+ * 金額入力（一括用）- memo化してフォーカス維持
  */
 const AmountInput = memo(function AmountInput({
     onAmountChange,
@@ -20,7 +23,6 @@ const AmountInput = memo(function AmountInput({
     const inputRef = useRef<HTMLInputElement>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        // 全角数字→半角に変換してから数字以外を除去
         const normalized = e.target.value.replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0));
         const raw = normalized.replace(/[^0-9]/g, '');
         setText(raw);
@@ -45,13 +47,12 @@ const AmountInput = memo(function AmountInput({
                     placeholder="0"
                     onChange={handleChange}
                     onFocus={() => {
-                        // モバイルSafari対策: フォーカス時にスクロール位置を安定させる
                         setTimeout(() => {
                             inputRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
                         }, 300);
                     }}
                     style={{
-                        fontSize: '16px',       // iOS Safari の auto-zoom を防止
+                        fontSize: '16px',
                         touchAction: 'manipulation',
                         WebkitUserSelect: 'text',
                         userSelect: 'text',
@@ -64,11 +65,38 @@ const AmountInput = memo(function AmountInput({
     );
 });
 
-export function FundAllocationView() {
+interface FundAllocationViewProps {
+    odds?: OddsMap;
+}
+
+export function FundAllocationView({ odds }: FundAllocationViewProps) {
     const { activeBetType, selections, addFormationToCart } = useBetStore();
     const [amount, setAmount] = useState(0);
+    const [mode, setMode] = useState<"bulk" | "individual">("bulk");
+    const [individualAmounts, setIndividualAmounts] = useState<Record<string, number>>({});
 
     const unrolled = useMemo(() => unrollCombinations(activeBetType, selections), [activeBetType, selections]);
+
+    // モード切替時に個別金額を初期化
+    const switchMode = (newMode: "bulk" | "individual") => {
+        if (newMode === "individual" && mode === "bulk") {
+            // 一括金額を個別に適用
+            const init: Record<string, number> = {};
+            for (const c of unrolled) {
+                init[c.id] = amount;
+            }
+            setIndividualAmounts(init);
+        }
+        setMode(newMode);
+    };
+
+    // オッズ取得
+    const getOdds = (combId: string): number | null => {
+        if (!odds) return null;
+        const entry = odds[activeBetType];
+        if (!entry?.data) return null;
+        return entry.data[combId] || null;
+    };
 
     if (unrolled.length === 0) {
         return (
@@ -78,8 +106,50 @@ export function FundAllocationView() {
         );
     }
 
+    const individualTotal = Object.values(individualAmounts).reduce((s, v) => s + v, 0);
+    const bulkTotal = unrolled.length * amount;
+    const totalAmount = mode === "bulk" ? bulkTotal : individualTotal;
+
     const handleAddToCart = () => {
-        addFormationToCart(amount);
+        if (mode === "individual") {
+            // 個別金額でカートに追加
+            const { activeBetType: bt, selections: sel } = useBetStore.getState();
+            const combs = unrollCombinations(bt, sel);
+            if (combs.length === 0) return;
+
+            const combinationsWithAmount = combs.map(c => ({
+                ...c,
+                amount: individualAmounts[c.id] || 0,
+            }));
+
+            const generateId = () => Math.random().toString(36).substring(2, 9);
+            const newFormation = {
+                id: generateId(),
+                betType: bt,
+                selections: JSON.parse(JSON.stringify(sel)),
+                combinations: combinationsWithAmount,
+                totalExpectedAmount: 0,
+                isIndividualAmount: true,
+            };
+
+            useBetStore.setState((state) => ({
+                cart: [...state.cart, newFormation],
+                selections: { first: [], second: [], third: [] },
+            }));
+
+            const total = combinationsWithAmount.reduce((s, c) => s + c.amount, 0);
+            const { toast } = require('sonner');
+            toast.success(`カートに追加しました（${combs.length}点）`, {
+                position: 'top-center',
+                description: `${total > 0 ? `${total.toLocaleString()}円` : '金額未設定'}`,
+                duration: 2000,
+            });
+
+            setIndividualAmounts({});
+            setMode("bulk");
+        } else {
+            addFormationToCart(amount);
+        }
     };
 
     return (
@@ -93,41 +163,139 @@ export function FundAllocationView() {
                 </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pb-2 pr-2 custom-scrollbar">
-                {unrolled.map((comb) => (
-                    <div key={comb.id} className="flex justify-center items-center border border-slate-200 rounded-lg py-1.5 px-2 bg-white shadow-sm font-mono text-base font-bold text-slate-700">
-                        {comb.id.split(/[-=]/).map((n, i, arr) => {
-                            const colorObj = BOAT_COLORS.find(c => c.no === Number(n));
+            {/* モード切替 */}
+            <div className="flex bg-slate-100 rounded-md p-0.5 w-fit">
+                <button
+                    onClick={() => switchMode("bulk")}
+                    className={cn(
+                        "text-[11px] font-bold px-3 py-1.5 rounded transition-all",
+                        mode === "bulk" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"
+                    )}
+                >
+                    一括金額
+                </button>
+                <button
+                    onClick={() => switchMode("individual")}
+                    className={cn(
+                        "text-[11px] font-bold px-3 py-1.5 rounded transition-all",
+                        mode === "individual" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"
+                    )}
+                >
+                    個別設定
+                </button>
+            </div>
+
+            {mode === "bulk" ? (
+                <>
+                    {/* 買い目一覧（コンパクト） */}
+                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pb-2 pr-2">
+                        {unrolled.map((comb) => (
+                            <div key={comb.id} className="flex justify-center items-center border border-slate-200 rounded-lg py-1.5 px-2 bg-white shadow-sm font-mono text-base font-bold text-slate-700">
+                                {comb.id.split(/[-=]/).map((n, i, arr) => {
+                                    const colorObj = BOAT_COLORS.find(c => c.no === Number(n));
+                                    return (
+                                        <span key={i} className="flex items-center">
+                                            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${colorObj?.colorCls || 'bg-slate-200 text-slate-800'}`}>
+                                                {n}
+                                            </span>
+                                            {i < arr.length - 1 && <span className="mx-0.5 text-neutral-300">-</span>}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col gap-4">
+                        <AmountInput onAmountChange={setAmount} />
+                        <div className="flex justify-between items-center py-2 px-1">
+                            <span className="text-sm font-bold text-slate-500">合計ベット額</span>
+                            <span className="text-2xl font-black text-blue-700 tracking-tight">{bulkTotal.toLocaleString()}<span className="text-sm font-bold ml-0.5">円</span></span>
+                            <span className="text-xs text-slate-400 ml-1">({unrolled.length}点 × {amount.toLocaleString()}円)</span>
+                        </div>
+                    </div>
+                </>
+            ) : (
+                <>
+                    {/* 個別設定モード */}
+                    <div className="flex flex-col gap-1 max-h-[400px] overflow-y-auto">
+                        {unrolled.map((comb) => {
+                            const oddsVal = getOdds(comb.id);
+                            const amt = individualAmounts[comb.id] || 0;
                             return (
-                                <span key={i} className="flex items-center">
-                                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${colorObj?.colorCls || 'bg-slate-200 text-slate-800'}`}>
-                                        {n}
-                                    </span>
-                                    {i < arr.length - 1 && <span className="mx-0.5 text-neutral-300">-</span>}
-                                </span>
+                                <div key={comb.id} className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                                    {/* 買い目番号 */}
+                                    <div className="flex items-center gap-0.5 min-w-[70px]">
+                                        {comb.id.split(/[-=]/).map((n, i, arr) => {
+                                            const colorObj = BOAT_COLORS.find(c => c.no === Number(n));
+                                            return (
+                                                <span key={i} className="flex items-center">
+                                                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${colorObj?.colorCls || 'bg-slate-200 text-slate-800'}`}>
+                                                        {n}
+                                                    </span>
+                                                    {i < arr.length - 1 && <span className="mx-0.5 text-neutral-300 text-xs">-</span>}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* オッズ */}
+                                    <div className="min-w-[50px] text-right">
+                                        {oddsVal ? (
+                                            <span className="text-[11px] font-bold text-amber-600">{oddsVal.toFixed(1)}倍</span>
+                                        ) : (
+                                            <span className="text-[10px] text-slate-300">-</span>
+                                        )}
+                                    </div>
+
+                                    {/* 金額入力 */}
+                                    <div className="flex-1 flex items-center justify-end">
+                                        <div className="relative w-24">
+                                            <input
+                                                type="number"
+                                                inputMode="numeric"
+                                                value={amt || ''}
+                                                onChange={(e) => {
+                                                    const v = parseInt(e.target.value) || 0;
+                                                    setIndividualAmounts(prev => ({ ...prev, [comb.id]: v }));
+                                                }}
+                                                placeholder="0"
+                                                style={{ fontSize: '16px' }}
+                                                className="w-full h-8 pr-6 text-right font-bold text-sm border border-slate-200 rounded-md px-2 appearance-none outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
+                                            />
+                                            <span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400">円</span>
+                                        </div>
+                                    </div>
+                                </div>
                             );
                         })}
                     </div>
-                ))}
-            </div>
 
-            <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col gap-4">
-                <AmountInput onAmountChange={setAmount} />
+                    {/* オッズ注意書き */}
+                    {odds && Object.keys(odds).length > 0 && odds[activeBetType] && (
+                        <div className="text-center">
+                            <p className="text-[10px] text-amber-500">
+                                参考オッズ（{new Date(odds[activeBetType].fetchedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}時点） / 確定オッズとは異なります
+                            </p>
+                        </div>
+                    )}
 
-                <div className="flex justify-between items-center py-2 px-1">
-                    <span className="text-sm font-bold text-slate-500">合計ベット額</span>
-                    <span className="text-2xl font-black text-blue-700 tracking-tight">{(unrolled.length * amount).toLocaleString()}<span className="text-sm font-bold ml-0.5">円</span></span>
-                    <span className="text-xs text-slate-400 ml-1">({unrolled.length}点 × {amount.toLocaleString()}円)</span>
-                </div>
+                    <div className="pt-2 border-t border-slate-100">
+                        <div className="flex justify-between items-center py-2 px-1">
+                            <span className="text-sm font-bold text-slate-500">合計ベット額</span>
+                            <span className="text-2xl font-black text-blue-700 tracking-tight">{individualTotal.toLocaleString()}<span className="text-sm font-bold ml-0.5">円</span></span>
+                        </div>
+                    </div>
+                </>
+            )}
 
-                <Button
-                    className="w-full font-bold bg-blue-600 hover:bg-blue-700 h-14 text-lg rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:shadow-none"
-                    onClick={handleAddToCart}
-                    disabled={amount <= 0}
-                >
-                    カートに追加
-                </Button>
-            </div>
+            <Button
+                className="w-full font-bold bg-blue-600 hover:bg-blue-700 h-14 text-lg rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:shadow-none"
+                onClick={handleAddToCart}
+                disabled={totalAmount <= 0}
+            >
+                カートに追加
+            </Button>
         </div>
     );
 }
