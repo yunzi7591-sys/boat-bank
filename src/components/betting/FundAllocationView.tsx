@@ -252,12 +252,13 @@ export function FundAllocationView({ odds }: FundAllocationViewProps) {
                                     <div className="flex-1 flex items-center justify-end">
                                         <div className="relative w-24">
                                             <input
-                                                type="number"
+                                                type="text"
                                                 inputMode="numeric"
+                                                pattern="[0-9]*"
                                                 value={amt || ''}
                                                 onChange={(e) => {
-                                                    const v = parseInt(e.target.value) || 0;
-                                                    setIndividualAmounts(prev => ({ ...prev, [comb.id]: v }));
+                                                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                                                    setIndividualAmounts(prev => ({ ...prev, [comb.id]: parseInt(raw) || 0 }));
                                                 }}
                                                 placeholder="0"
                                                 style={{ fontSize: '16px' }}
