@@ -660,6 +660,33 @@ async function saveRaceResult(
         refundedBoats: number[];
     }
 ) {
+    // 返還艇が新たに追加された場合、精算済みベットをリセットして再精算させる
+    if (resultData.refundedBoats.length > 0) {
+        const existing = await prisma.raceResult.findUnique({
+            where: { placeName_raceNumber_raceDate: { placeName, raceNumber, raceDate } },
+            select: { refunds: true },
+        });
+        const oldRefunds: number[] = (existing?.refunds as number[]) || [];
+        const newRefunds = resultData.refundedBoats.filter(b => !oldRefunds.includes(b));
+
+        if (newRefunds.length > 0) {
+            console.log(`[SYNC] ⚠️ ${placeName} R${raceNumber}: 新たな返還艇検出 [${newRefunds}] → 精算済みベットをリセット`);
+            // 精算済みのベットをリセット（再精算させる）
+            await prisma.prediction.updateMany({
+                where: { placeName, raceNumber, raceDate, isSettled: true },
+                data: { isSettled: false, isHit: false, hitAmount: 0, refundAmount: 0, resultChecked: false },
+            });
+            await prisma.userBet.updateMany({
+                where: { placeName, raceNumber, raceDate, isSettled: true },
+                data: { isSettled: false, isHit: false, hitAmount: 0, refundAmount: 0 },
+            });
+            await prisma.eventBet.updateMany({
+                where: { placeName, raceNumber, raceDate, isSettled: true },
+                data: { isSettled: false, isHit: false, hitAmount: 0, refundAmount: 0 },
+            });
+        }
+    }
+
     await prisma.$transaction(async (tx) => {
         await tx.raceResult.upsert({
             where: {
