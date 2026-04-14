@@ -595,12 +595,14 @@ export async function scrapeSingleRaceResult(placeName: string, raceNumber: numb
     const third = arrivalsData.find(a => a.place === 3)?.boatNumber || arrivalsData[2].boatNumber;
 
     // --- Parse Refunds ---
+    // 返還セクション: <th>返還</th> を含むテーブル内の numberSet1_number を取得
     const refunds: number[] = [];
-    $('div.grid_unit tbody tr').each((_, tr) => {
-        if ($(tr).text().includes('返還')) {
-            $(tr).find('span.numberSet1_number').each((_, span) => {
+    $('table').each((_, table) => {
+        const headerText = $(table).find('th').text();
+        if (headerText.includes('返還')) {
+            $(table).find('span.numberSet1_number').each((_, span) => {
                 const num = parseInt($(span).text().trim(), 10);
-                if (!isNaN(num) && !refunds.includes(num)) {
+                if (!isNaN(num) && num >= 1 && num <= 6 && !refunds.includes(num)) {
                     refunds.push(num);
                 }
             });
