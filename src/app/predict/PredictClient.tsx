@@ -162,7 +162,7 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
                         </div>
 
                         <div className="mt-8">
-                            <FundAllocationView />
+                            <FundAllocationView odds={odds} />
                         </div>
                     </div>
                 ) : (
