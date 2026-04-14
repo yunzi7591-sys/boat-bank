@@ -122,11 +122,13 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                 <span className="text-[10px] font-semibold text-slate-500">{formation.combinations.length}点</span>
                                 <div className="relative w-20">
                                     <Input
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
                                         placeholder="一括"
                                         className="h-6 pr-6 text-right font-bold text-[11px] px-1.5"
                                         value={formation.isIndividualAmount ? '' : (formation.totalExpectedAmount || '')}
-                                        onChange={(e) => updateCartFormationAmount(formation.id, parseInt(e.target.value) || 0)}
+                                        onChange={(e) => updateCartFormationAmount(formation.id, parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)}
                                     />
                                     <span className="absolute right-1.5 top-1 text-[9px] text-slate-400">円</span>
                                 </div>
@@ -150,10 +152,12 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                         </div>
                                         <div className="relative w-24 shrink-0">
                                             <Input
-                                                type="number"
+                                                type="text"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
                                                 className="h-7 pr-6 text-right font-bold text-xs"
                                                 value={comb.amount || ''}
-                                                onChange={(e) => updateCartItemAmount(formation.id, comb.id, parseInt(e.target.value) || 0)}
+                                                onChange={(e) => updateCartItemAmount(formation.id, comb.id, parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)}
                                             />
                                             <span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400">円</span>
                                         </div>
