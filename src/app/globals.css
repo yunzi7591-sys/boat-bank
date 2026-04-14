@@ -123,4 +123,13 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* 数値入力のスピナー（上下ボタン）を非表示 */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
 }
