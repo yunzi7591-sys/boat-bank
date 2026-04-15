@@ -75,7 +75,7 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
                     if (comb.id === officialPayout.numbers) {
                         isHit = true;
                         // 例: 払戻金1540円(100円あたり)で 500pt 賭けていたら -> (1540 / 100) * 500 = 7700pt
-                        const winPayout = Math.floor((officialPayout.amount / 100) * comb.amount);
+                        const winPayout = Math.round((officialPayout.amount / 100) * comb.amount);
                         totalWinAmount += winPayout;
                     }
                 }
@@ -135,7 +135,7 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
             const officialPayouts = payoutsList.filter(p => p.type === bet.betType);
             for (const payout of officialPayouts) {
                 if (bet.combination === payout.numbers) {
-                    hitAmount = Math.floor((payout.amount / 100) * bet.betAmount);
+                    hitAmount = Math.round((payout.amount / 100) * bet.betAmount);
                     isHit = true;
                 }
             }
@@ -204,7 +204,7 @@ export async function settleEventBets(placeName: string, raceNumber: number, rac
             const officialPayouts = payoutsList.filter(p => p.type === bet.betType);
             for (const payout of officialPayouts) {
                 if (bet.combination === payout.numbers) {
-                    hitAmount = Math.floor((payout.amount / 100) * bet.betAmount);
+                    hitAmount = Math.round((payout.amount / 100) * bet.betAmount);
                     isHit = true;
                 }
             }
