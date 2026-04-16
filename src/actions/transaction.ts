@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { calculatePointDeduction } from "@/lib/points";
+import { sendPushNotification } from "@/lib/push";
 
 export async function unlockPrediction(predictionId: string) {
     const session = await auth();
@@ -14,7 +15,7 @@ export async function unlockPrediction(predictionId: string) {
     const userId = session.user.id;
 
     try {
-        await prisma.$transaction(async (tx) => {
+        const txResult = await prisma.$transaction(async (tx) => {
             // 1. Get the prediction
             const prediction = await tx.prediction.findUnique({
                 where: { id: predictionId },
@@ -105,16 +106,15 @@ export async function unlockPrediction(predictionId: string) {
                 },
             });
 
-            // Create notification for seller
-            const buyer = await tx.user.findUnique({ where: { id: userId }, select: { name: true } });
-            await tx.notification.create({
-                data: {
-                    userId: prediction.authorId,
-                    type: "SALE",
-                    message: `${buyer?.name || '誰か'}さんがあなたの予想を購入しました（+${prediction.price}pt）`,
-                }
-            });
+            const buyerName = (await tx.user.findUnique({ where: { id: userId }, select: { name: true } }))?.name;
+            return { buyerName, authorId: prediction.authorId, price: prediction.price };
         });
+
+        // プッシュ通知（トランザクション外で非同期送信）
+        if (txResult.authorId) {
+            const message = `${txResult.buyerName || '誰か'}さんがあなたの予想を購入しました（+${txResult.price}pt）`;
+            sendPushNotification(txResult.authorId, "SALE", message, `/predictions/${predictionId}`).catch(() => {});
+        }
 
         // 5. Revalidate page to re-render Server Component state
         revalidatePath(`/predictions/${predictionId}`);
