@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LineChart, Search, User as UserIcon, Trophy } from "lucide-react";
+import { Home, LineChart, Bell, User as UserIcon, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -12,7 +12,7 @@ export function BottomNav() {
   const navItems = [
     { name: "ホーム", href: "/", icon: Home },
     { name: "マーケット", href: "/market", icon: LineChart },
-    { name: "検索", href: "/search", icon: Search },
+    { name: "通知", href: "/notifications", icon: Bell },
     { name: "ランキング", href: "/ranking", icon: Trophy },
     { name: "マイページ", href: "/mypage", icon: UserIcon },
   ];

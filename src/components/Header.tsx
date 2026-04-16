@@ -4,8 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Coins, HelpCircle } from "lucide-react";
 
-import { HeaderNotifications } from "./HeaderNotifications";
-import { PushNotificationManager } from "./PushNotificationManager";
 
 export async function Header() {
     const session = await auth();
@@ -33,11 +31,6 @@ export async function Header() {
         }
     }
 
-    const notifications = session?.user?.id ? await prisma.notification.findMany({
-        where: { userId: session.user.id },
-        orderBy: { createdAt: 'desc' },
-        take: 20
-    }) : [];
 
     return (
         <header className="bg-white text-[#061b31] sticky top-0 z-50 border-b border-[#e5edf5]">
@@ -76,8 +69,6 @@ export async function Header() {
                                 </Link>
                             )}
 
-                            <PushNotificationManager />
-                            <HeaderNotifications notifications={notifications} />
                         </>
                     ) : (
                         <div className="flex items-center gap-2">
