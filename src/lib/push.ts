@@ -1,11 +1,20 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
 
-webpush.setVapidDetails(
-    "mailto:support@boatbank.jp",
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!,
-);
+let vapidConfigured = false;
+
+function ensureVapid() {
+    if (vapidConfigured) return true;
+    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const privateKey = process.env.VAPID_PRIVATE_KEY;
+    if (!publicKey || !privateKey) {
+        console.warn("[Push] VAPID keys not configured, skipping push notification");
+        return false;
+    }
+    webpush.setVapidDetails("mailto:support@boatbank.jp", publicKey, privateKey);
+    vapidConfigured = true;
+    return true;
+}
 
 /**
  * 特定ユーザーにプッシュ通知を送信し、同時にDB通知も作成する
@@ -21,7 +30,9 @@ export async function sendPushNotification(
         data: { userId, type, message },
     });
 
-    // 2. プッシュ通知を送信
+    // 2. プッシュ通知を送信（VAPID未設定ならスキップ）
+    if (!ensureVapid()) return { sent: 0, total: 0 };
+
     const subscriptions = await prisma.pushSubscription.findMany({
         where: { userId },
     });
