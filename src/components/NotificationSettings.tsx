@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ShoppingCart, Megaphone } from "lucide-react";
+import { ShoppingCart, Megaphone, ChevronDown } from "lucide-react";
 import { updateNotificationSettings } from "@/actions/notification";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
 export function NotificationSettings({ initialSettings }: NotificationSettingsProps) {
     const [settings, setSettings] = useState(initialSettings);
     const [isPending, startTransition] = useTransition();
+    const [open, setOpen] = useState(false);
 
     const handleChange = (key: keyof typeof settings, value: boolean) => {
         const newSettings = { ...settings, [key]: value };
@@ -53,40 +54,52 @@ export function NotificationSettings({ initialSettings }: NotificationSettingsPr
     };
 
     return (
-        <div className="divide-y divide-[#f1f5f9]">
-            <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#533afd]/10 text-[#533afd]">
-                        <ShoppingCart className="w-4 h-4" />
-                    </div>
-                    <div>
-                        <p className="text-sm font-bold text-[#061b31]">予想が購入された時</p>
-                        <p className="text-[11px] text-[#94a3b8]">有料・無料どちらも通知</p>
-                    </div>
-                </div>
-                <Toggle
-                    checked={settings.notifySale}
-                    onChange={(v) => handleChange("notifySale", v)}
-                    disabled={isPending}
-                />
-            </div>
+        <div>
+            <button
+                onClick={() => setOpen(!open)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+            >
+                <span className="text-sm font-bold text-[#061b31]">通知設定</span>
+                <ChevronDown className={cn("w-4 h-4 text-[#94a3b8] transition-transform", open && "rotate-180")} />
+            </button>
 
-            <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-amber-50 text-amber-600">
-                        <Megaphone className="w-4 h-4" />
+            {open && (
+                <div className="divide-y divide-[#f1f5f9] animate-in slide-in-from-top-2 fade-in duration-200">
+                    <div className="flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#533afd]/10 text-[#533afd]">
+                                <ShoppingCart className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-[#061b31]">予想が購入された時</p>
+                                <p className="text-[11px] text-[#94a3b8]">有料・無料どちらも通知</p>
+                            </div>
+                        </div>
+                        <Toggle
+                            checked={settings.notifySale}
+                            onChange={(v) => handleChange("notifySale", v)}
+                            disabled={isPending}
+                        />
                     </div>
-                    <div>
-                        <p className="text-sm font-bold text-[#061b31]">フォロー中の人が予想を公開</p>
-                        <p className="text-[11px] text-[#94a3b8]">新しい予想が出た時に通知</p>
+
+                    <div className="flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-amber-50 text-amber-600">
+                                <Megaphone className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-[#061b31]">フォロー中の人が予想を公開</p>
+                                <p className="text-[11px] text-[#94a3b8]">新しい予想が出た時に通知</p>
+                            </div>
+                        </div>
+                        <Toggle
+                            checked={settings.notifyNewPrediction}
+                            onChange={(v) => handleChange("notifyNewPrediction", v)}
+                            disabled={isPending}
+                        />
                     </div>
                 </div>
-                <Toggle
-                    checked={settings.notifyNewPrediction}
-                    onChange={(v) => handleChange("notifyNewPrediction", v)}
-                    disabled={isPending}
-                />
-            </div>
+            )}
         </div>
     );
 }
