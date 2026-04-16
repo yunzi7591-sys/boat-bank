@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /mypage/
+Disallow: /predict/
+Disallow: /check-email/
+Disallow: /verify-email/
+Disallow: /reset-password/
+Disallow: /forgot-password/
+
+Sitemap: https://boatbank.jp/sitemap.xml
