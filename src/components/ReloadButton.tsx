@@ -1,27 +1,31 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { RotateCw } from "lucide-react";
-import { useState } from "react";
+import { useTransition } from "react";
+import { RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function ReloadButton({ className }: { className?: string }) {
     const router = useRouter();
-    const [spinning, setSpinning] = useState(false);
+    const [isPending, startTransition] = useTransition();
 
-    const handleReload = () => {
-        setSpinning(true);
-        router.refresh();
-        setTimeout(() => setSpinning(false), 1000);
+    const handleRefresh = () => {
+        if (isPending) return;
+        startTransition(() => {
+            router.refresh();
+        });
+        toast.success("最新の情報に更新しました", { duration: 2000 });
     };
 
     return (
         <button
-            onClick={handleReload}
-            className={cn("p-1.5 rounded-lg hover:bg-black/10 active:scale-90 transition-all", className)}
-            aria-label="更新"
+            onClick={handleRefresh}
+            disabled={isPending}
+            className={cn("p-1 rounded-full hover:bg-slate-200/50 transition-colors disabled:opacity-50", className)}
+            aria-label="最新データに更新"
         >
-            <RotateCw className={cn("w-4 h-4", spinning && "animate-spin")} />
+            <RefreshCw className={cn("w-3.5 h-3.5", isPending && "animate-spin")} />
         </button>
     );
 }
