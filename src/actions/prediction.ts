@@ -126,7 +126,7 @@ export async function publishPrediction(data: {
             });
 
             // フォロワーに通知
-            await notifyFollowers(userId, data.placeName, data.raceNumber, prediction.id);
+            notifyFollowers(userId, data.placeName, data.raceNumber, prediction.id).catch(() => {});
             return { success: true, predictionId: prediction.id };
         }
 
