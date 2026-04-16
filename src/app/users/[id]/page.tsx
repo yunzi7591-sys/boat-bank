@@ -74,7 +74,7 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
             {/* Header Profile */}
             <div className="bg-[#1c1e54] text-white p-6 pb-12 rounded-b-lg shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] relative overflow-hidden">
                 <div className="max-w-4xl mx-auto">
-                    <Link href="/" className="inline-flex items-center gap-1 text-white/60 hover:text-white text-sm mb-3">
+                    <Link href={currentUserId === userId ? "/mypage" : "/"} className="inline-flex items-center gap-1 text-white/60 hover:text-white text-sm mb-3">
                         <ArrowLeft className="w-4 h-4" />
                         戻る
                     </Link>
