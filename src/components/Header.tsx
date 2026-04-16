@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Coins, HelpCircle } from "lucide-react";
 
 import { HeaderNotifications } from "./HeaderNotifications";
+import { PushNotificationManager } from "./PushNotificationManager";
 
 export async function Header() {
     const session = await auth();
@@ -75,6 +76,7 @@ export async function Header() {
                                 </Link>
                             )}
 
+                            <PushNotificationManager />
                             <HeaderNotifications notifications={notifications} />
                         </>
                     ) : (

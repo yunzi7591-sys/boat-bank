@@ -6,6 +6,24 @@ import { Prisma } from "@prisma/client";
 import { calculatePointDeduction } from "@/lib/points";
 import { redirect } from "next/navigation";
 import { Formation } from "@/lib/bet-logic";
+import { sendPushToMultipleUsers } from "@/lib/push";
+
+async function notifyFollowers(authorId: string, placeName: string, raceNumber: number, predictionId: string) {
+    try {
+        const author = await prisma.user.findUnique({ where: { id: authorId }, select: { name: true } });
+        const followers = await prisma.follows.findMany({
+            where: { followingId: authorId },
+            select: { followerId: true },
+        });
+        if (followers.length === 0) return;
+
+        const followerIds = followers.map((f) => f.followerId);
+        const message = `${author?.name || "ユーザー"}さんが${placeName} ${raceNumber}Rの予想を公開しました`;
+        await sendPushToMultipleUsers(followerIds, "NEW_PREDICTION", message, `/predictions/${predictionId}`);
+    } catch (e) {
+        console.error("[notifyFollowers Error]", e);
+    }
+}
 
 export async function publishPrediction(data: {
     title: string;
@@ -107,6 +125,8 @@ export async function publishPrediction(data: {
                 return pred;
             });
 
+            // フォロワーに通知
+            await notifyFollowers(userId, data.placeName, data.raceNumber, prediction.id);
             return { success: true, predictionId: prediction.id };
         }
 
@@ -129,6 +149,8 @@ export async function publishPrediction(data: {
             },
         });
 
+        // フォロワーに通知
+        await notifyFollowers(userId, data.placeName, data.raceNumber, prediction.id);
         return { success: true, predictionId: prediction.id };
     } catch (e: any) {
         console.error("[publishPrediction Error]", e);
