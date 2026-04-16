@@ -1,13 +1,20 @@
 {
     "name": "BOAT BANK",
     "short_name": "BOAT BANK",
-    "description": "ガチ予想のマーケットプレイス＆収支管理アプリ",
+    "description": "競艇のガチ予想マーケットプレイス＆収支管理アプリ",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
-    "background_color": "#0f172a",
-    "theme_color": "#0f172a",
+    "background_color": "#ffffff",
+    "theme_color": "#533afd",
     "orientation": "portrait-primary",
+    "categories": ["sports", "finance"],
     "icons": [
+        {
+            "src": "/favicon-96x96.png",
+            "sizes": "96x96",
+            "type": "image/png"
+        },
         {
             "src": "/icon-192x192.png",
             "sizes": "192x192",
@@ -17,6 +24,32 @@
             "src": "/icon-512x512.png",
             "sizes": "512x512",
             "type": "image/png"
+        },
+        {
+            "src": "/icon-512x512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "マーケット",
+            "short_name": "マーケット",
+            "url": "/market",
+            "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "マイページ",
+            "short_name": "マイページ",
+            "url": "/mypage",
+            "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "ランキング",
+            "short_name": "ランキング",
+            "url": "/ranking",
+            "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
         }
     ]
 }
