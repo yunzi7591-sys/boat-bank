@@ -33,7 +33,7 @@ export async function Header() {
 
 
     return (
-        <header className="bg-white text-[#061b31] sticky top-0 z-50 border-b border-[#e5edf5]">
+        <header className="bg-white text-[#061b31] sticky top-0 z-50 border-b border-[#e5edf5]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
             <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
 
                 {/* Logo / Home Link */}
