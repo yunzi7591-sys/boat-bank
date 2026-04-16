@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { calculatePointDeduction } from "@/lib/points";
 import { redirect } from "next/navigation";
 import { Formation } from "@/lib/bet-logic";
-import { sendPushToMultipleUsers } from "@/lib/push";
+import { sendPushNotification, sendPushToMultipleUsers } from "@/lib/push";
 
 async function notifyFollowers(authorId: string, placeName: string, raceNumber: number, predictionId: string) {
     try {
@@ -206,6 +206,15 @@ export async function ridePrediction(predictionId: string) {
                 originalPredictionId: original.id,
             }
         });
+
+        // 著者に通知
+        const buyer = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+        sendPushNotification(
+            original.authorId,
+            "SALE",
+            `${buyer?.name || '誰か'}さんがあなたの無料予想を購入しました`,
+            `/predictions/${predictionId}`,
+        ).catch(() => {});
 
         return { success: true, predictionId: ride.id };
     } catch (e: any) {
