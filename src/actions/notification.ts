@@ -18,5 +18,24 @@ export async function markNotificationsAsRead() {
         }
     });
 
-    revalidatePath('/', 'layout'); // Revalidate header across all pages
+    revalidatePath('/', 'layout');
+}
+
+export async function updateNotificationSettings(settings: {
+    notifySale: boolean;
+    notifyNewPrediction: boolean;
+}) {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false };
+
+    await prisma.user.update({
+        where: { id: session.user.id },
+        data: {
+            notifySale: settings.notifySale,
+            notifyNewPrediction: settings.notifyNewPrediction,
+        },
+    });
+
+    revalidatePath('/notifications');
+    return { success: true };
 }

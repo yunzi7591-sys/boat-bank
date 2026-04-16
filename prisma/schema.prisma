@@ -25,7 +25,11 @@ model User {
   role          String    @default("BUYER")
   bio           String?   // 自己紹介
   link          String?   // プロフィールリンク（URL）
-  
+
+  // 通知設定
+  notifySale          Boolean @default(true)  // 予想が購入された時
+  notifyNewPrediction Boolean @default(true)  // フォロー中の人が予想を公開した時
+
   // Relations
   accounts      Account[]
   sessions      Session[]
