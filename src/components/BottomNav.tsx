@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LineChart, Bell, User as UserIcon, Trophy } from "lucide-react";
+import { Home, LineChart, Search, Bell, User as UserIcon, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -12,8 +12,9 @@ export function BottomNav() {
   const navItems = [
     { name: "ホーム", href: "/", icon: Home },
     { name: "マーケット", href: "/market", icon: LineChart },
-    { name: "通知", href: "/notifications", icon: Bell },
+    { name: "検索", href: "/search", icon: Search },
     { name: "ランキング", href: "/ranking", icon: Trophy },
+    { name: "通知", href: "/notifications", icon: Bell },
     { name: "マイページ", href: "/mypage", icon: UserIcon },
   ];
 
@@ -34,7 +35,7 @@ export function BottomNav() {
               prefetch={true}
               aria-label={item.name}
               className={cn(
-                "relative flex flex-col items-center justify-center w-16 h-full transition-colors",
+                "relative flex flex-col items-center justify-center w-14 h-full transition-colors",
                 isActive ? "text-[#533afd]" : "text-[#64748d]"
               )}
             >
