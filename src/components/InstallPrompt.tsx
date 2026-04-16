@@ -3,32 +3,38 @@
 import { useState, useEffect } from "react";
 import { Download, X, Share } from "lucide-react";
 
+function isDismissed() {
+    try {
+        const dismissed = localStorage.getItem("pwa-install-dismissed");
+        return dismissed ? Date.now() - parseInt(dismissed) < 7 * 24 * 60 * 60 * 1000 : false;
+    } catch {
+        return false;
+    }
+}
+
 export function InstallPrompt() {
     const [show, setShow] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
     useEffect(() => {
-        // 既にPWAとして動作中なら非表示
+        // 既にPWAとして動作中 or 7日以内に閉じた場合は非表示
         if (window.matchMedia("(display-mode: standalone)").matches) return;
-
-        // 閉じてから7日間は非表示
-        const dismissed = localStorage.getItem("pwa-install-dismissed");
-        if (dismissed && Date.now() - parseInt(dismissed) < 7 * 24 * 60 * 60 * 1000) return;
+        if (isDismissed()) return;
 
         const ua = navigator.userAgent;
         const ios = /iPad|iPhone|iPod/.test(ua);
         setIsIOS(ios);
 
         if (ios) {
-            // iOSではbeforeinstallpromptが発火しないので手動表示
             setTimeout(() => setShow(true), 3000);
         } else {
-            // Android/Chrome: beforeinstallpromptイベントを待つ
             const handler = (e: Event) => {
                 e.preventDefault();
                 setDeferredPrompt(e);
-                setTimeout(() => setShow(true), 3000);
+                if (!isDismissed()) {
+                    setTimeout(() => setShow(true), 3000);
+                }
             };
             window.addEventListener("beforeinstallprompt", handler);
             return () => window.removeEventListener("beforeinstallprompt", handler);
@@ -46,7 +52,7 @@ export function InstallPrompt() {
 
     const handleDismiss = () => {
         setShow(false);
-        localStorage.setItem("pwa-install-dismissed", Date.now().toString());
+        try { localStorage.setItem("pwa-install-dismissed", Date.now().toString()); } catch {}
     };
 
     if (!show) return null;
