@@ -66,6 +66,11 @@ export async function publishPrediction(data: {
     // Calculate total bet amount
     const betAmount = data.cartData.reduce((sum, f) => sum + f.combinations.reduce((sub, c) => sub + c.amount, 0), 0);
 
+    // 予想公開の1レース上限: 10万円
+    if (betAmount > 100_000) {
+        throw new Error("1レースあたりの合計金額は10万円までです。");
+    }
+
     // Convert cart to JSON string
     const predictedNumbersStr = JSON.stringify(data.cartData);
 
