@@ -442,9 +442,11 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                                     : '外部サイトへの誘導を公開しました'
                                                             );
                                                             router.push(`/predictions/${res.predictionId}`);
+                                                        } else {
+                                                            setError(res?.error || '公開に失敗しました');
                                                         }
                                                     } catch (err: any) {
-                                                        setError(err.message || '公開に失敗しました');
+                                                        setError('公開に失敗しました');
                                                     }
                                                 });
                                             }}
