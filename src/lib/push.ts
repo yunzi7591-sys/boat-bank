@@ -17,6 +17,21 @@ function ensureVapid() {
 }
 
 /**
+ * ユーザーの通知設定をチェックして、この通知タイプを受け取るか判定
+ */
+async function shouldNotify(userId: string, type: string): Promise<boolean> {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { notifySale: true, notifyNewPrediction: true },
+    });
+    if (!user) return false;
+
+    if (type === "SALE" && !user.notifySale) return false;
+    if (type === "NEW_PREDICTION" && !user.notifyNewPrediction) return false;
+    return true;
+}
+
+/**
  * 特定ユーザーにプッシュ通知を送信し、同時にDB通知も作成する
  */
 export async function sendPushNotification(
@@ -25,6 +40,9 @@ export async function sendPushNotification(
     message: string,
     url?: string,
 ) {
+    // 0. 通知設定チェック
+    if (!(await shouldNotify(userId, type))) return { sent: 0, total: 0 };
+
     // 1. DB通知を作成
     await prisma.notification.create({
         data: { userId, type, message },
