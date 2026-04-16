@@ -10,6 +10,7 @@ import { ProfileEditModal } from "@/components/mypage/ProfileEditModal";
 import { AccountSettings } from "@/components/mypage/AccountSettings";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
+import { ReloadButton } from "@/components/ReloadButton";
 import { PredictionList } from "@/components/mypage/PredictionList";
 
 export default async function MyPage() {
@@ -97,14 +98,17 @@ export default async function MyPage() {
             <div className="bg-[#1c1e54] text-white p-6 pb-12 rounded-b-lg shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] relative overflow-hidden">
                 <div className="max-w-4xl mx-auto">
                     <div className="mb-3">
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-lg font-light tracking-tight">{user.name}</h1>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-lg font-light tracking-tight">{user.name}</h1>
                             {user.role === 'ADMIN' && (
                                 <span className="text-[9px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">公式</span>
                             )}
                             {user.role === 'MONITOR' && (
                                 <span className="text-[9px] font-black bg-sky-400 text-sky-900 px-1.5 py-0.5 rounded">モニター</span>
                             )}
+                            </div>
+                            <ReloadButton className="text-white/60" />
                         </div>
                     </div>
 

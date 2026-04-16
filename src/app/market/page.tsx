@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarketFeed } from "@/components/market/MarketFeed";
 import { Globe, Users } from "lucide-react";
+import { ReloadButton } from "@/components/ReloadButton";
 
 export const revalidate = 0;
 
@@ -49,7 +50,10 @@ export default async function MarketPage() {
     return (
         <div className="min-h-full pb-20">
             <div className="bg-white border-b border-[#e5edf5] px-4 pt-5 pb-2 sticky top-[56px] z-40">
-                <h1 className="text-xl font-light text-[#061b31] mb-4">マーケット</h1>
+                <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-xl font-light text-[#061b31]">マーケット</h1>
+                    <ReloadButton className="text-[#64748d]" />
+                </div>
 
                 <Tabs defaultValue="all" className="w-full">
                     <TabsList className="w-full h-10 bg-[#f6f8fa] p-1 rounded-lg">
