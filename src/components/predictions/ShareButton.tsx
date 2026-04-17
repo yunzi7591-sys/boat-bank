@@ -13,9 +13,9 @@ type Props = {
 
 function buildShareText(placeName?: string, raceNumber?: number) {
     if (placeName && raceNumber) {
-        return `${placeName} ${raceNumber}R の予想🚤\n競艇予想マーケットプレイス BOAT BANK\n\n#競艇 #ボートレース #ボートレース${placeName} #${placeName}${raceNumber}R #BOATBANK`;
+        return `${placeName} ${raceNumber}R の予想🚤`;
     }
-    return `競艇予想マーケットプレイス BOAT BANK\n\n#競艇 #ボートレース #BOATBANK`;
+    return "BOAT BANK の予想🚤";
 }
 
 export function ShareButton({ title, urlPath, placeName, raceNumber }: Props) {

@@ -19,7 +19,7 @@ export function SharePromoModal() {
     const predictionId = payload?.predictionId ?? "";
 
     const shareUrl = `https://boatbank.jp/predictions/${predictionId}`;
-    const shareText = `${placeName} ${raceNumber}R の予想を購入しました🚤\n競艇予想マーケットプレイス BOAT BANK\n\n#競艇 #ボートレース #ボートレース${placeName} #${placeName}${raceNumber}R #BOATBANK`;
+    const shareText = `${placeName} ${raceNumber}R の予想を購入しました🚤`;
     const intentUrl = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
 
     const handleShare = async () => {
