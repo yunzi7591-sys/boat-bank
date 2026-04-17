@@ -3,6 +3,7 @@ import { auth, signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Coins, HelpCircle } from "lucide-react";
+import { checkAndUpdateLoginStreak } from "@/lib/login-streak";
 
 
 export async function Header() {
@@ -11,6 +12,7 @@ export async function Header() {
     let userPoints = 0;
     let eventPoints: number | null = null;
     if (session?.user?.id) {
+        await checkAndUpdateLoginStreak(session.user.id);
         const dbUser = await prisma.user.findUnique({
             where: { id: session.user.id },
             select: { points: true, dailyPoints: true }
