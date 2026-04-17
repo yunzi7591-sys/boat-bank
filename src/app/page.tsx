@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Trophy, ChevronRight } from "lucide-react";
 import { BOAT_COLORS } from "@/lib/bet-logic";
 import { VenueGrid } from "@/components/dashboard/VenueGrid";
-import { A8Banner } from "@/components/ads/A8Banner";
+import { A8Banner, A8_BANNER_BOTTOM, A8_BANNER_MIDDLE } from "@/components/ads/A8Banner";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -71,6 +71,9 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* A8 広告バナー（中間） */}
+      <A8Banner {...A8_BANNER_MIDDLE} />
+
       {/* 4. Latest Results */}
       <div className="mt-5 px-4">
         <div className="flex items-center justify-between mb-3">
@@ -103,8 +106,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* A8 広告バナー */}
-      <A8Banner />
+      {/* A8 広告バナー（下部） */}
+      <A8Banner {...A8_BANNER_BOTTOM} />
 
       <div className="mt-8 pb-4 px-4 flex items-center justify-center gap-4 text-[10px] text-[#64748d]">
         <Link href="/privacy" className="hover:text-[#533afd]">プライバシーポリシー</Link>
