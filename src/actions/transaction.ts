@@ -55,7 +55,8 @@ export async function unlockPrediction(predictionId: string) {
                         predictionId,
                     },
                 });
-                return { success: true };
+                const buyerName = (await tx.user.findUnique({ where: { id: userId }, select: { name: true } }))?.name;
+                return { buyerName, authorId: prediction.authorId, price: 0 };
             }
 
             // 2. Get the current user points
@@ -112,7 +113,9 @@ export async function unlockPrediction(predictionId: string) {
 
         // プッシュ通知（トランザクション外で非同期送信）
         if (txResult.authorId) {
-            const message = `${txResult.buyerName || '誰か'}さんがあなたの予想を購入しました（+${txResult.price}pt）`;
+            const message = txResult.price === 0
+                ? `${txResult.buyerName || '誰か'}さんがあなたの無料予想を購入しました`
+                : `${txResult.buyerName || '誰か'}さんがあなたの予想を購入しました（+${txResult.price}pt）`;
             sendPushNotification(txResult.authorId, "SALE", message, `/predictions/${predictionId}`).catch(() => {});
         }
 
