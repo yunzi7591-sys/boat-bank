@@ -23,7 +23,7 @@ export function A8Banner({ href, imgSrc, pixelSrc, width, height }: A8BannerProp
           alt=""
           src={imgSrc}
           className="rounded-lg block w-full h-auto"
-          style={{ aspectRatio: `${width} / ${height}` }}
+          style={{ aspectRatio: `${width} / ${Math.round(height * 1.3)}` }}
         />
       </a>
       {/* eslint-disable-next-line @next/next/no-img-element */}
