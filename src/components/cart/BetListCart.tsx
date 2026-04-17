@@ -120,17 +120,17 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                             <div className="flex items-center gap-1.5">
                                 <span className="font-bold text-[10px] bg-blue-100 text-blue-800 px-1.5 py-px rounded">{formation.betType}</span>
                                 <span className="text-[10px] font-semibold text-slate-500">{formation.combinations.length}点</span>
-                                <div className="relative w-20">
-                                    <Input
+                                <div className="w-24 flex items-center bg-white border border-slate-200 rounded-md h-6 focus-within:border-blue-400">
+                                    <input
                                         type="text"
                                         inputMode="numeric"
                                         pattern="[0-9]*"
                                         placeholder="一括"
-                                        className="h-6 pr-9 text-right font-bold text-[11px] px-1.5"
+                                        className="flex-1 w-0 h-full text-right font-bold text-[11px] px-1.5 bg-transparent outline-none border-0"
                                         value={formation.isIndividualAmount ? '' : (formation.totalExpectedAmount ? Math.floor(formation.totalExpectedAmount / 100) : '')}
                                         onChange={(e) => updateCartFormationAmount(formation.id, (parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0) * 100)}
                                     />
-                                    <span className="absolute right-1.5 top-1 text-[9px] text-slate-400 whitespace-nowrap select-none">00円</span>
+                                    <span className="text-[11px] font-bold text-slate-400 pr-1.5 whitespace-nowrap select-none">00円</span>
                                 </div>
                             </div>
                             <button onClick={() => removeFormation(formation.id)} className="text-slate-300 hover:text-red-500 p-0.5">
@@ -150,16 +150,16 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                 <span className="ml-1.5 text-[10px] font-bold text-amber-600">{oddsVal.toFixed(1)}倍</span>
                                             )}
                                         </div>
-                                        <div className="relative w-24 shrink-0">
-                                            <Input
+                                        <div className="w-28 shrink-0 flex items-center bg-white border border-slate-200 rounded-md h-7 focus-within:border-blue-400">
+                                            <input
                                                 type="text"
                                                 inputMode="numeric"
                                                 pattern="[0-9]*"
-                                                className="h-7 pr-10 text-right font-bold text-xs"
+                                                className="flex-1 w-0 h-full text-right font-bold text-xs px-2 bg-transparent outline-none border-0"
                                                 value={comb.amount > 0 ? Math.floor(comb.amount / 100) : ''}
                                                 onChange={(e) => updateCartItemAmount(formation.id, comb.id, (parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0) * 100)}
                                             />
-                                            <span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400 whitespace-nowrap select-none">00円</span>
+                                            <span className="text-xs font-bold text-slate-400 pr-2 whitespace-nowrap select-none">00円</span>
                                         </div>
                                         <button onClick={() => removeCombination(formation.id, comb.id)} className="text-slate-300 hover:text-red-500 p-0.5">
                                             <Trash2 className="w-3.5 h-3.5" />

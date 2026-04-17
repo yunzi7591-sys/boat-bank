@@ -250,7 +250,7 @@ export function FundAllocationView({ odds }: FundAllocationViewProps) {
 
                                     {/* 金額入力 */}
                                     <div className="flex-1 flex items-center justify-end">
-                                        <div className="relative w-24">
+                                        <div className="w-28 flex items-center bg-white border border-slate-200 rounded-md focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-200">
                                             <input
                                                 type="text"
                                                 inputMode="numeric"
@@ -262,9 +262,9 @@ export function FundAllocationView({ odds }: FundAllocationViewProps) {
                                                 }}
                                                 placeholder="0"
                                                 style={{ fontSize: '16px' }}
-                                                className="w-full h-8 pr-10 text-right font-bold text-sm border border-slate-200 rounded-md px-2 appearance-none outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
+                                                className="flex-1 w-0 h-8 text-right font-bold text-sm bg-transparent px-2 appearance-none outline-none border-0"
                                             />
-                                            <span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400 whitespace-nowrap select-none">00円</span>
+                                            <span className="text-sm font-bold text-slate-400 pr-2 whitespace-nowrap select-none">00円</span>
                                         </div>
                                     </div>
                                 </div>
