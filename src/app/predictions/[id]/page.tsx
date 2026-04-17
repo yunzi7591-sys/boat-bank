@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         openGraph: {
             title,
             description,
-            images: [`/api/og/prediction?id=${id}`],
+            images: [`/api/og/prediction?id=${id}&v=2`],
             type: 'article',
             siteName: 'BOAT BANK',
         },
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
             card: 'summary_large_image',
             title,
             description,
-            images: [`/api/og/prediction?id=${id}`],
+            images: [`/api/og/prediction?id=${id}&v=2`],
         },
     };
 }
