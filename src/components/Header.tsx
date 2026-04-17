@@ -3,7 +3,8 @@ import { auth, signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Coins, HelpCircle } from "lucide-react";
-import { checkAndUpdateLoginStreak } from "@/lib/login-streak";
+import { checkAndUpdateLoginStreak, LoginBonusResult } from "@/lib/login-streak";
+import { LoginBonusModal } from "@/components/LoginBonusModal";
 
 
 export async function Header() {
@@ -11,8 +12,9 @@ export async function Header() {
 
     let userPoints = 0;
     let eventPoints: number | null = null;
+    let loginBonus: LoginBonusResult | null = null;
     if (session?.user?.id) {
-        await checkAndUpdateLoginStreak(session.user.id);
+        loginBonus = await checkAndUpdateLoginStreak(session.user.id);
         const dbUser = await prisma.user.findUnique({
             where: { id: session.user.id },
             select: { points: true, dailyPoints: true }
@@ -88,6 +90,13 @@ export async function Header() {
                     )}
                 </div>
             </div>
+            {loginBonus && (
+                <LoginBonusModal
+                    streak={loginBonus.streak}
+                    dailyPoints={loginBonus.dailyPoints}
+                    isStreakUp={loginBonus.isStreakUp}
+                />
+            )}
         </header>
     );
 }

@@ -21,18 +21,24 @@ export function dailyPointsForStreak(streak: number): number {
   return 300;
 }
 
-export async function checkAndUpdateLoginStreak(userId: string) {
+export type LoginBonusResult = {
+  streak: number;
+  dailyPoints: number;
+  isStreakUp: boolean;
+};
+
+export async function checkAndUpdateLoginStreak(userId: string): Promise<LoginBonusResult | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { loginStreak: true, lastLoginDate: true, dailyPoints: true },
   });
-  if (!user) return;
+  if (!user) return null;
 
   const now = new Date();
   const todayKey = getJstDateKey(now);
   const lastKey = user.lastLoginDate ? getJstDateKey(user.lastLoginDate) : null;
 
-  if (lastKey === todayKey) return;
+  if (lastKey === todayKey) return null;
 
   let newStreak: number;
   if (!user.lastLoginDate) {
@@ -43,6 +49,7 @@ export async function checkAndUpdateLoginStreak(userId: string) {
   }
 
   const newDailyPoints = dailyPointsForStreak(newStreak);
+  const previousDailyPoints = dailyPointsForStreak(user.loginStreak);
 
   await prisma.user.update({
     where: { id: userId },
@@ -52,4 +59,10 @@ export async function checkAndUpdateLoginStreak(userId: string) {
       dailyPoints: newDailyPoints,
     },
   });
+
+  return {
+    streak: newStreak,
+    dailyPoints: newDailyPoints,
+    isStreakUp: newDailyPoints > previousDailyPoints,
+  };
 }
