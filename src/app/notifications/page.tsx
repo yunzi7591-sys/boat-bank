@@ -6,6 +6,7 @@ import { NotificationList } from "@/components/NotificationList";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PushNotificationManager } from "@/components/PushNotificationManager";
 import { InstallBanner } from "@/components/InstallBanner";
+import { A8Banner, A8_BANNER_BOTTOM } from "@/components/ads/A8Banner";
 
 export default async function NotificationsPage() {
     const session = await auth();
@@ -49,6 +50,9 @@ export default async function NotificationsPage() {
                     }}
                 />
             </div>
+
+            {/* A8 広告バナー */}
+            <A8Banner {...A8_BANNER_BOTTOM} />
 
             {/* 通知一覧 */}
             <NotificationList

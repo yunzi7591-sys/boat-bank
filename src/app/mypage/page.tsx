@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { ReloadButton } from "@/components/ReloadButton";
 import { PredictionList } from "@/components/mypage/PredictionList";
+import { A8Banner, A8_BANNER_MIDDLE } from "@/components/ads/A8Banner";
 
 export default async function MyPage() {
     const session = await auth();
@@ -190,6 +191,11 @@ export default async function MyPage() {
                         <ChevronRight className="w-5 h-5 text-[#64748d]" />
                     </div>
                 </Link>
+            </div>
+
+            {/* A8 広告バナー */}
+            <div className="max-w-4xl mx-auto mb-8">
+                <A8Banner {...A8_BANNER_MIDDLE} />
             </div>
 
             {/* Calendar PnL */}

@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarketFeed } from "@/components/market/MarketFeed";
 import { Globe, Users } from "lucide-react";
 import { ReloadButton } from "@/components/ReloadButton";
+import { A8Banner, A8_BANNER_BOTTOM } from "@/components/ads/A8Banner";
 
 export const revalidate = 0;
 
@@ -94,6 +95,9 @@ export default async function MarketPage() {
                     </div>
                 </Tabs>
             </div>
+
+            {/* A8 広告バナー */}
+            <A8Banner {...A8_BANNER_BOTTOM} />
         </div>
     );
 }
