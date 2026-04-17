@@ -28,7 +28,7 @@ export function UnlockButton({ predictionId, price, isClosed = false, placeName,
             const result = await unlockPrediction(predictionId);
             if (result?.success) {
                 const isOthers = authorId && currentUserId && authorId !== currentUserId;
-                if (isOthers && price > 0 && placeName && raceNumber) {
+                if (isOthers && placeName && raceNumber) {
                     setShowShareModal(true);
                 }
             } else {
