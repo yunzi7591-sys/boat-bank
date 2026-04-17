@@ -4,36 +4,43 @@ import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export function ShareButton({ title, urlPath }: { title: string; urlPath: string }) {
+type Props = {
+    title: string;
+    urlPath: string;
+    placeName?: string;
+    raceNumber?: number;
+};
+
+function buildShareText(placeName?: string, raceNumber?: number) {
+    if (placeName && raceNumber) {
+        return `${placeName} ${raceNumber}R の予想🚤\n競艇予想マーケットプレイス BOAT BANK\n\n#競艇 #ボートレース #ボートレース${placeName} #${placeName}${raceNumber}R #BOATBANK`;
+    }
+    return `競艇予想マーケットプレイス BOAT BANK\n\n#競艇 #ボートレース #BOATBANK`;
+}
+
+export function ShareButton({ title, urlPath, placeName, raceNumber }: Props) {
     const handleShare = async (e: React.MouseEvent) => {
-        e.preventDefault(); // Prevent navigation if placed inside a Link
+        e.preventDefault();
         e.stopPropagation();
 
         const fullUrl = `${window.location.origin}${urlPath}`;
+        const shareText = buildShareText(placeName, raceNumber);
 
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: "BOAT BANK - 予想",
-                    text: title,
+                    title: title || "BOAT BANK - 予想",
+                    text: shareText,
                     url: fullUrl,
                 });
+                return;
             } catch (error) {
-                if ((error as Error).name !== "AbortError") {
-                    copyToClipboard(fullUrl);
-                }
+                if ((error as Error).name === "AbortError") return;
             }
-        } else {
-            copyToClipboard(fullUrl);
         }
-    };
 
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text).then(() => {
-            toast.success("リンクをコピーしました", { position: 'top-center' });
-        }).catch(() => {
-            toast.error("コピーに失敗しました", { position: 'top-center' });
-        });
+        const intentUrl = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(fullUrl)}`;
+        window.open(intentUrl, "_blank", "noopener,noreferrer");
     };
 
     return (

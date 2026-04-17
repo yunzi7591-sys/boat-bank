@@ -123,7 +123,12 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                             </span>
                         </div>
                     </div>
-                    <ShareButton title={prediction.title || `${prediction.placeName}の予想`} urlPath={`/predictions/${prediction.id}`} />
+                    <ShareButton
+                        title={prediction.title || `${prediction.placeName}の予想`}
+                        urlPath={`/predictions/${prediction.id}`}
+                        placeName={prediction.placeName}
+                        raceNumber={prediction.raceNumber}
+                    />
                 </div>
 
                 <h1 className="text-2xl font-black text-slate-900 leading-tight mb-4">{prediction.title || `渾身の勝負レース`}</h1>
