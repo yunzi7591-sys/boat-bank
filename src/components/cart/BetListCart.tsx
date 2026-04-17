@@ -126,11 +126,11 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                         inputMode="numeric"
                                         pattern="[0-9]*"
                                         placeholder="一括"
-                                        className="h-6 pr-6 text-right font-bold text-[11px] px-1.5"
-                                        value={formation.isIndividualAmount ? '' : (formation.totalExpectedAmount || '')}
-                                        onChange={(e) => updateCartFormationAmount(formation.id, parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)}
+                                        className="h-6 pr-9 text-right font-bold text-[11px] px-1.5"
+                                        value={formation.isIndividualAmount ? '' : (formation.totalExpectedAmount ? Math.floor(formation.totalExpectedAmount / 100) : '')}
+                                        onChange={(e) => updateCartFormationAmount(formation.id, (parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0) * 100)}
                                     />
-                                    <span className="absolute right-1.5 top-1 text-[9px] text-slate-400">円</span>
+                                    <span className="absolute right-1.5 top-1 text-[9px] text-slate-400 whitespace-nowrap select-none">00円</span>
                                 </div>
                             </div>
                             <button onClick={() => removeFormation(formation.id)} className="text-slate-300 hover:text-red-500 p-0.5">
@@ -155,11 +155,11 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                 type="text"
                                                 inputMode="numeric"
                                                 pattern="[0-9]*"
-                                                className="h-7 pr-6 text-right font-bold text-xs"
-                                                value={comb.amount || ''}
-                                                onChange={(e) => updateCartItemAmount(formation.id, comb.id, parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)}
+                                                className="h-7 pr-10 text-right font-bold text-xs"
+                                                value={comb.amount > 0 ? Math.floor(comb.amount / 100) : ''}
+                                                onChange={(e) => updateCartItemAmount(formation.id, comb.id, (parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0) * 100)}
                                             />
-                                            <span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400">円</span>
+                                            <span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400 whitespace-nowrap select-none">00円</span>
                                         </div>
                                         <button onClick={() => removeCombination(formation.id, comb.id)} className="text-slate-300 hover:text-red-500 p-0.5">
                                             <Trash2 className="w-3.5 h-3.5" />

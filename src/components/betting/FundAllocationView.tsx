@@ -255,16 +255,16 @@ export function FundAllocationView({ odds }: FundAllocationViewProps) {
                                                 type="text"
                                                 inputMode="numeric"
                                                 pattern="[0-9]*"
-                                                value={amt || ''}
+                                                value={amt > 0 ? Math.floor(amt / 100) : ''}
                                                 onChange={(e) => {
                                                     const raw = e.target.value.replace(/[^0-9]/g, '');
-                                                    setIndividualAmounts(prev => ({ ...prev, [comb.id]: parseInt(raw) || 0 }));
+                                                    setIndividualAmounts(prev => ({ ...prev, [comb.id]: (parseInt(raw) || 0) * 100 }));
                                                 }}
                                                 placeholder="0"
                                                 style={{ fontSize: '16px' }}
-                                                className="w-full h-8 pr-6 text-right font-bold text-sm border border-slate-200 rounded-md px-2 appearance-none outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
+                                                className="w-full h-8 pr-10 text-right font-bold text-sm border border-slate-200 rounded-md px-2 appearance-none outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
                                             />
-                                            <span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400">円</span>
+                                            <span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400 whitespace-nowrap select-none">00円</span>
                                         </div>
                                     </div>
                                 </div>
