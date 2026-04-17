@@ -20,6 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://boatbank.jp"),
   title: "BOAT BANK",
   description: "ガチ予想のマーケットプレイス＆収支管理アプリ",
   manifest: "/manifest.json",
