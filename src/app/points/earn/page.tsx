@@ -26,7 +26,7 @@ export default async function EarnPointsPage() {
 
             {/* Title */}
             <div className="max-w-4xl mx-auto px-4 mb-6">
-                <h1 className="text-xl font-bold text-[#061b31]">ポイントを獲得</h1>
+                <h1 className="text-xl font-bold text-[#061b31]">ポイントの獲得方法</h1>
                 <p className="text-sm text-[#64748d] mt-1">準備中です</p>
             </div>
 

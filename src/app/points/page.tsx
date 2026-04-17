@@ -97,7 +97,7 @@ export default async function PointsPage() {
             <div className="max-w-4xl mx-auto px-4 mt-6">
                 <Link href="/points/earn">
                     <div className="bg-[#533afd] hover:bg-[#4434d4] transition-colors text-white rounded-lg h-14 flex items-center justify-center gap-2 font-bold text-base">
-                        ポイントを獲得する
+                        ポイントの獲得方法
                         <ArrowRight className="w-4 h-4" />
                     </div>
                 </Link>
