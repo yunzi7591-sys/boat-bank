@@ -18,9 +18,9 @@ export function SharePromoModal() {
     const raceNumber = payload?.raceNumber ?? 0;
     const predictionId = payload?.predictionId ?? "";
 
-    const shareText = `競艇予想マーケットプレイス BOAT BANK で${placeName} ${raceNumber}Rの予想を購入しました🚤\n\n#競艇 #ボートレース #BOATBANK`;
     const shareUrl = `https://boatbank.jp/predictions/${predictionId}`;
-    const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    const shareText = `競艇予想マーケットプレイス BOAT BANK で${placeName} ${raceNumber}Rの予想を購入しました🚤\n\n${shareUrl}\n\n#競艇 #ボートレース #BOATBANK`;
+    const intentUrl = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}`;
 
     const handleShare = async () => {
         if (!predictionId) return;
