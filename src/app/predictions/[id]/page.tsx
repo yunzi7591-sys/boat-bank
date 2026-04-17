@@ -300,7 +300,15 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                         ログイン / 新規登録
                                     </a>
                                 ) : (
-                                    <UnlockButton predictionId={prediction.id} price={prediction.price} isClosed={isClosed} />
+                                    <UnlockButton
+                                        predictionId={prediction.id}
+                                        price={prediction.price}
+                                        isClosed={isClosed}
+                                        placeName={prediction.placeName}
+                                        raceNumber={prediction.raceNumber}
+                                        authorId={prediction.authorId}
+                                        currentUserId={userId}
+                                    />
                                 )}
                             </div>
                         </div>

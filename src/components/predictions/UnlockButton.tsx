@@ -4,11 +4,22 @@ import { useState } from "react";
 import { unlockPrediction } from "@/actions/transaction";
 import { Button } from "@/components/ui/button";
 import { Lock, Loader2, Clock } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { SharePromoModal } from "@/components/predictions/SharePromoModal";
 
-export function UnlockButton({ predictionId, price, isClosed = false }: { predictionId: string, price: number, isClosed?: boolean }) {
+type Props = {
+    predictionId: string;
+    price: number;
+    isClosed?: boolean;
+    placeName?: string;
+    raceNumber?: number;
+    authorId?: string;
+    currentUserId?: string;
+};
+
+export function UnlockButton({ predictionId, price, isClosed = false, placeName, raceNumber, authorId, currentUserId }: Props) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     const handleUnlock = async () => {
         setLoading(true);
@@ -16,7 +27,10 @@ export function UnlockButton({ predictionId, price, isClosed = false }: { predic
         try {
             const result = await unlockPrediction(predictionId);
             if (result?.success) {
-                // Page gets revalidated by server action
+                const isOthers = authorId && currentUserId && authorId !== currentUserId;
+                if (isOthers && price > 0 && placeName && raceNumber) {
+                    setShowShareModal(true);
+                }
             } else {
                 setError(result?.error || "Failed to unlock prediction.");
             }
@@ -50,6 +64,16 @@ export function UnlockButton({ predictionId, price, isClosed = false }: { predic
                 <span className={`ml-2 font-black ${isClosed ? "text-slate-400" : "text-green-400"}`}>{price} pt</span>
             </Button>
             {error && <p className="text-red-500 text-sm font-semibold">{error}</p>}
+
+            {placeName && raceNumber && (
+                <SharePromoModal
+                    open={showShareModal}
+                    onClose={() => setShowShareModal(false)}
+                    predictionId={predictionId}
+                    placeName={placeName}
+                    raceNumber={raceNumber}
+                />
+            )}
         </div>
     );
 }
