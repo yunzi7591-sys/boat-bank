@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Flame, ClipboardList, Gift, Check } from "lucide-react";
+import { ArrowLeft, Flame, Check } from "lucide-react";
 import { dailyPointsForStreak } from "@/lib/login-streak";
 
 export default async function EarnPointsPage() {
@@ -20,11 +20,6 @@ export default async function EarnPointsPage() {
         { days: 1, pt: 300, label: "1〜2日目" },
         { days: 3, pt: 500, label: "3〜6日連続" },
         { days: 7, pt: 700, label: "7日連続〜" },
-    ];
-
-    const placeholders = [
-        { title: "アンケート回答", description: "簡単なアンケートに回答してポイントを獲得", icon: ClipboardList },
-        { title: "キャンペーン", description: "期間限定キャンペーンに参加してポイントを獲得", icon: Gift },
     ];
 
     return (
@@ -97,28 +92,6 @@ export default async function EarnPointsPage() {
                         ※ 1日でもログインが途切れると連続日数はリセットされます
                     </p>
                 </div>
-            </div>
-
-            {/* Placeholder Cards */}
-            <div className="max-w-4xl mx-auto px-4 flex flex-col gap-3">
-                {placeholders.map((item) => (
-                    <div
-                        key={item.title}
-                        className="bg-white border border-[#e5edf5] rounded-lg p-5 flex items-center gap-4 opacity-60"
-                        style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}
-                    >
-                        <div className="w-10 h-10 rounded-lg bg-[#f6f8fa] border border-[#e5edf5] flex items-center justify-center flex-shrink-0">
-                            <item.icon className="w-5 h-5 text-[#533afd]" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-sm font-bold text-[#061b31]">{item.title}</p>
-                            <p className="text-xs text-[#64748d] mt-0.5">{item.description}</p>
-                        </div>
-                        <span className="text-[10px] font-bold text-[#64748d] bg-[#f6f8fa] border border-[#e5edf5] px-2 py-1 rounded">
-                            COMING SOON
-                        </span>
-                    </div>
-                ))}
             </div>
         </div>
     );
