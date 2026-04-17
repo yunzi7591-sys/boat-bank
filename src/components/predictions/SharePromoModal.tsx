@@ -6,23 +6,24 @@ import { Coins, Sparkles, X as XIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { claimShareReward } from "@/actions/share";
 import { toast } from "sonner";
+import { useSharePromoStore } from "@/store/share-modal-store";
 
-type Props = {
-    open: boolean;
-    onClose: () => void;
-    predictionId: string;
-    placeName: string;
-    raceNumber: number;
-};
-
-export function SharePromoModal({ open, onClose, predictionId, placeName, raceNumber }: Props) {
+export function SharePromoModal() {
+    const payload = useSharePromoStore((s) => s.payload);
+    const close = useSharePromoStore((s) => s.close);
     const [loading, setLoading] = useState(false);
+
+    const open = payload !== null;
+    const placeName = payload?.placeName ?? "";
+    const raceNumber = payload?.raceNumber ?? 0;
+    const predictionId = payload?.predictionId ?? "";
 
     const shareText = `競艇予想マーケットプレイス BOAT BANK で${placeName} ${raceNumber}Rの予想を購入しました🚤\n\n#競艇 #ボートレース #BOATBANK`;
     const shareUrl = `https://boatbank.jp/predictions/${predictionId}`;
     const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
 
     const handleShare = async () => {
+        if (!predictionId) return;
         setLoading(true);
         try {
             window.open(intentUrl, "_blank", "noopener,noreferrer");
@@ -34,12 +35,12 @@ export function SharePromoModal({ open, onClose, predictionId, placeName, raceNu
             }
         } finally {
             setLoading(false);
-            onClose();
+            close();
         }
     };
 
     return (
-        <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+        <Dialog open={open} onOpenChange={(v) => !v && close()}>
             <DialogContent className="max-w-sm p-0 border-0 overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#334155] text-white rounded-2xl">
                 <DialogTitle className="sr-only">Xでシェアしてポイント獲得</DialogTitle>
 
@@ -115,7 +116,7 @@ export function SharePromoModal({ open, onClose, predictionId, placeName, raceNu
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.5 }}
-                        onClick={onClose}
+                        onClick={close}
                         disabled={loading}
                         className="w-full text-white/60 hover:text-white font-semibold py-2 text-sm transition-colors"
                     >

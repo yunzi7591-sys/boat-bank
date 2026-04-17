@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import { markNotificationsAsRead } from "@/actions/notification";
 import { NotificationList } from "@/components/NotificationList";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PushNotificationManager } from "@/components/PushNotificationManager";
@@ -26,7 +25,10 @@ export default async function NotificationsPage() {
 
     const unreadCount = notifications.filter((n) => !n.isRead).length;
     if (unreadCount > 0) {
-        await markNotificationsAsRead();
+        await prisma.notification.updateMany({
+            where: { userId: session.user.id, isRead: false },
+            data: { isRead: true },
+        });
     }
 
     return (

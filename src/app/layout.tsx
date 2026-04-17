@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Toaster } from "@/components/ui/sonner";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { SharePromoModal } from "@/components/predictions/SharePromoModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -76,6 +77,7 @@ export default function RootLayout({
         </main>
         <BottomNav />
         <InstallPrompt />
+        <SharePromoModal />
         <Toaster position="top-center" />
       </body>
     </html>

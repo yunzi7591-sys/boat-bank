@@ -4,7 +4,7 @@ import { useState } from "react";
 import { unlockPrediction } from "@/actions/transaction";
 import { Button } from "@/components/ui/button";
 import { Lock, Loader2, Clock } from "lucide-react";
-import { SharePromoModal } from "@/components/predictions/SharePromoModal";
+import { useSharePromoStore } from "@/store/share-modal-store";
 
 type Props = {
     predictionId: string;
@@ -19,7 +19,7 @@ type Props = {
 export function UnlockButton({ predictionId, price, isClosed = false, placeName, raceNumber, authorId, currentUserId }: Props) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [showShareModal, setShowShareModal] = useState(false);
+    const openSharePromo = useSharePromoStore((s) => s.open);
 
     const handleUnlock = async () => {
         setLoading(true);
@@ -29,7 +29,7 @@ export function UnlockButton({ predictionId, price, isClosed = false, placeName,
             if (result?.success) {
                 const isOthers = authorId && currentUserId && authorId !== currentUserId;
                 if (isOthers && placeName && raceNumber) {
-                    setShowShareModal(true);
+                    openSharePromo({ predictionId, placeName, raceNumber });
                 }
             } else {
                 setError(result?.error || "Failed to unlock prediction.");
@@ -64,16 +64,6 @@ export function UnlockButton({ predictionId, price, isClosed = false, placeName,
                 <span className={`ml-2 font-black ${isClosed ? "text-slate-400" : "text-green-400"}`}>{price} pt</span>
             </Button>
             {error && <p className="text-red-500 text-sm font-semibold">{error}</p>}
-
-            {placeName && raceNumber && (
-                <SharePromoModal
-                    open={showShareModal}
-                    onClose={() => setShowShareModal(false)}
-                    predictionId={predictionId}
-                    placeName={placeName}
-                    raceNumber={raceNumber}
-                />
-            )}
         </div>
     );
 }
