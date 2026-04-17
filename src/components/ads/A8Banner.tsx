@@ -13,7 +13,8 @@ export function A8Banner() {
           height={50}
           alt=""
           src="https://www23.a8.net/svt/bgt?aid=260417294658&wid=001&eno=01&mid=s00000021136001010000&mc=1"
-          className="rounded-lg"
+          className="rounded-lg block"
+          style={{ width: "320px", height: "50px", maxWidth: "none" }}
         />
       </a>
       {/* eslint-disable-next-line @next/next/no-img-element */}
