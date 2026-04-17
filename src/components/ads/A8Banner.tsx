@@ -6,6 +6,7 @@ export function A8Banner() {
         href="https://px.a8.net/svt/ejp?a8mat=4B1N9Q+AVR8TU+4J34+60H7L"
         rel="nofollow sponsored noopener"
         target="_blank"
+        className="block w-full"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -13,8 +14,8 @@ export function A8Banner() {
           height={50}
           alt=""
           src="https://www23.a8.net/svt/bgt?aid=260417294658&wid=001&eno=01&mid=s00000021136001010000&mc=1"
-          className="rounded-lg block"
-          style={{ width: "320px", height: "50px", maxWidth: "none" }}
+          className="rounded-lg block w-full h-auto"
+          style={{ aspectRatio: "320 / 50" }}
         />
       </a>
       {/* eslint-disable-next-line @next/next/no-img-element */}
