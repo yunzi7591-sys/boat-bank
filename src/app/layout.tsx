@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
 import { SharePromoModal } from "@/components/predictions/SharePromoModal";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -82,6 +83,9 @@ export default function RootLayout({
         <SharePromoModal />
         <Toaster position="top-center" />
       </body>
+      {process.env.NEXT_PUBLIC_GA_ID && (
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+      )}
     </html>
   );
 }
