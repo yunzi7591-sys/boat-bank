@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface EventBetItem {
     id: string;
@@ -23,7 +24,18 @@ interface DayData {
     cumulative: number;
 }
 
+const BET_TYPE_LABELS: Record<string, string> = {
+    "3TR": "3連単",
+    "3PL": "3連複",
+    "2TR": "2連単",
+    "2PL": "2連複",
+    "WIDE": "拡連複",
+    "WIN": "単勝",
+    "PLACE": "複勝",
+};
+
 export function EventBetHistory({ bets, initialPt }: { bets: EventBetItem[]; initialPt: number }) {
+    const [openKey, setOpenKey] = useState<string | null>(null);
     // 日別の収支を計算
     const { dailyData, raceGroups } = useMemo(() => {
         // レースごとにグループ化
@@ -52,6 +64,7 @@ export function EventBetHistory({ bets, initialPt }: { bets: EventBetItem[]; ini
                 pnl,
                 allSettled,
                 anyHit: items.some(i => i.isHit),
+                items,
             };
         });
 
@@ -152,19 +165,66 @@ export function EventBetHistory({ bets, initialPt }: { bets: EventBetItem[]; ini
                         {raceGroups.map(g => {
                             const dateObj = new Date(g.date);
                             const dateLabel = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+                            const isOpen = openKey === g.key;
                             return (
-                                <div key={g.key} className={`grid grid-cols-[1fr_60px_60px_60px] gap-1 text-[11px] py-1.5 rounded ${g.anyHit ? 'bg-amber-50/70' : ''}`}>
-                                    <span className="font-bold text-[#061b31]">
-                                        <span className="text-[9px] text-[#64748d] mr-1">{dateLabel}</span>
-                                        {g.placeName} {g.raceNumber}R
-                                    </span>
-                                    <span className="text-right tabular-nums text-[#64748d]">{g.totalBet.toLocaleString()}</span>
-                                    <span className="text-right tabular-nums text-[#061b31]">
-                                        {g.allSettled ? g.totalReturn.toLocaleString() : '-'}
-                                    </span>
-                                    <span className={`text-right tabular-nums font-bold ${!g.allSettled ? 'text-[#64748d]' : g.pnl > 0 ? 'text-[#533afd]' : g.pnl < 0 ? 'text-[#ea2261]' : 'text-[#64748d]'}`}>
-                                        {!g.allSettled ? '待ち' : `${g.pnl >= 0 ? '+' : ''}${g.pnl.toLocaleString()}`}
-                                    </span>
+                                <div key={g.key} className={`rounded ${g.anyHit ? 'bg-amber-50/70' : ''}`}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setOpenKey(isOpen ? null : g.key)}
+                                        className="w-full grid grid-cols-[16px_1fr_60px_60px_60px] gap-1 text-[11px] py-1.5 items-center text-left hover:bg-[#f6f8fa] transition-colors rounded px-1"
+                                    >
+                                        {isOpen ? <ChevronDown className="w-3 h-3 text-[#64748d]" /> : <ChevronRight className="w-3 h-3 text-[#64748d]" />}
+                                        <span className="font-bold text-[#061b31]">
+                                            <span className="text-[9px] text-[#64748d] mr-1">{dateLabel}</span>
+                                            {g.placeName} {g.raceNumber}R
+                                        </span>
+                                        <span className="text-right tabular-nums text-[#64748d]">{g.totalBet.toLocaleString()}</span>
+                                        <span className="text-right tabular-nums text-[#061b31]">
+                                            {g.allSettled ? g.totalReturn.toLocaleString() : '-'}
+                                        </span>
+                                        <span className={`text-right tabular-nums font-bold ${!g.allSettled ? 'text-[#64748d]' : g.pnl > 0 ? 'text-[#533afd]' : g.pnl < 0 ? 'text-[#ea2261]' : 'text-[#64748d]'}`}>
+                                            {!g.allSettled ? '待ち' : `${g.pnl >= 0 ? '+' : ''}${g.pnl.toLocaleString()}`}
+                                        </span>
+                                    </button>
+                                    {isOpen && (
+                                        <div className="px-2 pb-2 pt-1 border-t border-[#e5edf5] bg-white/60 rounded-b">
+                                            <div className="grid grid-cols-[50px_1fr_60px_60px] gap-1 text-[9px] font-bold text-[#64748d] pb-1">
+                                                <span>式別</span>
+                                                <span>買い目</span>
+                                                <span className="text-right">賭金</span>
+                                                <span className="text-right">結果</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                {g.items.map(item => {
+                                                    const total = item.hitAmount + item.refundAmount;
+                                                    const isRefund = item.refundAmount > 0;
+                                                    return (
+                                                        <div key={item.id} className="grid grid-cols-[50px_1fr_60px_60px] gap-1 text-[10px] items-center">
+                                                            <span className="text-[9px] font-bold text-[#533afd] bg-[#533afd]/10 px-1 py-0.5 rounded text-center">
+                                                                {BET_TYPE_LABELS[item.betType] || item.betType}
+                                                            </span>
+                                                            <span className="font-mono font-bold tabular-nums text-[#061b31] tracking-wider">
+                                                                {item.combination}
+                                                                {item.isSettled && (
+                                                                    item.isHit ? (
+                                                                        <span className="ml-1.5 text-[8px] font-bold text-white bg-[#533afd] px-1 py-0.5 rounded">的中</span>
+                                                                    ) : isRefund ? (
+                                                                        <span className="ml-1.5 text-[8px] font-bold text-[#ca8a04] bg-[#ca8a04]/10 px-1 py-0.5 rounded">返還</span>
+                                                                    ) : (
+                                                                        <span className="ml-1.5 text-[8px] font-bold text-[#64748d] bg-[#64748d]/10 px-1 py-0.5 rounded">外れ</span>
+                                                                    )
+                                                                )}
+                                                            </span>
+                                                            <span className="text-right tabular-nums text-[#64748d]">{item.betAmount.toLocaleString()}</span>
+                                                            <span className={`text-right tabular-nums font-bold ${!item.isSettled ? 'text-[#64748d]' : item.isHit ? 'text-[#533afd]' : isRefund ? 'text-[#ca8a04]' : 'text-[#64748d]'}`}>
+                                                                {!item.isSettled ? '待ち' : total > 0 ? total.toLocaleString() : '—'}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

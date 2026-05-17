@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 interface NewsItem {
     id: string;
@@ -40,7 +41,7 @@ export function NewsListClient({ items }: { items: NewsItem[] }) {
                         </h2>
                         <div
                             className="text-sm text-[#374151] leading-relaxed [&_a]:text-[#533afd] [&_a]:underline [&_a]:hover:text-[#3b1ff0]"
-                            dangerouslySetInnerHTML={{ __html: news.content }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(news.content) }}
                         />
                     </div>
                 ))}

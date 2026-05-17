@@ -4,10 +4,14 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Toaster } from "@/components/ui/sonner";
-import { InstallPrompt } from "@/components/InstallPrompt";
 import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
 import { SharePromoModal } from "@/components/predictions/SharePromoModal";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { RevenueCatInit } from "@/components/RevenueCatInit";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { auth } from "@/auth";
+import { HideOnLp, MainWrapper } from "@/components/layout/ChromeWrapper";
+import { KeyboardScrollFix } from "@/components/KeyboardScrollFix";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,6 +52,12 @@ export const metadata: Metadata = {
     title: "BOAT BANK",
     description: "ガチ予想のマーケットプレイス＆収支管理アプリ",
   },
+  alternates: {
+    canonical: "https://boatbank.jp",
+  },
+  verification: {
+    google: "WZcSVEsSVyYU5GuElmykK_T3Dj2_yL8rXqHGKJKu7kQ",
+  },
 };
 
 export const viewport = {
@@ -55,36 +65,39 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  colorScheme: "light",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+  const userId = session?.user?.id ?? null;
   return (
     <html lang="ja">
-      <head>
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6719163751249094"
-          crossOrigin="anonymous"
-        />
-      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-white text-[#061b31] pb-16`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col bg-white text-[#061b31]`}
+        style={{ height: '100dvh', overflow: 'hidden' }}
       >
-        <Header />
-        <main className="flex-1 w-full relative max-w-md mx-auto bg-white min-h-[100dvh]" style={{boxShadow: 'rgba(50,50,93,0.25) 0px 30px 45px -30px, rgba(0,0,0,0.1) 0px 18px 36px -18px'}}>
-          {children}
-        </main>
-        <BottomNav />
-        <InstallPrompt />
-        <PushPermissionPrompt />
+        <HideOnLp>
+          <Header />
+        </HideOnLp>
+        <ServiceWorkerRegister />
+        <RevenueCatInit userId={userId} />
+        <KeyboardScrollFix />
+        <MainWrapper>{children}</MainWrapper>
+        <HideOnLp>
+          <BottomNav />
+        </HideOnLp>
+        <HideOnLp>
+          <PushPermissionPrompt isLoggedIn={Boolean(userId)} />
+        </HideOnLp>
         <SharePromoModal />
         <Toaster position="top-center" />
-        {process.env.NEXT_PUBLIC_GA_ID && (
-          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        {process.env.NEXT_PUBLIC_GA_ID?.trim() && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID.trim()} />
         )}
       </body>
     </html>

@@ -23,6 +23,10 @@
 # misc
 .DS_Store
 *.pem
+*.p8
+*.db
+*.sqlite
+*.sqlite3
 
 # debug
 npm-debug.log*
@@ -43,3 +47,34 @@ next-env.d.ts
 /src/generated/prisma
 .env*.local
 public/.next
+
+# Capacitor - iOS
+ios/App/Pods
+ios/App/build
+ios/DerivedData
+ios/App/App/public
+ios/App/App/capacitor.config.json
+ios/App/App/capacitor.config.js
+
+# Capacitor - Android
+android/.gradle
+android/build
+android/app/build
+android/app/src/main/assets/public
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/local.properties
+android/.idea
+*.iml
+
+# Capacitor build/SPM artifacts
+ios/App/.next/
+ios/App/CapApp-SPM/
+
+# Claude Code worktrees (local scratch areas)
+.claude/worktrees/
+
+# Promo (nested node project with its own deps)
+promo/node_modules/
+promo/.next/
+promo/out/

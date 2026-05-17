@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { syncOfficialGradeAndDay } from '@/lib/boatrace-api';
+import { verifyCronAuth } from "@/lib/cron-auth";
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // 2 minutes
@@ -7,14 +8,8 @@ export const maxDuration = 120; // 2 minutes
 export async function GET(request: Request) {
     try {
         // Validate Cron Secret
-        const authHeader = request.headers.get('authorization');
-        const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
-
-        if (process.env.NODE_ENV === 'production') {
-            if (authHeader !== expectedAuth) {
-                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-            }
-        }
+        const _auth = verifyCronAuth(request);
+        if (!_auth.ok) return _auth.response;
 
         console.log("[CRON] Starting schedule grade/day supplementation...");
 
@@ -33,6 +28,6 @@ export async function GET(request: Request) {
         });
     } catch (e: any) {
         console.error('[CRON SCHEDULE SUPPLEMENT ERROR]', e);
-        return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+        return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
     }
 }

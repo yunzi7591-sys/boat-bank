@@ -98,6 +98,7 @@ export function NotificationSettings({ initialSettings }: NotificationSettingsPr
                             disabled={isPending}
                         />
                     </div>
+
                 </div>
             )}
         </div>

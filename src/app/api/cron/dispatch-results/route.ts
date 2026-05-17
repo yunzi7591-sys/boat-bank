@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { Client } from '@upstash/qstash';
 import { getUnsyncedRaces } from '@/lib/boatrace-api';
+import { verifyCronAuth } from "@/lib/cron-auth";
+import { withCronMutex } from "@/lib/cron-mutex";
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -10,15 +12,10 @@ const BATCH_LIMIT = 20;
 export async function GET(request: Request) {
     try {
         // 認証チェック
-        const authHeader = request.headers.get('authorization');
-        const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
+        const _auth = verifyCronAuth(request);
+        if (!_auth.ok) return _auth.response;
 
-        if (process.env.NODE_ENV === 'production') {
-            if (authHeader !== expectedAuth) {
-                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-            }
-        }
-
+        const result = await withCronMutex("dispatch-results", 50, async () => {
         // 未同期レースを取得
         const unsyncedRaces = await getUnsyncedRaces(BATCH_LIMIT);
 
@@ -83,8 +80,14 @@ export async function GET(request: Request) {
             syncedCount: syncRes.count,
             settlementCount,
         });
+        });
+
+        if (result && typeof result === "object" && "skipped" in result) {
+            return NextResponse.json({ success: true, skipped: result.reason });
+        }
+        return result as NextResponse;
     } catch (e: any) {
         console.error('[DISPATCH ERROR]', e);
-        return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+        return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
     }
 }

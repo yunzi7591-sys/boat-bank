@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { syncAndSaveSingleResult } from '@/lib/boatrace-api';
 import { settleRacePredictions } from '@/lib/evaluate';
+import { verifyCronAuth } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -8,12 +9,15 @@ export const maxDuration = 30;
 export async function POST(request: Request) {
     try {
         // 認証: x-cron-secret ヘッダー（QStash経由）または Authorization ヘッダー（手動）
-        if (process.env.NODE_ENV === 'production') {
+        const secret = process.env.CRON_SECRET;
+        if (!secret) {
+            if (process.env.NODE_ENV === 'production') {
+                return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+            }
+        } else {
             const cronSecret = request.headers.get('x-cron-secret');
             const authHeader = request.headers.get('authorization');
-            const expected = process.env.CRON_SECRET;
-
-            if (cronSecret !== expected && authHeader !== `Bearer ${expected}`) {
+            if (cronSecret !== secret && authHeader !== `Bearer ${secret}`) {
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
             }
         }
@@ -21,8 +25,8 @@ export async function POST(request: Request) {
         const data = await request.json();
         return await processRace(data);
     } catch (e: any) {
-        console.error('[QUEUE WORKER ERROR]', e);
-        return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+        console.error('[QUEUE WORKER ERROR]', e?.message, e?.stack);
+        return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
     }
 }
 
@@ -37,13 +41,8 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Missing params: placeName, raceNumber, raceDate' }, { status: 400 });
     }
 
-    // 開発環境のみ許可
-    if (process.env.NODE_ENV === 'production') {
-        const authHeader = request.headers.get('authorization');
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-    }
+    const _auth = verifyCronAuth(request);
+    if (!_auth.ok) return _auth.response;
 
     return await processRace({
         placeName,
@@ -59,7 +58,22 @@ async function processRace(data: { placeName: string; raceNumber: number; raceDa
     console.log(`[QUEUE] Processing ${placeName} R${raceNumber}...`);
 
     // 1. 結果取得 + 保存（スクレイピング優先 + APIフォールバック）
-    await syncAndSaveSingleResult(placeName, raceNumber, raceDate);
+    try {
+        await syncAndSaveSingleResult(placeName, raceNumber, raceDate);
+    } catch (syncErr: any) {
+        // 結果未発表のレースは想定内 → 200 で返し QStash のリトライ暴発を防ぐ
+        const msg = syncErr?.message || '';
+        const isNotReady = /着順データ不足|払戻・返還データなし|両方失敗/.test(msg);
+        if (isNotReady) {
+            console.log(`[QUEUE] ${placeName} R${raceNumber}: 結果未発表のためスキップ (${msg})`);
+            return NextResponse.json({
+                success: true,
+                race: `${placeName} R${raceNumber}`,
+                notReady: true,
+            });
+        }
+        throw syncErr;
+    }
 
     // 2. 精算処理
     try {

@@ -1,12 +1,14 @@
 "use client";
 
 import { ShoppingCart, UserPlus, Megaphone, Info } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 interface NotificationItem {
     id: string;
     message: string;
     type: string;
+    url?: string | null;
     isRead: boolean;
     createdAt: string;
 }
@@ -35,12 +37,12 @@ export function NotificationList({ notifications }: { notifications: Notificatio
                 const config = typeConfig[n.type] || typeConfig.SYSTEM;
                 const Icon = config.icon;
 
-                return (
+                const content = (
                     <div
-                        key={n.id}
                         className={cn(
                             "px-4 py-3 flex items-start gap-3 transition-colors",
-                            !n.isRead && "bg-blue-50/40"
+                            !n.isRead && "bg-blue-50/40",
+                            n.url && "hover:bg-slate-50 active:bg-slate-100 cursor-pointer"
                         )}
                     >
                         <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5", config.color)}>
@@ -60,6 +62,15 @@ export function NotificationList({ notifications }: { notifications: Notificatio
                         </div>
                     </div>
                 );
+
+                if (n.url) {
+                    return (
+                        <Link key={n.id} href={n.url} className="block">
+                            {content}
+                        </Link>
+                    );
+                }
+                return <div key={n.id}>{content}</div>;
             })}
         </div>
     );

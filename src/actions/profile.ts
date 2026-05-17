@@ -20,8 +20,20 @@ export async function updateProfile(data: { name: string; bio: string; link?: st
     if (data.bio && data.bio.length > 500) {
         return { success: false, error: "自己紹介は500文字以内で入力してください。" };
     }
-    if (data.link && (data.link.length > 200 || !/^https?:\/\//.test(data.link))) {
-        return { success: false, error: "リンクは有効なURL（http/httpsで始まる200文字以内）を入力してください。" };
+    let normalizedLink: string | null = null;
+    if (data.link) {
+        if (data.link.length > 200) {
+            return { success: false, error: "リンクは200文字以内で入力してください。" };
+        }
+        try {
+            const u = new URL(data.link);
+            if (u.protocol !== "https:" && u.protocol !== "http:") {
+                return { success: false, error: "リンクはhttp/httpsで始まるURLを入力してください。" };
+            }
+            normalizedLink = u.toString();
+        } catch {
+            return { success: false, error: "有効なURLを入力してください。" };
+        }
     }
 
     try {
@@ -30,13 +42,13 @@ export async function updateProfile(data: { name: string; bio: string; link?: st
             data: {
                 name: data.name,
                 bio: data.bio,
-                link: data.link || null,
+                link: normalizedLink,
             },
         });
 
         revalidatePath("/mypage");
         return { success: true };
-    } catch (error: any) {
+    } catch (error) {
         return { success: false, error: "プロフィールの更新に失敗しました。" };
     }
 }
@@ -68,7 +80,7 @@ export async function changePassword(data: { currentPassword: string; newPasswor
             return { success: false, error: "新しいパスワードは8文字以上で入力してください。" };
         }
 
-        const hashedPassword = await bcrypt.hash(data.newPassword, 10);
+        const hashedPassword = await bcrypt.hash(data.newPassword, 12);
 
         await prisma.user.update({
             where: { id: userId },
@@ -76,7 +88,7 @@ export async function changePassword(data: { currentPassword: string; newPasswor
         });
 
         return { success: true };
-    } catch (error: any) {
+    } catch (error) {
         return { success: false, error: "パスワードの変更に失敗しました。" };
     }
 }

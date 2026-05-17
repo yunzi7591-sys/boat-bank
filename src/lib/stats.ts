@@ -428,11 +428,17 @@ async function buildRaceTypeMap(placeNameDates: { placeName: string; raceDate: D
     return raceTypeMap;
 }
 
+export type PeriodStats = {
+    all: VenueStatsWithPeriod[];
+    year: VenueStatsWithPeriod[];
+    monthly: { [key: string]: VenueStatsWithPeriod[] };
+};
+
 export async function getPrivateVenueStatsAll(userId: string): Promise<{
     all: VenueStatsWithPeriod[];
     year: VenueStatsWithPeriod[];
     monthly: { [key: string]: VenueStatsWithPeriod[] };
-    byRaceType: { [K in RaceType]: VenueStatsWithPeriod[] };
+    byRaceType: { [K in RaceType]: PeriodStats };
 }> {
     const currentYear = new Date().getFullYear();
 
@@ -457,33 +463,37 @@ export async function getPrivateVenueStatsAll(userId: string): Promise<{
         });
     }
 
-    const allStats = buildFromBets(userBets);
-    const yearBets = userBets.filter(b => b.raceDate && b.raceDate.getUTCFullYear() === currentYear);
-    const yearStats = buildFromBets(yearBets);
-
-    const monthly: { [key: string]: VenueStatsWithPeriod[] } = {};
-    for (let m = 0; m < 12; m++) {
-        const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
-        const monthBets = yearBets.filter(b => b.raceDate && b.raceDate.getUTCMonth() === m);
-        monthly[key] = buildFromBets(monthBets);
+    function buildPeriodStats(bets: typeof userBets): PeriodStats {
+        const all = buildFromBets(bets);
+        const yearBets = bets.filter(b => b.raceDate && b.raceDate.getUTCFullYear() === currentYear);
+        const year = buildFromBets(yearBets);
+        const monthly: { [key: string]: VenueStatsWithPeriod[] } = {};
+        for (let m = 0; m < 12; m++) {
+            const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
+            const monthBets = yearBets.filter(b => b.raceDate && b.raceDate.getUTCMonth() === m);
+            monthly[key] = buildFromBets(monthBets);
+        }
+        return { all, year, monthly };
     }
 
-    // raceType別
+    const overall = buildPeriodStats(userBets);
+
+    // raceType別（それぞれ通算/年/月別に分割）
     const placeNameDates = userBets
         .filter((b): b is typeof b & { placeName: string; raceDate: Date } => !!b.placeName && !!b.raceDate)
         .map(b => ({ placeName: b.placeName, raceDate: b.raceDate }));
     const raceTypeMap = await buildRaceTypeMap(placeNameDates);
 
-    const byRaceType = {} as { [K in RaceType]: VenueStatsWithPeriod[] };
+    const byRaceType = {} as { [K in RaceType]: PeriodStats };
     for (const rt of RACE_TYPES) {
         const filtered = userBets.filter(b => {
             if (!b.placeName || !b.raceDate) return false;
             return raceTypeMap.get(`${b.placeName}|${b.raceDate.toISOString()}`) === rt;
         });
-        byRaceType[rt] = buildFromBets(filtered);
+        byRaceType[rt] = buildPeriodStats(filtered);
     }
 
-    return { all: allStats, year: yearStats, monthly, byRaceType };
+    return { all: overall.all, year: overall.year, monthly: overall.monthly, byRaceType };
 }
 
 /**
@@ -493,7 +503,7 @@ export async function getPublicVenueStatsAll(userId: string): Promise<{
     all: VenueStatsWithPeriod[];
     year: VenueStatsWithPeriod[];
     monthly: { [key: string]: VenueStatsWithPeriod[] };
-    byRaceType: { [K in RaceType]: VenueStatsWithPeriod[] };
+    byRaceType: { [K in RaceType]: PeriodStats };
 }> {
     const currentYear = new Date().getFullYear();
 
@@ -517,30 +527,34 @@ export async function getPublicVenueStatsAll(userId: string): Promise<{
         });
     }
 
-    const allStats = buildFromPreds(predictions);
-    const yearPreds = predictions.filter(p => p.raceDate.getUTCFullYear() === currentYear);
-    const yearStats = buildFromPreds(yearPreds);
-
-    const monthly: { [key: string]: VenueStatsWithPeriod[] } = {};
-    for (let m = 0; m < 12; m++) {
-        const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
-        const monthPreds = yearPreds.filter(p => p.raceDate.getUTCMonth() === m);
-        monthly[key] = buildFromPreds(monthPreds);
+    function buildPeriodStats(preds: typeof predictions): PeriodStats {
+        const all = buildFromPreds(preds);
+        const yearPreds = preds.filter(p => p.raceDate.getUTCFullYear() === currentYear);
+        const year = buildFromPreds(yearPreds);
+        const monthly: { [key: string]: VenueStatsWithPeriod[] } = {};
+        for (let m = 0; m < 12; m++) {
+            const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
+            const monthPreds = yearPreds.filter(p => p.raceDate.getUTCMonth() === m);
+            monthly[key] = buildFromPreds(monthPreds);
+        }
+        return { all, year, monthly };
     }
 
-    // raceType別
+    const overall = buildPeriodStats(predictions);
+
+    // raceType別（それぞれ通算/年/月別に分割）
     const placeNameDates = predictions.map(p => ({ placeName: p.placeName, raceDate: p.raceDate }));
     const raceTypeMap = await buildRaceTypeMap(placeNameDates);
 
-    const byRaceType = {} as { [K in RaceType]: VenueStatsWithPeriod[] };
+    const byRaceType = {} as { [K in RaceType]: PeriodStats };
     for (const rt of RACE_TYPES) {
         const filtered = predictions.filter(p => {
             return raceTypeMap.get(`${p.placeName}|${p.raceDate.toISOString()}`) === rt;
         });
-        byRaceType[rt] = buildFromPreds(filtered);
+        byRaceType[rt] = buildPeriodStats(filtered);
     }
 
-    return { all: allStats, year: yearStats, monthly, byRaceType };
+    return { all: overall.all, year: overall.year, monthly: overall.monthly, byRaceType };
 }
 
 export async function getPrivateVenueStatsWithPeriod(

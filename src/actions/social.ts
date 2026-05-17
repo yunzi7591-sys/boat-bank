@@ -11,6 +11,12 @@ export async function toggleFollow(targetUserId: string) {
     const currentUserId = session.user.id;
     if (currentUserId === targetUserId) throw new Error("Cannot follow yourself");
 
+    const target = await prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: { id: true },
+    });
+    if (!target) throw new Error("User not found");
+
     const existing = await prisma.follows.findUnique({
         where: {
             followerId_followingId: {
@@ -20,29 +26,33 @@ export async function toggleFollow(targetUserId: string) {
         }
     });
 
-    if (existing) {
-        // Unfollow
-        await prisma.follows.delete({
-            where: {
-                followerId_followingId: {
+    try {
+        if (existing) {
+            await prisma.follows.delete({
+                where: {
+                    followerId_followingId: {
+                        followerId: currentUserId,
+                        followingId: targetUserId
+                    }
+                }
+            });
+        } else {
+            await prisma.follows.create({
+                data: {
                     followerId: currentUserId,
                     followingId: targetUserId
                 }
-            }
-        });
-    } else {
-        // Follow
-        await prisma.follows.create({
-            data: {
-                followerId: currentUserId,
-                followingId: targetUserId
-            }
-        });
+            });
+        }
+    } catch (e: any) {
+        if (e?.code === "P2002" || e?.code === "P2025") {
+            return { success: true, isFollowing: !existing };
+        }
+        throw e;
     }
 
-    // Revalidate paths that might show follow status or following timeline
     revalidatePath('/market');
-    revalidatePath(`/user/${targetUserId}`); // if user profiles exist
+    revalidatePath(`/users/${targetUserId}`);
     revalidatePath('/mypage');
 
     return { success: true, isFollowing: !existing };

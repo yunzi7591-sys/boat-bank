@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { settleRacePredictions } from "@/lib/evaluate";
 import { revalidatePath } from "next/cache";
+import { errorMessage } from "@/lib/errors";
 
 export async function deleteBet(betId: string) {
     const session = await auth();
@@ -71,6 +72,30 @@ export async function submitBets(payload: SubmitBetsPayload) {
 
         const raceDate = new Date(payload.raceDate);
 
+        // 2.6. Deadline guard: reject bets after the race has closed
+        const schedule = await prisma.raceSchedule.findUnique({
+            where: {
+                placeName_raceNumber_raceDate: {
+                    placeName: payload.placeName,
+                    raceNumber: payload.raceNumber,
+                    raceDate,
+                },
+            },
+            select: { deadlineAt: true },
+        });
+        // schedule が見つからない場合は不正リクエスト or 過去日のため拒否
+        if (!schedule) {
+            return { success: false, error: "対象レースが見つかりません。" };
+        }
+        if (schedule.deadlineAt < new Date()) {
+            return { success: false, error: "このレースは既に締切時刻を過ぎています。" };
+        }
+        // raceDate が過去すぎる（24時間以上前）場合も拒否
+        const now = new Date();
+        if (raceDate.getTime() < now.getTime() - 24 * 60 * 60 * 1000) {
+            return { success: false, error: "過去のレースには投票できません。" };
+        }
+
         // 3. Build data array for createMany
         const betDataArray = payload.bets.map(bet => ({
             userId,
@@ -97,14 +122,14 @@ export async function submitBets(payload: SubmitBetsPayload) {
             try {
                 await settleRacePredictions(payload.placeName, payload.raceNumber, raceDate);
                 console.log(`[Bet] Auto-settled bets for ${payload.placeName} R${payload.raceNumber}`);
-            } catch (e: any) {
-                console.warn(`[Bet] Auto-settle failed: ${e.message}`);
+            } catch (e) {
+                console.warn(`[Bet] Auto-settle failed: ${errorMessage(e)}`);
             }
         }
 
         revalidatePath('/mypage');
         return { success: true, count: result.count };
-    } catch (e: any) {
+    } catch (e) {
         console.error("[Bet Error] Failed to submit bets:", e);
         return { success: false, error: "ベットの登録に失敗しました。" };
     }

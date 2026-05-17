@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { LogOut, KeyRound } from "lucide-react";
+import { LogOut, KeyRound, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,8 +16,9 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { changePassword } from "@/actions/profile";
+import { deleteAccount } from "@/actions/account";
 
-export function AccountSettings() {
+export function AccountSettings({ hasPassword = true }: { hasPassword?: boolean }) {
     const [open, setOpen] = useState(false);
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -25,6 +26,33 @@ export function AccountSettings() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
+
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleteText, setDeleteText] = useState("");
+    const [deletePassword, setDeletePassword] = useState("");
+    const [deleteError, setDeleteError] = useState("");
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    async function handleDelete(e: React.FormEvent) {
+        e.preventDefault();
+        setDeleteError("");
+        setDeleteLoading(true);
+        try {
+            const result = await deleteAccount({
+                confirmation: deleteText,
+                password: hasPassword ? deletePassword : undefined,
+            });
+            if (result.success) {
+                window.location.href = "/";
+            } else {
+                setDeleteError(result.error || "削除に失敗しました");
+                setDeleteLoading(false);
+            }
+        } catch {
+            setDeleteError("削除に失敗しました");
+            setDeleteLoading(false);
+        }
+    }
 
     function resetForm() {
         setCurrentPassword("");
@@ -170,6 +198,77 @@ export function AccountSettings() {
                 <LogOut className="w-5 h-5 mr-3 text-red-400 group-hover:text-red-600" />
                 ログアウト
             </Button>
+
+            <Dialog open={deleteOpen} onOpenChange={(v) => { setDeleteOpen(v); if (!v) { setDeleteText(""); setDeletePassword(""); setDeleteError(""); } }}>
+                <DialogTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        className="w-full justify-start text-red-700 hover:text-red-800 hover:bg-red-50 font-medium h-12 rounded-lg group transition-all border border-red-200"
+                    >
+                        <Trash2 className="w-5 h-5 mr-3 text-red-500 group-hover:text-red-700" />
+                        アカウントを削除
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-red-700">アカウントを削除</DialogTitle>
+                        <DialogDescription className="text-[#64748d] space-y-2">
+                            <span className="block">この操作は取り消せません。以下のデータがすべて完全に削除されます。</span>
+                            <span className="block text-xs">・プロフィール、保有ポイント<br/>・予想、取引履歴、賭け履歴<br/>・フォロー関係、通知設定<br/>・サブスクリプション情報</span>
+                            <span className="block text-xs text-amber-700 bg-amber-50 p-2 rounded mt-2">
+                                ⚠️ サブスク有効中の方は、先に「サブスクリプション → 解約」を済ませてください。App Store の課金はアプリでは解約できません（iPhone「設定 → Apple ID → サブスクリプション」から）。
+                            </span>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleDelete} className="space-y-4">
+                        {hasPassword && (
+                            <div className="space-y-2">
+                                <Label htmlFor="delete-password" className="text-[#273951]">
+                                    本人確認のためパスワードを入力
+                                </Label>
+                                <Input
+                                    id="delete-password"
+                                    type="password"
+                                    value={deletePassword}
+                                    onChange={(e) => setDeletePassword(e.target.value)}
+                                    required
+                                    autoComplete="current-password"
+                                    className="border-red-200 focus-visible:border-red-500 focus-visible:ring-red-500/20"
+                                />
+                            </div>
+                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="delete-confirm" className="text-[#273951]">
+                                確認のため「<span className="font-bold">削除</span>」と入力してください
+                            </Label>
+                            <Input
+                                id="delete-confirm"
+                                type="text"
+                                value={deleteText}
+                                onChange={(e) => setDeleteText(e.target.value)}
+                                required
+                                className="border-red-200 focus-visible:border-red-500 focus-visible:ring-red-500/20"
+                            />
+                        </div>
+
+                        {deleteError && (
+                            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md border border-red-200">
+                                {deleteError}
+                            </p>
+                        )}
+
+                        <DialogFooter>
+                            <Button
+                                type="submit"
+                                disabled={deleteLoading || deleteText !== "削除" || (hasPassword && !deletePassword)}
+                                className="bg-red-600 hover:bg-red-700 text-white rounded-[4px]"
+                            >
+                                {deleteLoading ? "削除中..." : "アカウントを完全に削除する"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

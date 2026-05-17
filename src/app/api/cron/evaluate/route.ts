@@ -1,20 +1,15 @@
 import { NextResponse } from 'next/server';
 import { syncTodayResults } from '@/lib/boatrace-api';
 import { settleRacePredictions, settleAllPending } from '@/lib/evaluate';
+import { verifyCronAuth } from "@/lib/cron-auth";
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 // Phase 53: This route now scrapes results from boatrace.jp, then evaluates pending predictions.
 export async function GET(request: Request) {
-    const authHeader = request.headers.get('authorization');
-    const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
-
-    if (process.env.NODE_ENV === 'production') {
-        if (authHeader !== expectedAuth) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-    }
+    const _auth = verifyCronAuth(request);
+        if (!_auth.ok) return _auth.response;
 
     try {
         console.log("[Cron] Starting scraping-based result sync + evaluation batch...");
@@ -54,7 +49,7 @@ export async function GET(request: Request) {
         });
     } catch (error: any) {
         console.error("[Cron Error]", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
 

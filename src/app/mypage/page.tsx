@@ -5,14 +5,15 @@ import { CalendarPnLWrapper } from "@/components/mypage/CalendarPnLWrapper";
 import { notFound, redirect } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
-import { DemoEvalButton } from "@/components/mypage/DemoEvalButton";
 import { ProfileEditModal } from "@/components/mypage/ProfileEditModal";
 import { AccountSettings } from "@/components/mypage/AccountSettings";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Crown } from "lucide-react";
+import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { ReloadButton } from "@/components/ReloadButton";
 import { PredictionList } from "@/components/mypage/PredictionList";
-import { A8Banner, A8_BANNER_MIDDLE } from "@/components/ads/A8Banner";
+import { A8Banner } from "@/components/ads/A8Banner";
+import { A8_BANNER_MIDDLE } from "@/components/ads/A8BannerConfig";
 
 export default async function MyPage() {
     const session = await auth();
@@ -23,7 +24,7 @@ export default async function MyPage() {
     // Fetch full user for points
     const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { name: true, points: true, role: true, bio: true, link: true,
+        select: { name: true, points: true, role: true, bio: true, link: true, password: true,
             _count: { select: { followers: true, following: true } },
         }
     });
@@ -92,6 +93,9 @@ export default async function MyPage() {
 
     const isPositiveReturn = stats.recoveryRate >= 100;
 
+    const subscription = await getUserSubscription(userId);
+    const subActive = isSubscriptionActive(subscription);
+
     return (
         <div className="min-h-screen bg-white font-sans pb-24">
 
@@ -104,9 +108,6 @@ export default async function MyPage() {
                                 <h1 className="text-lg font-light tracking-tight">{user.name}</h1>
                             {user.role === 'ADMIN' && (
                                 <span className="text-[9px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">公式</span>
-                            )}
-                            {user.role === 'MONITOR' && (
-                                <span className="text-[9px] font-black bg-sky-400 text-sky-900 px-1.5 py-0.5 rounded">モニター</span>
                             )}
                             </div>
                             <ReloadButton className="text-white/60" />
@@ -169,6 +170,33 @@ export default async function MyPage() {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Subscription Banner — always visible */}
+            <div className="max-w-4xl mx-auto px-4 mb-6">
+                <Link href="/subscribe" className="block">
+                    <div
+                        className={`rounded-2xl p-4 flex items-center justify-between transition-transform hover:scale-[1.01] ${
+                            subActive
+                                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white"
+                                : "bg-gradient-to-r from-[#533afd] to-[#7c3aed] text-white"
+                        }`}
+                        style={{ boxShadow: "rgba(50,50,93,0.15) 0px 8px 20px -8px" }}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="bg-white/20 rounded-full p-2">
+                                <Crown className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-black tracking-tight">BOAT BANK スタンダード</h3>
+                                <p className="text-[11px] opacity-90 mt-0.5">
+                                    {subActive ? "ご利用中の会員プラン" : "初月無料・月500円で詳細分析がすべて見られる"}
+                                </p>
+                            </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 opacity-80" />
+                    </div>
+                </Link>
             </div>
 
             {/* Venue Stats Link */}
@@ -252,15 +280,9 @@ export default async function MyPage() {
 
             {/* Account Settings Menu */}
             <div className="max-w-4xl mx-auto px-4 mt-8 pb-12">
-                <AccountSettings />
+                <AccountSettings hasPassword={Boolean(user.password)} />
             </div>
 
-            {/* Admin Demo Evaluation Trigger */}
-            {user.role === 'ADMIN' && (
-                <div className="max-w-4xl mx-auto px-4 mt-6 opacity-50 hover:opacity-100 transition-opacity">
-                    <DemoEvalButton />
-                </div>
-            )}
 
         </div>
     );

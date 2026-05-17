@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TimelineCard } from "./TimelineCard";
+import type { TimelineCardPrediction } from "@/lib/types";
 
 type SortMode = "popular" | "new";
 
@@ -29,7 +30,7 @@ export function MarketFeed({
     currentUserId,
     followingIds = [],
 }: {
-    predictions: any[];
+    predictions: TimelineCardPrediction[];
     currentUserId?: string;
     followingIds?: string[];
 }) {

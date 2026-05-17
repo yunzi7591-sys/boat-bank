@@ -1,12 +1,36 @@
-User-agent: *
+# OGP プレビュー用クローラーは全URL許可（X / Facebook / LINE / Slack 等）
+User-agent: Twitterbot
 Allow: /
-Disallow: /api/
-Disallow: /admin/
-Disallow: /mypage/
-Disallow: /predict/
-Disallow: /check-email/
-Disallow: /verify-email/
-Disallow: /reset-password/
-Disallow: /forgot-password/
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: facebookcatalog
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: Slackbot-LinkExpanding
+Allow: /
+
+User-agent: Slackbot
+Allow: /
+
+User-agent: line-poker
+Allow: /
+
+User-agent: Discordbot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+# 通常クローラー（Google等）は TOP のみインデックス
+User-agent: *
+Allow: /$
+Allow: /sitemap.xml
+Allow: /robots.txt
+Disallow: /
 
 Sitemap: https://boatbank.jp/sitemap.xml

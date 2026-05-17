@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { BotIdClient } from "botid/client";
 import { RegisterForm } from "./form";
 import { Ship } from "lucide-react";
 
@@ -12,6 +13,11 @@ export default async function RegisterPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+            <BotIdClient
+                protect={[
+                    { path: "/register", method: "POST" },
+                ]}
+            />
             <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
                 <div className="bg-yellow-500 px-6 py-8 text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(45deg,rgba(255,255,255,0.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.15)_50%,rgba(255,255,255,0.15)_75%,transparent_75%,transparent)] bg-[length:20px_20px]"></div>

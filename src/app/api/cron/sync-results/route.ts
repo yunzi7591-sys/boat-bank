@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { syncTodayResults } from '@/lib/boatrace-api';
 import { settleRacePredictions } from '@/lib/evaluate';
+import { verifyCronAuth } from "@/lib/cron-auth";
+import { withCronMutex } from "@/lib/cron-mutex";
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -12,42 +14,45 @@ export const maxDuration = 300;
  */
 export async function GET(request: Request) {
     try {
-        const authHeader = request.headers.get('authorization');
-        const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
+        const _auth = verifyCronAuth(request);
+        if (!_auth.ok) return _auth.response;
 
-        if (process.env.NODE_ENV === 'production') {
-            if (authHeader !== expectedAuth) {
-                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const result = await withCronMutex("sync-results", 270, async () => {
+            console.log("[CRON] Starting batch result sync (legacy)...");
+
+            const syncRes = await syncTodayResults({});
+            if (!syncRes.success) {
+                return { success: false, error: syncRes.error, status: 500 as const };
             }
-        }
 
-        console.log("[CRON] Starting batch result sync (legacy)...");
+            const processedRaces = syncRes.processedRaces || [];
 
-        const syncRes = await syncTodayResults({});
-        if (!syncRes.success) {
-            return NextResponse.json({ success: false, error: syncRes.error }, { status: 500 });
-        }
-
-        const processedRaces = syncRes.processedRaces || [];
-
-        let settlementCount = 0;
-        for (const race of processedRaces) {
-            try {
-                const stats = await settleRacePredictions(race.placeName, race.raceNumber, race.raceDate);
-                if (stats.success) settlementCount += stats.settledCount;
-            } catch (evalErr: any) {
-                console.error(`[CRON] Settlement failed for ${race.placeName} R${race.raceNumber}:`, evalErr.message);
+            let settlementCount = 0;
+            for (const race of processedRaces) {
+                try {
+                    const stats = await settleRacePredictions(race.placeName, race.raceNumber, race.raceDate);
+                    if (stats.success) settlementCount += stats.settledCount;
+                } catch (evalErr: any) {
+                    console.error(`[CRON] Settlement failed for ${race.placeName} R${race.raceNumber}:`, evalErr.message);
+                }
             }
-        }
 
-        return NextResponse.json({
-            success: true,
-            syncedCount: syncRes.count,
-            settlementCount,
-            races: processedRaces.map(r => `${r.placeName} R${r.raceNumber}`).join(', ')
+            return {
+                success: true,
+                syncedCount: syncRes.count,
+                settlementCount,
+                races: processedRaces.map(r => `${r.placeName} R${r.raceNumber}`).join(', '),
+                status: 200 as const,
+            };
         });
+
+        if ("skipped" in result) {
+            return NextResponse.json({ success: true, skipped: result.reason });
+        }
+        const { status, ...body } = result;
+        return NextResponse.json(body, { status });
     } catch (e: any) {
         console.error('[CRON RESULT SYNC ERROR]', e);
-        return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+        return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
     }
 }

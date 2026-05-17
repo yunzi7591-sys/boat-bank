@@ -2,11 +2,8 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
-import { calculatePointDeduction } from "@/lib/points";
-import { redirect } from "next/navigation";
 import { Formation } from "@/lib/bet-logic";
-import { sendPushNotification, sendPushToMultipleUsers } from "@/lib/push";
+import { sendPushToMultipleUsers } from "@/lib/push";
 
 async function notifyFollowers(authorId: string, placeName: string, raceNumber: number, predictionId: string) {
     try {
@@ -87,17 +84,17 @@ export async function publishPrediction(data: {
 
         if (data.publishType === "external") {
             const prediction = await prisma.$transaction(async (tx) => {
-                const user = await tx.user.findUnique({ where: { id: userId } });
-                if (!user) throw new Error("ユーザーが見つかりません");
-                const deduction = calculatePointDeduction(user.points, user.dailyPoints, 100);
-                if (!deduction) {
+                // 残高条件付きUPDATEでロストアップデートを防ぐ
+                const deducted = await tx.$executeRaw`
+                    UPDATE "User"
+                    SET "dailyPoints" = GREATEST("dailyPoints" - 100, 0),
+                        "points" = "points" - GREATEST(100 - "dailyPoints", 0)
+                    WHERE id = ${userId}
+                      AND "dailyPoints" + "points" >= 100
+                `;
+                if (deducted === 0) {
                     throw new Error("ポイントが不足しています。外部サイトへの予想公開には100ptが必要です。");
                 }
-
-                await tx.user.update({
-                    where: { id: userId },
-                    data: { points: deduction.newPoints, dailyPoints: deduction.newDailyPoints },
-                });
 
                 await tx.transaction.create({
                     data: { userId, points: -100, action: "EXTERNAL_PUBLISH" },
@@ -158,67 +155,3 @@ export async function publishPrediction(data: {
     }
 }
 
-export async function ridePrediction(predictionId: string) {
-    try {
-        const session = await auth();
-        if (!session?.user?.id) {
-            return { success: false, error: "ログインが必要です。" };
-        }
-
-        const userId = session.user.id;
-
-        const original = await prisma.prediction.findUnique({
-            where: { id: predictionId },
-        });
-
-        if (!original) {
-            return { success: false, error: "元の予想が見つかりません。" };
-        }
-
-        let cartData: Formation[];
-        try {
-            cartData = typeof original.predictedNumbers === 'string'
-                ? JSON.parse(original.predictedNumbers)
-                : original.predictedNumbers as unknown as Formation[];
-        } catch {
-            return { success: false, error: "買い目データの解析に失敗しました。" };
-        }
-
-        const betAmount = cartData.reduce((sum, f) => sum + f.combinations.reduce((sub, c) => sub + c.amount, 0), 0);
-
-        if (betAmount <= 0) {
-            return { success: false, error: "この予想にはベット金額が設定されていません。" };
-        }
-
-        const ride = await prisma.prediction.create({
-            data: {
-                title: `[相乗り] ${original.title || '無題'}`,
-                commentary: "",
-                price: 0,
-                predictedNumbers: original.predictedNumbers as Prisma.InputJsonValue,
-                authorId: userId,
-                placeName: original.placeName,
-                raceNumber: original.raceNumber,
-                raceDate: original.raceDate,
-                deadlineAt: original.deadlineAt,
-                isPrivate: true,
-                betAmount: betAmount,
-                originalPredictionId: original.id,
-            }
-        });
-
-        // 著者に通知
-        const buyer = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
-        sendPushNotification(
-            original.authorId,
-            "SALE",
-            `${buyer?.name || '誰か'}さんがあなたの無料予想を購入しました`,
-            `/predictions/${predictionId}`,
-        ).catch(() => {});
-
-        return { success: true, predictionId: ride.id };
-    } catch (e: any) {
-        console.error("[ridePrediction Error]", e);
-        return { success: false, error: e.message || "相乗りに失敗しました。" };
-    }
-}

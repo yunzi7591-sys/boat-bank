@@ -4,10 +4,12 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { generateVerificationToken, generatePasswordResetToken, getPasswordResetTokenByToken } from "@/lib/tokens";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/mail";
+import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/client-ip";
 
 export async function registerUser(formData: FormData) {
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
+    const name = (formData.get("name") as string)?.trim();
+    const email = (formData.get("email") as string)?.trim().toLowerCase();
     const password = formData.get("password") as string;
 
     if (!name || !email || !password) {
@@ -16,6 +18,12 @@ export async function registerUser(formData: FormData) {
 
     if (password.length < 8) {
         return { error: "パスワードは8文字以上で入力してください" };
+    }
+
+const ip = await getClientIp();
+    const ipLimit = await rateLimit(`register:ip:${ip}`, 5, 60 * 60 * 1000);
+    if (!ipLimit.allowed) {
+        return { error: "登録の試行回数が多すぎます。しばらくしてから再度お試しください。" };
     }
 
     // Check if user already exists
@@ -38,26 +46,16 @@ export async function registerUser(formData: FormData) {
         return { success: true, needsVerification: true };
     }
 
-    // Create user and welcome bonus transaction atomically
+    // Create user without bonus — welcome bonus is granted after email verification
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    await prisma.$transaction(async (tx) => {
-        const user = await tx.user.create({
-            data: {
-                name,
-                email,
-                password: hashedPassword,
-                points: 5000, // 5,000pt Welcome Bonus!
-            },
-        });
-
-        await tx.transaction.create({
-            data: {
-                userId: user.id,
-                points: 5000,
-                action: "WELCOME_BONUS",
-            }
-        });
+    await prisma.user.create({
+        data: {
+            name,
+            email,
+            password: hashedPassword,
+            points: 0,
+        },
     });
 
     // Generate verification token and send email
@@ -87,6 +85,13 @@ export async function getUserPoints(): Promise<number> {
 export async function resendVerificationEmail(email: string) {
     if (!email) {
         return { error: "メールアドレスが必要です" };
+    }
+
+const ip = await getClientIp();
+    const ipLimit = await rateLimit(`resend-verify:ip:${ip}`, 5, 60 * 60 * 1000);
+    const emailLimit = await rateLimit(`resend-verify:email:${email}`, 3, 60 * 60 * 1000);
+    if (!ipLimit.allowed || !emailLimit.allowed) {
+        return { error: "送信回数の上限に達しました。しばらくしてから再度お試しください。" };
     }
 
     const user = await prisma.user.findUnique({
@@ -128,6 +133,13 @@ export async function resendVerificationEmail(email: string) {
 export async function requestPasswordReset(email: string) {
     if (!email) {
         return { error: "メールアドレスを入力してください" };
+    }
+
+const ip = await getClientIp();
+    const ipLimit = await rateLimit(`pwreset:ip:${ip}`, 5, 60 * 60 * 1000);
+    const emailLimit = await rateLimit(`pwreset:email:${email}`, 3, 60 * 60 * 1000);
+    if (!ipLimit.allowed || !emailLimit.allowed) {
+        return { error: "送信回数の上限に達しました。しばらくしてから再度お試しください。" };
     }
 
     const user = await prisma.user.findUnique({

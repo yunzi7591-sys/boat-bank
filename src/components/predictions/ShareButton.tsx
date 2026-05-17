@@ -23,8 +23,15 @@ export function ShareButton({ title, urlPath, placeName, raceNumber }: Props) {
         e.preventDefault();
         e.stopPropagation();
 
-        const fullUrl = `${window.location.origin}${urlPath}`;
+        const cacheBuster = Date.now().toString(36);
+        const separator = urlPath.includes("?") ? "&" : "?";
+        const fullUrl = `${window.location.origin}${urlPath}${separator}ref=${cacheBuster}`;
         const shareText = buildShareText(placeName, raceNumber);
+
+        const predictionId = urlPath.match(/\/predictions\/([^/?#]+)/)?.[1];
+        if (predictionId) {
+            fetch(`/api/og/warmup?id=${predictionId}`, { cache: "no-store" }).catch(() => {});
+        }
 
         if (navigator.share) {
             try {
@@ -39,7 +46,7 @@ export function ShareButton({ title, urlPath, placeName, raceNumber }: Props) {
             }
         }
 
-        const intentUrl = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(fullUrl)}`;
+        const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(fullUrl)}`;
         window.open(intentUrl, "_blank", "noopener,noreferrer");
     };
 

@@ -9,10 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { AppleSignInButton } from "@/components/AppleSignInButton";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 export function LoginForm() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [agreeTerms, setAgreeTerms] = useState(false);
+    const [agreePrivacy, setAgreePrivacy] = useState(false);
 
     async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -47,6 +51,14 @@ export function LoginForm() {
             setIsLoading(false);
         }
     }
+
+    const oauthBeforeSignIn = () => {
+        if (!agreeTerms || !agreePrivacy) {
+            toast.error("利用規約とプライバシーポリシーに同意してください（新規登録の場合）");
+            return false;
+        }
+        return true;
+    };
 
     return (
         <form onSubmit={onSubmit} className="space-y-4">
@@ -83,6 +95,38 @@ export function LoginForm() {
             >
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "ログイン"}
             </Button>
+
+            <div className="relative py-1">
+                <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase">
+                    <span className="bg-white px-2 text-slate-400">または</span>
+                </div>
+            </div>
+
+            <div className="space-y-3 pt-1 pb-2">
+                <p className="text-[11px] text-slate-500">
+                    Apple / Google で初めて利用される方は、以下にご同意ください
+                </p>
+                <label className="flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-slate-300 text-[#533afd] focus:ring-[#533afd]" />
+                    <span className="text-xs text-slate-600">
+                        <Link href="/terms" target="_blank" className="text-[#533afd] underline">利用規約</Link>に同意する
+                    </span>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-slate-300 text-[#533afd] focus:ring-[#533afd]" />
+                    <span className="text-xs text-slate-600">
+                        <Link href="/privacy" target="_blank" className="text-[#533afd] underline">プライバシーポリシー</Link>に同意する
+                    </span>
+                </label>
+            </div>
+
+            <div className="space-y-2">
+                <GoogleSignInButton beforeSignIn={oauthBeforeSignIn} />
+                <AppleSignInButton beforeSignIn={oauthBeforeSignIn} />
+            </div>
         </form>
     );
 }

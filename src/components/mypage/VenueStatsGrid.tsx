@@ -20,11 +20,17 @@ interface VenueStatsItem {
 
 type RaceType = "morning" | "day" | "nighter" | "midnight";
 
+interface PeriodStats {
+  all: VenueStatsItem[];
+  year: VenueStatsItem[];
+  monthly: { [key: string]: VenueStatsItem[] };
+}
+
 interface VenueStatsGridProps {
   allTimeStats: VenueStatsItem[];
   yearStats: VenueStatsItem[];
   monthlyStats: { [key: string]: VenueStatsItem[] };
-  byRaceType: { [K in RaceType]: VenueStatsItem[] };
+  byRaceType: { [K in RaceType]: PeriodStats };
 }
 
 type Period = "allTime" | "year" | "monthly";
@@ -71,23 +77,28 @@ export function VenueStatsGrid({
   const [displayMode, setDisplayMode] = useState<"recovery" | "profit">("recovery");
   const [raceTypeFilter, setRaceTypeFilter] = useState<RaceTypeFilter>("all");
 
-  const stats: VenueStatsItem[] =
+  const activePeriodSource: PeriodStats =
     raceTypeFilter !== "all"
       ? byRaceType[raceTypeFilter]
-      : period === "allTime"
-        ? allTimeStats
-        : period === "year"
-          ? yearStats
-          : (monthlyStats[getMonthKey(selectedMonth)] ?? []);
+      : { all: allTimeStats, year: yearStats, monthly: monthlyStats };
 
+  const stats: VenueStatsItem[] =
+    period === "allTime"
+      ? activePeriodSource.all
+      : period === "year"
+        ? activePeriodSource.year
+        : (activePeriodSource.monthly[getMonthKey(selectedMonth)] ?? []);
+
+  const basePeriodLabel =
+    period === "allTime"
+      ? "通算"
+      : period === "year"
+        ? "2026年"
+        : `2026年${selectedMonth}月`;
   const periodLabel =
     raceTypeFilter !== "all"
-      ? `通算 / ${RACE_TYPE_LABELS[raceTypeFilter]}`
-      : period === "allTime"
-        ? "通算"
-        : period === "year"
-          ? "2026年"
-          : `2026年${selectedMonth}月`;
+      ? `${basePeriodLabel} / ${RACE_TYPE_LABELS[raceTypeFilter]}`
+      : basePeriodLabel;
 
   function handleCellClick(item: VenueStatsItem) {
     setSelectedVenue(item);
@@ -115,14 +126,14 @@ export function VenueStatsGrid({
       </div>
 
       {/* 期間切り替えタブ */}
-      <div className={`flex gap-1 mb-3 bg-[#f1f5f9] rounded-lg p-1 ${raceTypeFilter !== "all" ? "opacity-40 pointer-events-none" : ""}`}>
+      <div className="flex gap-1 mb-3 bg-[#f1f5f9] rounded-lg p-1">
         {(Object.keys(PERIOD_LABELS) as Period[]).map((key) => (
           <button
             key={key}
             type="button"
             onClick={() => setPeriod(key)}
             className={`flex-1 text-xs font-bold py-2 rounded-md transition-colors ${
-              period === key && raceTypeFilter === "all"
+              period === key
                 ? "bg-white text-[#061b31] shadow-sm"
                 : "text-[#64748d] hover:text-[#061b31]"
             }`}

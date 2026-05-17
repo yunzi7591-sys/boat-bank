@@ -52,6 +52,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
     const [isPending, startTransition] = useTransition();
     const [isBetPending, startBetTransition] = useTransition();
     const [error, setError] = useState('');
+    const [publishDialogOpen, setPublishDialogOpen] = useState(false);
 
     // Publish type: pre-selected from parent or null
     const [publishType, setPublishType] = useState<"internal" | "external" | null>(initialPublishType || null);
@@ -81,6 +82,31 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
     const totalAmount = cart.reduce((sum, f) => {
         return sum + f.combinations.reduce((sub, c) => sub + c.amount, 0);
     }, 0);
+
+    // 合成オッズ計算: 各買い目の「的中時払戻倍率」 = (bet × odds) / totalAmount
+    const compositeOdds = (() => {
+        if (totalAmount === 0 || !odds) return null;
+        const ratios: number[] = [];
+        let hasMissing = false;
+        for (const formation of cart) {
+            for (const comb of formation.combinations) {
+                if (comb.amount <= 0) continue;
+                const o = getOddsForCombination(odds, formation.betType, comb.id);
+                if (o === null) {
+                    hasMissing = true;
+                    continue;
+                }
+                ratios.push((comb.amount * o) / totalAmount);
+            }
+        }
+        if (ratios.length === 0) return null;
+        return {
+            min: Math.min(...ratios),
+            max: Math.max(...ratios),
+            avg: ratios.reduce((a, b) => a + b, 0) / ratios.length,
+            hasMissing,
+        };
+    })();
 
     // 締切チェック: 30秒ごとに更新
     const [now, setNow] = useState(() => new Date());
@@ -181,6 +207,32 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                             </span>
                         </p>
                         <p className="text-[10px] text-amber-500 mt-0.5">確定オッズとは異なります</p>
+                    </div>
+                )}
+
+                {/* Composite Odds */}
+                {compositeOdds && (
+                    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg px-4 py-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-black text-indigo-700 tracking-wider">合成オッズ</span>
+                            {compositeOdds.hasMissing && (
+                                <span className="text-[9px] text-indigo-400 font-bold">一部オッズ未取得</span>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                                <p className="text-[9px] text-indigo-500 font-bold mb-0.5">最低</p>
+                                <p className="text-sm font-black text-indigo-900 tabular-nums">{compositeOdds.min.toFixed(2)}倍</p>
+                            </div>
+                            <div className="border-x border-indigo-200">
+                                <p className="text-[9px] text-indigo-500 font-bold mb-0.5">平均</p>
+                                <p className="text-sm font-black text-indigo-900 tabular-nums">{compositeOdds.avg.toFixed(2)}倍</p>
+                            </div>
+                            <div>
+                                <p className="text-[9px] text-indigo-500 font-bold mb-0.5">最高</p>
+                                <p className="text-sm font-black text-indigo-900 tabular-nums">{compositeOdds.max.toFixed(2)}倍</p>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -312,9 +364,10 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                 締切終了
                             </Button>
                         ) : (
-                            <Dialog onOpenChange={(open) => {
+                            <Dialog open={publishDialogOpen} onOpenChange={(open) => {
+                                setPublishDialogOpen(open);
                                 if (!open) {
-                                    setPublishType(null);
+                                    setPublishType(initialPublishType || null);
                                     setExternalUrl('');
                                     setAnalysisComment('');
                                     setExternalConsent(false);

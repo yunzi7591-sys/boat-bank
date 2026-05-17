@@ -1,17 +1,26 @@
 import webpush from "web-push";
+import apn from "@parse/node-apn";
 import { prisma } from "@/lib/prisma";
+import { getApnsProvider, getApnsBundleId } from "@/lib/apns";
 
 let vapidConfigured = false;
 
 function ensureVapid() {
     if (vapidConfigured) return true;
-    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    const privateKey = process.env.VAPID_PRIVATE_KEY;
-    if (!publicKey || !privateKey) {
+    const rawPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const rawPrivate = process.env.VAPID_PRIVATE_KEY;
+    if (!rawPublic || !rawPrivate) {
         console.warn("[Push] VAPID keys not configured, skipping push notification");
         return false;
     }
-    webpush.setVapidDetails("mailto:support@boatbank.jp", publicKey, privateKey);
+    const publicKey = rawPublic.trim().replace(/^["']|["']$/g, "");
+    const privateKey = rawPrivate.trim().replace(/^["']|["']$/g, "");
+    try {
+        webpush.setVapidDetails("mailto:support@boatbank.jp", publicKey, privateKey);
+    } catch (e) {
+        console.error("[Push] VAPID setup failed", e);
+        return false;
+    }
     vapidConfigured = true;
     return true;
 }
@@ -45,35 +54,63 @@ export async function sendPushNotification(
 
     // 1. DB通知を作成
     await prisma.notification.create({
-        data: { userId, type, message },
+        data: { userId, type, message, url: url || null },
     });
 
-    // 2. プッシュ通知を送信（VAPID未設定ならスキップ）
-    if (!ensureVapid()) return { sent: 0, total: 0 };
-
+    // 2. プッシュ通知を送信
     const subscriptions = await prisma.pushSubscription.findMany({
         where: { userId },
     });
+    if (subscriptions.length === 0) return { sent: 0, total: 0 };
 
-    const payload = JSON.stringify({
+    const webPayload = JSON.stringify({
         title: "BOAT BANK",
         body: message,
         url: url || "/",
         icon: "/icon-192x192.png",
     });
 
+    const vapidReady = ensureVapid();
+    const apnsProvider = getApnsProvider();
+
     const results = await Promise.allSettled(
         subscriptions.map(async (sub) => {
+            if (sub.platform === "ios") {
+                if (!apnsProvider) return;
+                const note = new apn.Notification();
+                note.alert = { title: "BOAT BANK", body: message };
+                note.sound = "default";
+                note.topic = getApnsBundleId();
+                if (url) note.payload = { url };
+                const deviceToken = sub.endpoint.startsWith("ios:")
+                    ? sub.endpoint.slice(4)
+                    : sub.endpoint;
+                try {
+                    const res = await apnsProvider.send(note, deviceToken);
+                    if (res.failed && res.failed.length > 0) {
+                        const reason = res.failed[0].response?.reason;
+                        if (reason === "BadDeviceToken" || reason === "Unregistered") {
+                            await prisma.pushSubscription.delete({ where: { id: sub.id } });
+                        }
+                    }
+                } catch (err) {
+                    console.error("[APNs] send failed", err);
+                    throw err;
+                }
+                return;
+            }
+
+            // Web push
+            if (!vapidReady || !sub.p256dh || !sub.auth) return;
             try {
                 await webpush.sendNotification(
                     {
                         endpoint: sub.endpoint,
                         keys: { p256dh: sub.p256dh, auth: sub.auth },
                     },
-                    payload,
+                    webPayload,
                 );
             } catch (err: any) {
-                // 410 Gone = 購読が無効化された → 削除
                 if (err.statusCode === 410 || err.statusCode === 404) {
                     await prisma.pushSubscription.delete({ where: { id: sub.id } });
                 }

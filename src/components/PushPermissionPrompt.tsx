@@ -5,8 +5,9 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Bell, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { isNativeApp, isIOS } from "@/lib/platform";
 
-const STORAGE_KEY = "push-permission-asked";
+const STORAGE_KEY = "push-permission-asked-v2";
 
 function urlBase64ToUint8Array(base64String: string) {
     const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -26,29 +27,112 @@ function isStandalone() {
     return false;
 }
 
-export function PushPermissionPrompt() {
+const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24時間
+
+export function PushPermissionPrompt({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [native, setNative] = useState(false);
 
     useEffect(() => {
-        if (!isStandalone()) return;
-        if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
-        if (Notification.permission !== "default") return;
-        try {
-            if (localStorage.getItem(STORAGE_KEY)) return;
-        } catch {}
-        const timer = setTimeout(() => setOpen(true), 1200);
-        return () => clearTimeout(timer);
-    }, []);
+        if (!isLoggedIn) return;
 
-    const close = () => {
-        try { localStorage.setItem(STORAGE_KEY, Date.now().toString()); } catch {}
+        const onNative = isNativeApp() && isIOS();
+        setNative(onNative);
+
+        // クールダウンチェック (24時間)
+        try {
+            const last = localStorage.getItem(STORAGE_KEY);
+            if (last && Date.now() - Number(last) < COOLDOWN_MS) return;
+        } catch {}
+
+        let cancelled = false;
+        (async () => {
+            if (onNative) {
+                try {
+                    const { Capacitor } = await import("@capacitor/core");
+                    if (!Capacitor.isPluginAvailable("PushNotifications")) return;
+                    const { PushNotifications } = await import("@capacitor/push-notifications");
+                    const status = await PushNotifications.checkPermissions();
+                    if (status.receive === "granted" || status.receive === "denied") return;
+                } catch {
+                    return;
+                }
+            } else {
+                if (!isStandalone()) return;
+                if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+                if (Notification.permission !== "default") return;
+            }
+            if (cancelled) return;
+            setTimeout(() => !cancelled && setOpen(true), 1200);
+        })();
+        return () => { cancelled = true; };
+    }, [isLoggedIn]);
+
+    const close = (setCooldown = true) => {
+        if (setCooldown) {
+            try { localStorage.setItem(STORAGE_KEY, Date.now().toString()); } catch {}
+        }
         setOpen(false);
     };
 
     const handleAllow = async () => {
         setLoading(true);
         try {
+            if (native) {
+                const { PushNotifications } = await import("@capacitor/push-notifications");
+
+                const perm = await PushNotifications.requestPermissions();
+                if (perm.receive !== "granted") {
+                    toast.error("通知が許可されませんでした");
+                    close();
+                    return;
+                }
+
+                let resolveToken!: (token: string) => void;
+                let rejectToken!: (err: Error) => void;
+                const tokenPromise = new Promise<string>((res, rej) => {
+                    resolveToken = res;
+                    rejectToken = rej;
+                });
+
+                const regHandle = await PushNotifications.addListener("registration", (token) => {
+                    resolveToken(token.value);
+                });
+                const errHandle = await PushNotifications.addListener("registrationError", (err) => {
+                    rejectToken(new Error(err.error || "registration error"));
+                });
+
+                const timeoutId = setTimeout(() => {
+                    rejectToken(new Error("APNs registration timeout (8s) - 古いビルドの可能性"));
+                }, 8000);
+
+                let deviceToken: string;
+                try {
+                    await PushNotifications.register();
+                    deviceToken = await tokenPromise;
+                } finally {
+                    clearTimeout(timeoutId);
+                    regHandle.remove();
+                    errHandle.remove();
+                }
+
+                const res = await fetch("/api/push/subscribe", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ platform: "ios", token: deviceToken }),
+                });
+
+                if (res.ok) {
+                    toast.success("通知をONにしました");
+                } else {
+                    toast.error("通知の設定に失敗しました");
+                }
+                setLoading(false);
+                close();
+                return;
+            }
+
             const reg = await navigator.serviceWorker.register("/sw.js");
             await navigator.serviceWorker.ready;
 
@@ -85,11 +169,14 @@ export function PushPermissionPrompt() {
             }
         } catch (e) {
             console.error("[PushPermissionPrompt]", e);
-            toast.error("通知の設定に失敗しました");
-        } finally {
+            const msg = e instanceof Error ? e.message : String(e);
+            toast.error(`通知の設定に失敗しました: ${msg.slice(0, 80)}`);
             setLoading(false);
-            close();
+            close(false);
+            return;
         }
+        setLoading(false);
+        close();
     };
 
     return (
@@ -150,7 +237,7 @@ export function PushPermissionPrompt() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.4 }}
-                        onClick={close}
+                        onClick={() => close()}
                         disabled={loading}
                         className="w-full text-white/60 hover:text-white font-semibold py-2 text-sm transition-colors"
                     >

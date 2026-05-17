@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { VENUES } from "@/lib/constants/venues";
 import * as cheerio from "cheerio";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 
 // v3 API endpoints
 const SCHEDULE_API_URL = "https://boatraceopenapi.github.io/programs/v3/today.json";
@@ -42,7 +43,7 @@ function normalizeDayLabel(label: string | undefined): string {
  */
 export async function syncTodayScheduleChunk(offset: number = 0, limit: number = 20) {
     try {
-        const res = await fetch(SCHEDULE_API_URL, { cache: 'no-store' });
+        const res = await fetchWithRetry(SCHEDULE_API_URL, { cache: 'no-store', label: 'schedule-chunk' });
         if (!res.ok) throw new Error(`API Fetch failed: ${res.status}`);
 
         const data = await res.json();
@@ -173,7 +174,7 @@ export async function syncTodaySchedule() {
 
         const schedulesAlreadySynced = existingCount > 100;
 
-        const res = await fetch(SCHEDULE_API_URL, { cache: 'no-store' });
+        const res = await fetchWithRetry(SCHEDULE_API_URL, { cache: 'no-store', label: 'schedule-full' });
         if (!res.ok) {
             console.error(`[API Error] Schedule API Fetch failed with status: ${res.status} ${res.statusText}`);
             throw new Error(`Schedule API Fetch failed: ${res.status} ${res.statusText}`);
@@ -525,7 +526,7 @@ function parseResultFromAPIData(raceResult: any) {
 export async function fetchResultFromAPI(placeName: string, raceNumber: number, raceDate: Date) {
     console.log(`[API Fallback] Fetching result for ${placeName} R${raceNumber} from results/v3...`);
 
-    const res = await fetch(RESULTS_API_URL, { cache: 'no-store' });
+    const res = await fetchWithRetry(RESULTS_API_URL, { cache: 'no-store', label: 'results-fallback' });
     if (!res.ok) throw new Error(`Result API Fetch failed: ${res.status}`);
 
     const data = await res.json();
@@ -668,34 +669,36 @@ async function saveRaceResult(
         refundedBoats: number[];
     }
 ) {
-    // 返還艇が新たに追加された場合、精算済みベットをリセットして再精算させる
-    if (resultData.refundedBoats.length > 0) {
-        const existing = await prisma.raceResult.findUnique({
+    // 返還艇判定 + RaceResult 書き込み + 関連更新を全て同一トランザクションで実行
+    await prisma.$transaction(async (tx) => {
+        // 既存の返還艇情報を取得（同じ tx 内で読む）
+        const existing = await tx.raceResult.findUnique({
             where: { placeName_raceNumber_raceDate: { placeName, raceNumber, raceDate } },
             select: { refunds: true },
         });
-        const oldRefunds: number[] = (existing?.refunds as number[]) || [];
-        const newRefunds = resultData.refundedBoats.filter(b => !oldRefunds.includes(b));
 
-        if (newRefunds.length > 0) {
-            console.log(`[SYNC] ⚠️ ${placeName} R${raceNumber}: 新たな返還艇検出 [${newRefunds}] → 精算済みベットをリセット`);
-            // 精算済みのベットをリセット（再精算させる）
-            await prisma.prediction.updateMany({
-                where: { placeName, raceNumber, raceDate, isSettled: true },
-                data: { isSettled: false, isHit: false, hitAmount: 0, refundAmount: 0, resultChecked: false },
-            });
-            await prisma.userBet.updateMany({
-                where: { placeName, raceNumber, raceDate, isSettled: true },
-                data: { isSettled: false, isHit: false, hitAmount: 0, refundAmount: 0 },
-            });
-            await prisma.eventBet.updateMany({
-                where: { placeName, raceNumber, raceDate, isSettled: true },
-                data: { isSettled: false, isHit: false, hitAmount: 0, refundAmount: 0 },
-            });
+        // 新たな返還艇を判定して、精算済みベットをリセット
+        if (resultData.refundedBoats.length > 0) {
+            const oldRefunds: number[] = (existing?.refunds as number[]) || [];
+            const newRefunds = resultData.refundedBoats.filter(b => !oldRefunds.includes(b));
+
+            if (newRefunds.length > 0) {
+                console.log(`[SYNC] ⚠️ ${placeName} R${raceNumber}: 新たな返還艇検出 [${newRefunds}] → 精算済みベットをリセット`);
+                await tx.prediction.updateMany({
+                    where: { placeName, raceNumber, raceDate, isSettled: true },
+                    data: { isSettled: false, isHit: false, hitAmount: 0, refundAmount: 0, resultChecked: false },
+                });
+                await tx.userBet.updateMany({
+                    where: { placeName, raceNumber, raceDate, isSettled: true },
+                    data: { isSettled: false, isHit: false, hitAmount: 0, refundAmount: 0 },
+                });
+                await tx.eventBet.updateMany({
+                    where: { placeName, raceNumber, raceDate, isSettled: true },
+                    data: { isSettled: false, isHit: false, hitAmount: 0, refundAmount: 0 },
+                });
+            }
         }
-    }
 
-    await prisma.$transaction(async (tx) => {
         await tx.raceResult.upsert({
             where: {
                 placeName_raceNumber_raceDate: { placeName, raceNumber, raceDate }
@@ -784,7 +787,7 @@ export async function syncAndSaveSingleResult(placeName: string, raceNumber: num
  */
 export async function getUnsyncedRaces(limit?: number) {
     const now = new Date();
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
 
     // JST基準で当日の範囲を取得
     const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
@@ -795,7 +798,7 @@ export async function getUnsyncedRaces(limit?: number) {
     return prisma.raceSchedule.findMany({
         where: {
             raceDate: { gte: todayStart, lte: todayEnd },
-            deadlineAt: { lt: fiveMinutesAgo },
+            deadlineAt: { lt: oneMinuteAgo },
             resultSynced: false,
         },
         orderBy: [{ deadlineAt: 'asc' }, { placeName: 'asc' }, { raceNumber: 'asc' }],
@@ -824,7 +827,7 @@ export async function syncTodayResults(options: { limit?: number } = {}) {
         // Phase 1: API一括取得（1リクエストで全レース分）
         let apiResultsMap = new Map<string, any>(); // "placeName-raceNumber" → raceResult
         try {
-            const res = await fetch(RESULTS_API_URL, { cache: 'no-store' });
+            const res = await fetchWithRetry(RESULTS_API_URL, { cache: 'no-store', label: 'results-bulk' });
             if (res.ok) {
                 const data = await res.json();
                 const results = data.results || [];

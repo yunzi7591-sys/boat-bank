@@ -3,11 +3,39 @@ import { prisma } from "@/lib/prisma";
 import { Trophy, ChevronRight } from "lucide-react";
 import { BOAT_COLORS } from "@/lib/bet-logic";
 import { VenueGrid } from "@/components/dashboard/VenueGrid";
-import { A8Banner, A8_BANNER_BOTTOM, A8_BANNER_MIDDLE } from "@/components/ads/A8Banner";
+import { A8Banner } from "@/components/ads/A8Banner";
+import { A8_BANNER_BOTTOM, A8_BANNER_MIDDLE } from "@/components/ads/A8BannerConfig";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
 
 export const revalidate = 60;
+
+export const metadata: Metadata = {
+    title: "BOAT BANK | 競艇予想マーケットプレイス・収支管理アプリ",
+    description:
+        "BOAT BANK は、競艇（ボートレース）の予想を売買できるマーケットプレイス。回収率・的中率・販売数まで全公開された予想家から買い目を購入でき、自分の舟券収支も24場ごとに自動記録。月別PnLカレンダーで日々の収支を一目で把握できます。",
+    keywords: [
+        "競艇", "ボートレース", "予想", "舟券", "収支管理", "回収率", "的中率",
+        "マーケットプレイス", "PnL", "競艇予想", "ボートレース予想", "予想屋",
+        "買い目", "BOAT BANK", "ボートバンク",
+    ],
+    openGraph: {
+        title: "BOAT BANK | 競艇予想マーケットプレイス・収支管理アプリ",
+        description:
+            "ガチ予想のマーケットプレイス。回収率・的中率まで全公開された予想家から買い目を購入できる。自分の舟券収支も24場ごとに自動記録。",
+        url: "https://boatbank.jp",
+        siteName: "BOAT BANK",
+        type: "website",
+        locale: "ja_JP",
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "BOAT BANK | 競艇予想マーケットプレイス",
+        description: "回収率公開のガチ予想 × 自動収支管理。",
+    },
+    alternates: { canonical: "https://boatbank.jp" },
+};
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -109,10 +137,14 @@ export default async function DashboardPage() {
       {/* A8 広告バナー（下部） */}
       <A8Banner {...A8_BANNER_BOTTOM} />
 
-      <div className="mt-8 pb-4 px-4 flex items-center justify-center gap-4 text-[10px] text-[#64748d]">
+      <div className="mt-8 pb-4 px-4 flex items-center justify-center gap-3 text-[10px] text-[#64748d] flex-wrap">
         <Link href="/privacy" className="hover:text-[#533afd]">プライバシーポリシー</Link>
         <span>|</span>
         <Link href="/terms" className="hover:text-[#533afd]">利用規約</Link>
+        <span>|</span>
+        <Link href="/sct" className="hover:text-[#533afd]">特定商取引法に基づく表記</Link>
+        <span>|</span>
+        <Link href="/contact" className="hover:text-[#533afd]">お問い合わせ</Link>
       </div>
     </div>
   );

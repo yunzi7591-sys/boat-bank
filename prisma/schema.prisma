@@ -46,13 +46,14 @@ model User {
   userBets          UserBet[]
   eventParticipants EventParticipant[]
   eventBets         EventBet[]
+  subscription      Subscription?
 }
 
 model Follows {
   followerId  String
   followingId String
-  follower    User   @relation("follower", fields: [followerId], references: [id])
-  following   User   @relation("following", fields: [followingId], references: [id])
+  follower    User   @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User   @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@id([followerId, followingId])
   @@index([followerId])
@@ -140,8 +141,7 @@ model Prediction {
   // 賭け設定 (Phase 27追加)
   betAmount        Int      @default(0)     // この予想にユーザーが賭けた合計ポイント
   hitAmount        Int      @default(0)     // 的中時の獲得金額（払い戻し）
-  originalPredictionId String?              // 他人の予想の丸乗り（Ride on）した場合の元予想ID
-  
+
   // 結果判定
   isSettled        Boolean  @default(false) // 払い戻し・精算処理が完了したか
   resultChecked    Boolean  @default(false)
@@ -171,8 +171,10 @@ model Transaction {
   // 購入された予想記事（購入アクションの場合）
   predictionId String?
   prediction   Prediction? @relation(fields: [predictionId], references: [id], onDelete: SetNull)
-  
+
   createdAt    DateTime   @default(now())
+
+  @@index([userId, action, createdAt])
 }
 
 // レース結果モデル (成績バッチ照合用)
@@ -284,8 +286,9 @@ model Notification {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   type         String   // "SALE", "FOLLOW", "SYSTEM" など
   message      String   // 通知メッセージ本文
+  url          String?  // 通知タップ時の遷移先
   isRead       Boolean  @default(false)
-  
+
   createdAt    DateTime @default(now())
 }
 
@@ -294,9 +297,10 @@ model PushSubscription {
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  endpoint     String   @unique
-  p256dh       String
-  auth         String
+  platform     String   @default("web") // "web" | "ios" | "android"
+  endpoint     String   @unique          // Web: subscription URL / iOS: APNs device token / Android: FCM token
+  p256dh       String?
+  auth         String?
   createdAt    DateTime @default(now())
 
   @@index([userId])
@@ -402,4 +406,35 @@ model News {
   isPublished Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// -------------------------------------------------------------
+// Subscription (RevenueCat連携による月額サブスク / Phase 60)
+// 詳細分析機能のアクセス権をこのテーブルで管理する
+// -------------------------------------------------------------
+model Subscription {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  revenueCatUserId      String?   // RevenueCat app_user_id（通常はユーザーIDと同一）
+  entitlementId         String?   // 例: "premium"
+  productId             String?   // 例: "boatbank_monthly"
+
+  status                String    // "active" | "trialing" | "grace_period" | "paused" | "expired" | "cancelled"
+  platform              String?   // "app_store" | "play_store" | "promotional"
+  originalTransactionId String?   // Apple original_transaction_id / Google purchase token
+
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  trialEnd              DateTime?
+  willRenew             Boolean   @default(true)
+  unsubscribedAt        DateTime?
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([status])
+  @@index([currentPeriodEnd])
+  @@index([originalTransactionId])
 }

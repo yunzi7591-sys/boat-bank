@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 export async function getMyPredictions() {
     const session = await auth();
-    if ((session?.user as any)?.role !== "ADMIN") return [];
+    if (session?.user?.role !== "ADMIN") return [];
 
     return prisma.prediction.findMany({
         where: { authorId: session!.user!.id },
@@ -28,7 +28,7 @@ export async function getMyPredictions() {
 
 export async function deletePrediction(predictionId: string) {
     const session = await auth();
-    if ((session?.user as any)?.role !== "ADMIN") return { success: false, error: "Unauthorized" };
+    if (session?.user?.role !== "ADMIN") return { success: false, error: "Unauthorized" };
 
     // 自分の予想のみ削除可能
     const pred = await prisma.prediction.findFirst({

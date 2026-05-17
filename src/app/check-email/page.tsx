@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { BotIdClient } from "botid/client";
 import { Button } from "@/components/ui/button";
 import { Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +32,11 @@ export default function CheckEmailPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <BotIdClient
+        protect={[
+          { path: "/check-email", method: "POST" },
+        ]}
+      />
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <Mail className="w-8 h-8 text-emerald-600" />
@@ -50,9 +56,16 @@ export default function CheckEmailPage() {
           </p>
         )}
 
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6 text-left">
+          <p className="text-amber-800 text-xs leading-relaxed">
+            <span className="font-bold">⚠️ メール到着まで最大10分ほどかかる場合があります。</span>
+            <br />
+            10分以上経っても届かない場合は <span className="font-bold">迷惑メール（スパム）フォルダ</span> も必ずご確認ください。
+          </p>
+        </div>
+
         <p className="text-slate-400 text-xs mb-8 leading-relaxed">
           メール内のリンクをクリックして、アカウントの作成を完了してください。
-          メールが届かない場合は、迷惑メールフォルダもご確認ください。
         </p>
 
         <div className="space-y-3">

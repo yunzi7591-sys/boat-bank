@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { BotIdClient } from "botid/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,11 @@ export default function ForgotPasswordPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+            <BotIdClient
+                protect={[
+                    { path: "/forgot-password", method: "POST" },
+                ]}
+            />
             <div className="w-full max-w-sm bg-white rounded-lg shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-100">
                 <div className="bg-[#1c1e54] px-6 py-8 text-center relative overflow-hidden">
                     <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px]" />

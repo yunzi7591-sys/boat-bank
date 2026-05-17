@@ -6,7 +6,7 @@ import { AdminTabs } from "@/components/admin/AdminTabs";
 
 export default async function AdminDashboard() {
     const session = await auth();
-    if ((session?.user as any)?.role !== "ADMIN") {
+    if (session?.user?.role !== "ADMIN") {
         redirect("/");
     }
 

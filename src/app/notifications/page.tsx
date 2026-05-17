@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { NotificationList } from "@/components/NotificationList";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { PushNotificationManager } from "@/components/PushNotificationManager";
-import { InstallBanner } from "@/components/InstallBanner";
-import { A8Banner, A8_BANNER_BOTTOM } from "@/components/ads/A8Banner";
+import { A8Banner } from "@/components/ads/A8Banner";
+import { A8_BANNER_BOTTOM } from "@/components/ads/A8BannerConfig";
 
 export default async function NotificationsPage() {
     const session = await auth();
@@ -33,15 +33,12 @@ export default async function NotificationsPage() {
 
     return (
         <div className="min-h-screen bg-white pb-24">
-            <div className="px-4 pt-5 pb-3 border-b border-[#e5edf5] sticky top-[56px] z-40 bg-white">
+            <div className="px-4 pt-5 pb-3 border-b border-[#e5edf5] sticky top-0 z-40 bg-white">
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl font-light text-[#061b31]">通知</h1>
                     <PushNotificationManager />
                 </div>
             </div>
-
-            {/* インストール促進 */}
-            <InstallBanner />
 
             {/* 通知設定（アコーディオン） */}
             <div className="border-b border-[#e5edf5]">
@@ -62,6 +59,7 @@ export default async function NotificationsPage() {
                     id: n.id,
                     message: n.message,
                     type: n.type,
+                    url: n.url,
                     isRead: n.isRead,
                     createdAt: n.createdAt.toISOString(),
                 }))}

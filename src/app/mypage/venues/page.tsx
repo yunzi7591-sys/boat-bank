@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getPrivateVenueStatsAll } from "@/lib/stats";
 import { VenueStatsGrid } from "@/components/mypage/VenueStatsGrid";
 import { BackButton } from "@/components/BackButton";
+import { SubscriptionGate } from "@/components/SubscriptionGate";
 
 export default async function VenuesPage() {
     const session = await auth();
@@ -15,7 +16,23 @@ export default async function VenuesPage() {
             <div className="max-w-4xl mx-auto px-4 pt-6">
                 <BackButton label="マイページに戻る" />
                 <h1 className="text-xl font-black text-[#061b31] mb-4">詳細成績</h1>
-                <VenueStatsGrid allTimeStats={all} yearStats={year} monthlyStats={monthly} byRaceType={byRaceType} />
+                <SubscriptionGate
+                    preview={
+                        <VenueStatsGrid
+                            allTimeStats={all}
+                            yearStats={year}
+                            monthlyStats={monthly}
+                            byRaceType={byRaceType}
+                        />
+                    }
+                >
+                    <VenueStatsGrid
+                        allTimeStats={all}
+                        yearStats={year}
+                        monthlyStats={monthly}
+                        byRaceType={byRaceType}
+                    />
+                </SubscriptionGate>
             </div>
         </div>
     );

@@ -1,0 +1,22 @@
+{
+    "name": "boatbank-promo",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "start": "remotion studio",
+        "build": "remotion render MainComp out/boatbank-promo.mp4",
+        "build:mov": "remotion render MainComp out/boatbank-promo.mov --codec=prores --prores-profile=4444",
+        "build:stills": "remotion still Promo1 out/promo-1.png && remotion still Promo2 out/promo-2.png && remotion still Promo3 out/promo-3.png && remotion still Promo4 out/promo-4.png"
+    },
+    "dependencies": {
+        "@remotion/cli": "^4.0.0",
+        "@remotion/google-fonts": "^4.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "remotion": "^4.0.0"
+    },
+    "devDependencies": {
+        "@types/react": "^19.0.0",
+        "typescript": "^5.4.0"
+    }
+}

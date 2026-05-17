@@ -12,7 +12,7 @@ export async function createEvent(data: {
     initialPt: number;
 }) {
     const session = await auth();
-    if ((session?.user as any)?.role !== "ADMIN") {
+    if (session?.user?.role !== "ADMIN") {
         return { error: "権限がありません" };
     }
 
@@ -72,7 +72,7 @@ export async function getAllEvents() {
 
 export async function endEvent(eventId: string) {
     const session = await auth();
-    if ((session?.user as any)?.role !== "ADMIN") {
+    if (session?.user?.role !== "ADMIN") {
         return { error: "権限がありません" };
     }
 

@@ -5,39 +5,40 @@ import { prisma } from "@/lib/prisma";
 import { settleRacePredictions } from "@/lib/evaluate";
 import { syncTodaySchedule, syncOfficialGradeAndDay, syncTodayResults, syncAndSaveSingleResult } from "@/lib/boatrace-api";
 import { revalidatePath } from "next/cache";
+import { errorMessage } from "@/lib/errors";
 
 // Function removed
 
 export async function triggerSyncSchedule() {
     try {
         const session = await auth();
-        if ((session?.user as any)?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
+        if (session?.user?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
 
         const result = await syncTodaySchedule();
         revalidatePath('/admin');
         return result;
-    } catch (e: any) {
-        return { success: false, error: e.message };
+    } catch (e) {
+        return { success: false, error: errorMessage(e) };
     }
 }
 
 export async function triggerSyncScrape() {
     try {
         const session = await auth();
-        if ((session?.user as any)?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
+        if (session?.user?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
 
         const result = await syncOfficialGradeAndDay();
         revalidatePath('/admin');
         return result;
-    } catch (e: any) {
-        return { success: false, error: e.message };
+    } catch (e) {
+        return { success: false, error: errorMessage(e) };
     }
 }
 
 export async function triggerApiEvaluation(formData: FormData) {
     try {
         const session = await auth();
-        if ((session?.user as any)?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
+        if (session?.user?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
 
         const placeName = formData.get("placeName") as string;
         const raceNumber = parseInt(formData.get("raceNumber") as string);
@@ -61,15 +62,15 @@ export async function triggerApiEvaluation(formData: FormData) {
         revalidatePath('/ranking');
 
         return { success: true };
-    } catch (e: any) {
-        return { success: false, error: e.message };
+    } catch (e) {
+        return { success: false, error: errorMessage(e) };
     }
 }
 
 export async function triggerResultSyncBulk() {
     try {
         const session = await auth();
-        if ((session?.user as any)?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
+        if (session?.user?.role !== 'ADMIN') return { success: false, error: "Unauthorized" };
 
         const syncRes = await syncTodayResults({}); // Unlimited manual sync
         if (!syncRes.success) {
@@ -93,9 +94,9 @@ export async function triggerResultSyncBulk() {
             success: true,
             syncedCount: syncRes.count,
             settlementProcessedCount: settlementCount,
-            races: processedRaces.map((r: any) => `${r.placeName} R${r.raceNumber}`).join(', ')
+            races: processedRaces.map((r) => `${r.placeName} R${r.raceNumber}`).join(', ')
         };
-    } catch (e: any) {
-        return { success: false, error: e.message };
+    } catch (e) {
+        return { success: false, error: errorMessage(e) };
     }
 }

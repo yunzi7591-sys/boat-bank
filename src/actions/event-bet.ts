@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { settleEventBets } from "@/lib/evaluate";
 import { revalidatePath } from "next/cache";
+import { errorMessage } from "@/lib/errors";
 
 interface EventBetInput {
     betType: string;
@@ -112,14 +113,14 @@ export async function submitEventBets(payload: SubmitEventBetsPayload) {
             try {
                 await settleEventBets(payload.placeName, payload.raceNumber, raceDate);
                 console.log(`[EventBet] Auto-settled event bets for ${payload.placeName} R${payload.raceNumber}`);
-            } catch (e: any) {
-                console.warn(`[EventBet] Auto-settle failed: ${e.message}`);
+            } catch (e) {
+                console.warn(`[EventBet] Auto-settle failed: ${errorMessage(e)}`);
             }
         }
 
         revalidatePath('/events');
         return { success: true, count: payload.bets.length };
-    } catch (e: any) {
+    } catch (e) {
         console.error("[EventBet Error] Failed to submit event bets:", e);
         return { success: false, error: "限定ptベットの登録に失敗しました。" };
     }

@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
 import { syncTodaySchedule } from "@/lib/boatrace-api";
+import { verifyCronAuth } from "@/lib/cron-auth";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
-
-        if (process.env.NODE_ENV === 'production') {
-            if (authHeader !== expectedAuth) {
-                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-            }
-        }
+        const _auth = verifyCronAuth(req);
+        if (!_auth.ok) return _auth.response;
 
         console.log("[SYNC] Starting schedule sync (v3 API - grade/day included)...");
 
@@ -27,6 +22,6 @@ export async function GET(req: Request) {
 
     } catch (error: any) {
         console.error("[SYNC] Failed:", error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
     }
 }

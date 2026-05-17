@@ -120,8 +120,18 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    height: 100%;
+    background-color: #ffffff;
+    color-scheme: light;
+  }
+  html, body {
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: auto;
+  }
   body {
     @apply bg-background text-foreground;
+    background-color: #ffffff !important;
   }
   /* 数値入力のスピナー（上下ボタン）を非表示 */
   input[type="number"]::-webkit-inner-spin-button,

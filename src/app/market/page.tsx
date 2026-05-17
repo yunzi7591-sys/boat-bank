@@ -4,7 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarketFeed } from "@/components/market/MarketFeed";
 import { Globe, Users } from "lucide-react";
 import { ReloadButton } from "@/components/ReloadButton";
-import { A8Banner, A8_BANNER_BOTTOM } from "@/components/ads/A8Banner";
+import { A8Banner } from "@/components/ads/A8Banner";
+import { A8_BANNER_BOTTOM } from "@/components/ads/A8BannerConfig";
 
 export const revalidate = 0;
 
@@ -50,7 +51,7 @@ export default async function MarketPage() {
 
     return (
         <div className="min-h-full pb-20">
-            <div className="bg-white border-b border-[#e5edf5] px-4 pt-5 pb-2 sticky top-[56px] z-40">
+            <div className="bg-white border-b border-[#e5edf5] px-4 pt-5 pb-2 sticky top-0 z-40">
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-xl font-light text-[#061b31]">マーケット</h1>
                     <ReloadButton className="text-[#64748d]" />

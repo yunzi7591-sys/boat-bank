@@ -99,11 +99,22 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
             <header className="bg-slate-900 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center h-[60px]">
                 <div className="flex items-center gap-2">
-                    <Link href={venue ? `/place/${venue.id}` : "/"}>
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-slate-800 h-9 w-9">
+                    {viewCart ? (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white hover:bg-slate-800 h-9 w-9"
+                            onClick={() => setViewCart(false)}
+                        >
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
-                    </Link>
+                    ) : (
+                        <Link href={venue ? `/place/${venue.id}` : "/"}>
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-slate-800 h-9 w-9">
+                                <ArrowLeft className="w-5 h-5" />
+                            </Button>
+                        </Link>
+                    )}
                     <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-slate-400 leading-none mb-0.5 tracking-wider">
                             {eventId ? 'EVENT BETTING' : 'VOTING UI'}
@@ -118,16 +129,18 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
                         )}
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-white border-white/20 hover:bg-white/10 bg-transparent h-8 font-black text-[11px] px-3 rounded-full"
-                        onClick={() => setViewCart(!viewCart)}
-                    >
-                        {viewCart ? '← 投票する' : `カート (${cart.length})`}
-                    </Button>
-                </div>
+                {!viewCart && (
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-white border-white/20 hover:bg-white/10 bg-transparent h-8 font-black text-[11px] px-3 rounded-full"
+                            onClick={() => setViewCart(true)}
+                        >
+                            カート ({cart.length})
+                        </Button>
+                    </div>
+                )}
             </header>
 
             <main className="flex-1 max-w-lg w-full mx-auto p-4 flex flex-col pb-24">

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Coins, HelpCircle } from "lucide-react";
 import { checkAndUpdateLoginStreak, LoginBonusResult } from "@/lib/login-streak";
 import { LoginBonusModal } from "@/components/LoginBonusModal";
+import { HeaderAutoRefresh } from "@/components/HeaderAutoRefresh";
+import { HeaderShell } from "@/components/HeaderShell";
 
 
 export async function Header() {
@@ -37,7 +39,7 @@ export async function Header() {
 
 
     return (
-        <header className="bg-white text-[#061b31] sticky top-0 z-50 border-b border-[#e5edf5]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <HeaderShell>
             <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
 
                 {/* Logo / Home Link */}
@@ -97,6 +99,7 @@ export async function Header() {
                     isStreakUp={loginBonus.isStreakUp}
                 />
             )}
-        </header>
+            {session?.user && <HeaderAutoRefresh />}
+        </HeaderShell>
     );
 }

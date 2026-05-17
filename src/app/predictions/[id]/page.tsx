@@ -9,17 +9,29 @@ import { Lock, ExternalLink } from "lucide-react";
 import { ShareButton } from "@/components/predictions/ShareButton";
 import type { Metadata } from "next";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ref?: string | string[] }> }): Promise<Metadata> {
     const { id } = await params;
+    const sp = await searchParams;
+    const refRaw = Array.isArray(sp.ref) ? sp.ref[0] : sp.ref;
+    const ref = refRaw && /^[a-z0-9]{1,16}$/i.test(refRaw) ? refRaw : undefined;
+
     const prediction = await prisma.prediction.findUnique({
         where: { id },
-        select: { title: true, placeName: true, raceNumber: true, author: { select: { name: true } } },
+        select: { title: true, placeName: true, raceNumber: true, createdAt: true, author: { select: { name: true } } },
     });
 
     if (!prediction) return { title: 'BOAT BANK' };
 
-    const title = prediction.title || `${prediction.placeName} ${prediction.raceNumber}R 予想`;
-    const description = `${prediction.author?.name}の予想 - ${prediction.placeName} ${prediction.raceNumber}R | BOAT BANK`;
+    const raceLabel = `${prediction.placeName} ${prediction.raceNumber}R 予想`;
+    const rawTitle = (prediction.title || '').trim();
+    const hasReadableText = /[一-龠ぁ-んァ-ンa-zA-Z0-9]/.test(rawTitle);
+    const baseTitle = hasReadableText && rawTitle.length >= 2 ? rawTitle : raceLabel;
+    const title = baseTitle === raceLabel ? raceLabel : `${baseTitle} | ${raceLabel}`;
+    const description = `${prediction.author?.name}さんの ${raceLabel}。BOAT BANK で公開中のガチ予想です。`;
+    const ogImage = `https://boatbank.jp/api/og/prediction/${id}/${prediction.createdAt.getTime()}`;
+    const canonicalUrl = ref
+        ? `https://boatbank.jp/predictions/${id}?ref=${ref}`
+        : `https://boatbank.jp/predictions/${id}`;
 
     return {
         title,
@@ -27,7 +39,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         openGraph: {
             title,
             description,
-            images: [`/api/og/prediction?id=${id}&v=2`],
+            url: canonicalUrl,
+            images: [{
+                url: ogImage,
+                width: 1200,
+                height: 630,
+                type: 'image/png',
+                alt: raceLabel,
+            }],
             type: 'article',
             siteName: 'BOAT BANK',
         },
@@ -35,7 +54,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
             card: 'summary_large_image',
             title,
             description,
-            images: [`/api/og/prediction?id=${id}&v=2`],
+            images: [{
+                url: ogImage,
+                width: 1200,
+                height: 630,
+                alt: raceLabel,
+            }],
         },
     };
 }
@@ -45,11 +69,8 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
     const session = await auth();
     const userId = session?.user?.id;
 
-    const prediction = await prisma.prediction.update({
+    const prediction = await prisma.prediction.findUnique({
         where: { id: params.id },
-        data: {
-            viewCount: { increment: 1 } // Increment view count on each visit
-        },
         include: {
             author: {
                 select: { name: true, image: true },
@@ -59,6 +80,18 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
 
     if (!prediction) {
         notFound();
+    }
+
+    if (prediction.isPrivate && prediction.authorId !== userId) {
+        notFound();
+    }
+
+    // Increment viewCount only for logged-in users other than the author (prevents bot inflation & self-view spam)
+    if (userId && prediction.authorId !== userId) {
+        await prisma.prediction.update({
+            where: { id: params.id },
+            data: { viewCount: { increment: 1 } },
+        });
     }
 
     let isUnlocked = false;

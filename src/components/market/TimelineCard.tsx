@@ -3,15 +3,16 @@ import { Eye, Users, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import { FollowButton } from "@/components/market/FollowButton";
+import type { TimelineCardPrediction } from "@/lib/types";
 
 export function TimelineCard({
     prediction,
     currentUserId,
     isFollowingAuthor
 }: {
-    prediction: any,
-    currentUserId?: string,
-    isFollowingAuthor: boolean
+    prediction: TimelineCardPrediction;
+    currentUserId?: string;
+    isFollowingAuthor: boolean;
 }) {
     const isFree = prediction.price === 0;
     const purchaseCount = prediction._count?.transactions || 0;
@@ -36,7 +37,6 @@ export function TimelineCard({
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-[#64748d]">
                             <span className="font-bold">{prediction.author?.name}</span>
                             {prediction.author?.role === 'ADMIN' && <span className="text-[8px] font-black bg-amber-400 text-amber-900 px-1 py-0.5 rounded leading-none">公式</span>}
-                            {prediction.author?.role === 'MONITOR' && <span className="text-[8px] font-black bg-sky-400 text-sky-900 px-1 py-0.5 rounded leading-none">モニター</span>}
                             {currentUserId && currentUserId !== prediction.authorId && (
                                 <FollowButton targetUserId={prediction.authorId} initialIsFollowing={isFollowingAuthor} />
                             )}

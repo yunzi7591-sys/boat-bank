@@ -18,15 +18,39 @@ export function SharePromoModal() {
     const raceNumber = payload?.raceNumber ?? 0;
     const predictionId = payload?.predictionId ?? "";
 
-    const shareUrl = `https://boatbank.jp/predictions/${predictionId}`;
     const shareText = `${placeName} ${raceNumber}R の予想を購入しました🚤`;
-    const intentUrl = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
 
     const handleShare = async () => {
         if (!predictionId) return;
         setLoading(true);
         try {
-            window.open(intentUrl, "_blank", "noopener,noreferrer");
+            fetch(`/api/og/warmup?id=${predictionId}`, { cache: "no-store" }).catch(() => {});
+            const cacheBuster = Date.now().toString(36);
+            const shareUrl = `https://boatbank.jp/predictions/${predictionId}?ref=${cacheBuster}`;
+
+            let shared = false;
+            if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+                try {
+                    await navigator.share({
+                        title: "BOAT BANK",
+                        text: shareText,
+                        url: shareUrl,
+                    });
+                    shared = true;
+                } catch (error) {
+                    if ((error as Error).name === "AbortError") {
+                        setLoading(false);
+                        close();
+                        return;
+                    }
+                }
+            }
+
+            if (!shared) {
+                const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+                window.open(intentUrl, "_blank", "noopener,noreferrer");
+            }
+
             const result = await claimShareReward(predictionId);
             if (result.success) {
                 toast.success(`+${result.awardedPoints}pt 獲得しました`);

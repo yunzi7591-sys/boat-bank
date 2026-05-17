@@ -56,16 +56,36 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Update user's emailVerified and delete the token
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: user.id },
-      data: { emailVerified: new Date() },
-    }),
-    prisma.verificationToken.delete({
+  // 原子的なメール認証＋ボーナス付与（並列リクエストでの二重取得を防止）
+  await prisma.$transaction(async (tx) => {
+    // emailVerified が null のレコードのみを更新（DBレベルで一度だけ成功）
+    const updated = await tx.user.updateMany({
+      where: { id: user.id, emailVerified: null },
+      data: { emailVerified: new Date(), points: { increment: 5000 } },
+    });
+
+    // この transaction が初回認証だった場合のみ Transaction を作成
+    if (updated.count === 1) {
+      // 念のため二重防止: WELCOME_BONUS が既にあれば作成しない
+      const existingBonus = await tx.transaction.findFirst({
+        where: { userId: user.id, action: "WELCOME_BONUS" },
+        select: { id: true },
+      });
+      if (!existingBonus) {
+        await tx.transaction.create({
+          data: {
+            userId: user.id,
+            points: 5000,
+            action: "WELCOME_BONUS",
+          },
+        });
+      }
+    }
+
+    await tx.verificationToken.delete({
       where: { token },
-    }),
-  ]);
+    });
+  });
 
   return NextResponse.json({ success: true });
 }

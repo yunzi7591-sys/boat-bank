@@ -39,3 +39,4 @@ export async function updateNotificationSettings(settings: {
     revalidatePath('/notifications');
     return { success: true };
 }
+
