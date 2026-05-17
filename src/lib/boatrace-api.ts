@@ -68,6 +68,10 @@ export async function syncTodayScheduleChunk(offset: number = 0, limit: number =
             const placeName = venue.name;
             const raceNumber = prog.number;
             const raceDate = new Date(prog.date);
+            if (typeof prog.closed_at !== 'string' || !prog.closed_at) {
+                console.warn(`[CHUNK] skip ${placeName} R${raceNumber}: closed_at is null`);
+                continue;
+            }
             const deadlineAt = new Date(`${prog.closed_at.replace(' ', 'T')}+09:00`);
             const grade = normalizeGradeLabel(prog.grade_label);
             const day = normalizeDayLabel(prog.day_label);
@@ -199,6 +203,10 @@ export async function syncTodaySchedule() {
             const raceNumber = prog.number;
             const raceDate = new Date(prog.date); // "2026-02-28" resulting in UTC 00:00
             // "closed_at": "2026-02-28 15:48:00"
+            if (typeof prog.closed_at !== 'string' || !prog.closed_at) {
+                console.warn(`[SYNC] skip ${placeName} R${raceNumber}: closed_at is null`);
+                continue;
+            }
             const deadlineAt = new Date(`${prog.closed_at.replace(' ', 'T')}+09:00`);
 
             // v3: grade_label/day_label から直接取得（スクレイピング不要）

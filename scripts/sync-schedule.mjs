@@ -62,6 +62,10 @@ async function main() {
       const stadiumId = prog.stadium_number.toString().padStart(2, '0');
       const venue = VENUES.find(v => v.id === stadiumId);
       if (!venue) continue;
+      if (typeof prog.closed_at !== 'string' || !prog.closed_at) {
+        console.warn(`[SYNC] skip ${venue.name} R${prog.number}: closed_at is null`);
+        continue;
+      }
 
       const entriesData = [];
       for (const b of (prog.boats || [])) {
