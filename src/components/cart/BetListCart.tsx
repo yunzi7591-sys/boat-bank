@@ -515,7 +515,12 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                 </div>
                                                 <div>
                                                     <label className="text-xs font-bold text-[#64748d]">締切時刻</label>
-                                                    <Input name="deadlineAt" type="datetime-local" defaultValue={deadlineAt ? new Date(deadlineAt.getTime() - deadlineAt.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''} required readOnly className="bg-slate-50 border-[#e5edf5] text-[#64748d]" />
+                                                    <div className="h-9 px-3 flex items-center bg-slate-50 border border-[#e5edf5] rounded-md text-[#64748d] text-sm select-none">
+                                                        {deadlineAt
+                                                            ? deadlineAt.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                                            : '—'}
+                                                    </div>
+                                                    <input type="hidden" name="deadlineAt" value={deadlineAt ? deadlineAt.toISOString() : ''} />
                                                 </div>
                                             </div>
 

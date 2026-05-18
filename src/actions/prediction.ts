@@ -52,9 +52,25 @@ export async function publishPrediction(data: {
             return { success: false, error: "価格は0〜100,000の整数で指定してください。" };
         }
 
-        if (new Date(data.deadlineAt) < new Date()) {
+        // クライアントから送られた deadlineAt は信用せず、DBから正規の締切時刻を引き直す
+        const raceDateForLookup = new Date(data.raceDate);
+        const schedule = await prisma.raceSchedule.findUnique({
+            where: {
+                placeName_raceNumber_raceDate: {
+                    placeName: data.placeName,
+                    raceNumber: data.raceNumber,
+                    raceDate: raceDateForLookup,
+                },
+            },
+            select: { deadlineAt: true },
+        });
+        if (!schedule) {
+            return { success: false, error: "対象レースが見つかりません。" };
+        }
+        if (schedule.deadlineAt < new Date()) {
             return { success: false, error: "締切時刻を過ぎたレースの予想は公開できません。" };
         }
+        data.deadlineAt = schedule.deadlineAt;
 
         if (data.publishType === "internal") {
             if (!data.title) {
