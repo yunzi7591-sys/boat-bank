@@ -84,6 +84,7 @@ export async function getUserVenueStats(userId: string): Promise<VenueStats[]> {
             isHit: true,
             betAmount: true,
             hitAmount: true,
+            refundAmount: true,
         },
     });
 
@@ -95,7 +96,7 @@ export async function getUserVenueStats(userId: string): Promise<VenueStats[]> {
         entry.inv += bet.betAmount || 0;
         entry.total++;
         if (bet.isSettled) {
-            entry.ref += bet.hitAmount || 0;
+            entry.ref += (bet.hitAmount || 0) + (bet.refundAmount || 0);
             if (bet.isHit) entry.hit++;
         }
         venueMap.set(bet.placeName, entry);
@@ -263,6 +264,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
             isSettled: true,
             isHit: true,
             hitAmount: true,
+            refundAmount: true,
         },
     });
 
@@ -274,7 +276,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     for (const bet of userBets) {
         totalInvestment += bet.betAmount || 0;
         if (bet.isSettled) {
-            totalRefund += bet.hitAmount || 0;
+            totalRefund += (bet.hitAmount || 0) + (bet.refundAmount || 0);
         }
         const key = `bet-${bet.placeName}-${bet.raceNumber}-${bet.raceDate?.toISOString()}`;
         const race = raceMap.get(key) || { settled: false, hit: false };
@@ -434,6 +436,193 @@ export type PeriodStats = {
     monthly: { [key: string]: VenueStatsWithPeriod[] };
 };
 
+// --- グレード別 + 開催形態別 統計 (組み合わせ自由) ---
+
+// グレードの並び順（フィルタ表示順）
+export const GRADE_VALUES = ["一般", "G1", "G2", "G3", "SG"] as const;
+export type Grade = (typeof GRADE_VALUES)[number];
+
+/**
+ * 1レース分の集計を最小単位（会場×開催形態×グレード×月）にまとめたもの。
+ * クライアント側でこれを期間・開催形態・グレードで自由に絞って24場に再集計する。
+ */
+export interface StatsLeaf {
+    venueId: string;
+    placeName: string;
+    raceType: RaceType | null; // 解決できない場合 null
+    grade: Grade | null;       // 解決できない場合 null
+    ym: string;                // "2026-05"
+    inv: number;               // 投資額
+    ref: number;               // 回収額
+    hit: number;               // 的中数
+    total: number;             // 件数
+}
+
+const NAME_TO_VENUE_ID = new Map(VENUES.map((v) => [v.name, v.id]));
+
+/**
+ * RaceSchedule から (placeName|raceDateISO) → grade / raceType のマップを作る。
+ * グレードは「その日のその場」共通なので任意のレースから取得。
+ * 開催形態(raceType)は最小レース番号の締切時刻を1日の代表として分類する
+ * （クリーンアップでR1が消えていても残っている最小Rで代替）。
+ */
+async function buildScheduleMaps(): Promise<{
+    gradeMap: Map<string, Grade>;
+    raceTypeMap: Map<string, RaceType>;
+}> {
+    const schedules = await prisma.raceSchedule.findMany({
+        select: { placeName: true, raceDate: true, raceNumber: true, deadlineAt: true, grade: true },
+    });
+
+    const gradeMap = new Map<string, Grade>();
+    // 代表締切を選ぶための「現在の最小レース番号」記録
+    const minRaceNum = new Map<string, number>();
+    const raceTypeMap = new Map<string, RaceType>();
+
+    const validGrades = new Set<string>(GRADE_VALUES);
+
+    for (const s of schedules) {
+        const key = `${s.placeName}|${s.raceDate.toISOString()}`;
+
+        if (s.grade && validGrades.has(s.grade) && !gradeMap.has(key)) {
+            gradeMap.set(key, s.grade as Grade);
+        }
+
+        const prevMin = minRaceNum.get(key);
+        if (prevMin === undefined || s.raceNumber < prevMin) {
+            minRaceNum.set(key, s.raceNumber);
+            raceTypeMap.set(key, classifyRaceType(s.deadlineAt));
+        }
+    }
+
+    return { gradeMap, raceTypeMap };
+}
+
+interface RaceRow {
+    placeName: string | null;
+    raceDate: Date | null;
+    inv: number;
+    ref: number;
+    settled: boolean;
+    hit: boolean;
+}
+
+function buildLeaves(
+    rows: RaceRow[],
+    gradeMap: Map<string, Grade>,
+    raceTypeMap: Map<string, RaceType>
+): StatsLeaf[] {
+    const leafMap = new Map<string, StatsLeaf>();
+
+    for (const r of rows) {
+        if (!r.placeName || !r.raceDate) continue;
+        const venueId = NAME_TO_VENUE_ID.get(r.placeName);
+        if (!venueId) continue;
+
+        const key = `${r.placeName}|${r.raceDate.toISOString()}`;
+        const grade = gradeMap.get(key) ?? null;
+        const raceType = raceTypeMap.get(key) ?? null;
+        const ym = `${r.raceDate.getUTCFullYear()}-${String(r.raceDate.getUTCMonth() + 1).padStart(2, "0")}`;
+
+        const leafKey = `${venueId}|${raceType ?? "?"}|${grade ?? "?"}|${ym}`;
+        const leaf = leafMap.get(leafKey) ?? {
+            venueId,
+            placeName: r.placeName,
+            raceType,
+            grade,
+            ym,
+            inv: 0,
+            ref: 0,
+            hit: 0,
+            total: 0,
+        };
+        leaf.inv += r.inv;
+        leaf.total++;
+        if (r.settled) {
+            leaf.ref += r.ref;
+            if (r.hit) leaf.hit++;
+        }
+        leafMap.set(leafKey, leaf);
+    }
+
+    return Array.from(leafMap.values());
+}
+
+/**
+ * マイページ用（UserBetベース）: 開催形態×グレードで自由集計するための葉データ
+ */
+export async function getPrivateStatsLeaves(userId: string): Promise<StatsLeaf[]> {
+    const [userBets, maps] = await Promise.all([
+        prisma.userBet.findMany({
+            where: { userId },
+            select: { placeName: true, raceDate: true, betAmount: true, hitAmount: true, refundAmount: true, isSettled: true, isHit: true },
+        }),
+        buildScheduleMaps(),
+    ]);
+
+    const rows: RaceRow[] = userBets.map((b) => ({
+        placeName: b.placeName,
+        raceDate: b.raceDate,
+        inv: b.betAmount || 0,
+        ref: (b.hitAmount || 0) + (b.refundAmount || 0),
+        settled: b.isSettled,
+        hit: b.isHit,
+    }));
+
+    return buildLeaves(rows, maps.gradeMap, maps.raceTypeMap);
+}
+
+/**
+ * サブスク未加入者向けのプレビュー用ダミーデータ。
+ * ぼかし表示の背景としてグリッドを成立させるためだけのサンプル値であり、
+ * 実ユーザーの成績は一切含めない（タダ見え対策）。
+ */
+export function buildSampleStatsLeaves(year: number): StatsLeaf[] {
+    const samples: Array<{ inv: number; ref: number; hit: number; total: number }> = [
+        { inv: 48000, ref: 52800, hit: 7, total: 22 },
+        { inv: 36000, ref: 29500, hit: 5, total: 18 },
+        { inv: 54000, ref: 61200, hit: 9, total: 25 },
+        { inv: 30000, ref: 24000, hit: 4, total: 15 },
+        { inv: 42000, ref: 45600, hit: 6, total: 20 },
+        { inv: 27000, ref: 21300, hit: 3, total: 12 },
+        { inv: 60000, ref: 70800, hit: 11, total: 28 },
+        { inv: 33000, ref: 28900, hit: 5, total: 16 },
+    ];
+    const ym = `${year}-01`;
+    return VENUES.slice(0, samples.length).map((v, i) => ({
+        venueId: v.id,
+        placeName: v.name,
+        raceType: null,
+        grade: null,
+        ym,
+        ...samples[i],
+    }));
+}
+
+/**
+ * 公開プロフィール用（Predictionベース）: 開催形態×グレードで自由集計するための葉データ
+ */
+export async function getPublicStatsLeaves(userId: string): Promise<StatsLeaf[]> {
+    const [predictions, maps] = await Promise.all([
+        prisma.prediction.findMany({
+            where: { authorId: userId, isPrivate: false },
+            select: { placeName: true, raceDate: true, betAmount: true, hitAmount: true, refundAmount: true, isSettled: true, isHit: true },
+        }),
+        buildScheduleMaps(),
+    ]);
+
+    const rows: RaceRow[] = predictions.map((p) => ({
+        placeName: p.placeName,
+        raceDate: p.raceDate,
+        inv: p.betAmount || 0,
+        ref: (p.hitAmount || 0) + (p.refundAmount || 0),
+        settled: p.isSettled,
+        hit: p.isHit,
+    }));
+
+    return buildLeaves(rows, maps.gradeMap, maps.raceTypeMap);
+}
+
 export async function getPrivateVenueStatsAll(userId: string): Promise<{
     all: VenueStatsWithPeriod[];
     year: VenueStatsWithPeriod[];
@@ -444,7 +633,7 @@ export async function getPrivateVenueStatsAll(userId: string): Promise<{
 
     const userBets = await prisma.userBet.findMany({
         where: { userId },
-        select: { placeName: true, raceDate: true, isSettled: true, isHit: true, betAmount: true, hitAmount: true },
+        select: { placeName: true, raceDate: true, isSettled: true, isHit: true, betAmount: true, hitAmount: true, refundAmount: true },
     });
 
     function buildFromBets(bets: typeof userBets): VenueStatsWithPeriod[] {
@@ -454,7 +643,7 @@ export async function getPrivateVenueStatsAll(userId: string): Promise<{
             const e = map.get(bet.placeName) || { inv: 0, ref: 0, hit: 0, total: 0 };
             e.inv += bet.betAmount || 0;
             e.total++;
-            if (bet.isSettled) { e.ref += bet.hitAmount || 0; if (bet.isHit) e.hit++; }
+            if (bet.isSettled) { e.ref += (bet.hitAmount || 0) + (bet.refundAmount || 0); if (bet.isHit) e.hit++; }
             map.set(bet.placeName, e);
         }
         return VENUES.map(v => {
@@ -576,6 +765,7 @@ export async function getPrivateVenueStatsWithPeriod(
             isHit: true,
             betAmount: true,
             hitAmount: true,
+            refundAmount: true,
         },
     });
 
@@ -587,7 +777,7 @@ export async function getPrivateVenueStatsWithPeriod(
         entry.inv += bet.betAmount || 0;
         entry.total++;
         if (bet.isSettled) {
-            entry.ref += bet.hitAmount || 0;
+            entry.ref += (bet.hitAmount || 0) + (bet.refundAmount || 0);
             if (bet.isHit) entry.hit++;
         }
         venueMap.set(bet.placeName, entry);
@@ -697,7 +887,7 @@ export async function getUserDailyStats(
     // マイページ: UserBetのみ
     const userBets = await prisma.userBet.findMany({
         where: { userId, raceDate: { gte, lt } },
-        select: { raceDate: true, betAmount: true, hitAmount: true, isSettled: true },
+        select: { raceDate: true, betAmount: true, hitAmount: true, refundAmount: true, isSettled: true },
     });
 
     const dayMap = new Map<string, { inv: number; ref: number; count: number }>();
@@ -707,7 +897,7 @@ export async function getUserDailyStats(
         const dateStr = bet.raceDate.toISOString().slice(0, 10);
         const entry = dayMap.get(dateStr) || { inv: 0, ref: 0, count: 0 };
         entry.inv += bet.betAmount || 0;
-        if (bet.isSettled) entry.ref += bet.hitAmount || 0;
+        if (bet.isSettled) entry.ref += (bet.hitAmount || 0) + (bet.refundAmount || 0);
         entry.count++;
         dayMap.set(dateStr, entry);
     }

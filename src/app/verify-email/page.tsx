@@ -77,6 +77,21 @@ export default function VerifyEmailPage() {
                 ログインする
               </Button>
             </Link>
+            <Link
+              href="/login?callbackUrl=/subscribe"
+              className="block mt-4 rounded-xl border border-[#533afd]/20 bg-gradient-to-r from-[#533afd]/5 to-[#7c3aed]/5 p-4 text-left hover:border-[#533afd]/40 transition-colors"
+            >
+              <p className="text-xs font-black text-[#533afd] mb-1">
+                🎁 いまなら初月無料
+              </p>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                24場ごとの回収率・収支分析が見られる会員プラン（月500円）を、
+                iOSアプリからまるごと1か月無料で試せます。
+              </p>
+              <p className="text-xs font-bold text-[#533afd] mt-2">
+                くわしく見る →
+              </p>
+            </Link>
           </>
         )}
 

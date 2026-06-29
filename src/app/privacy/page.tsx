@@ -8,7 +8,7 @@ export default function PrivacyPage() {
     return (
         <LegalLayout
             title="プライバシーポリシー"
-            updatedAt="2026年5月8日"
+            updatedAt="2026年6月17日"
             intro={
                 <p>
                     BOAT BANK（以下「本サービス」）は、個人が運営するサービスです。
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
                 />
                 <Highlight>
                     クレジットカード番号等の決済情報は、本サービスでは取得・保存しません。
-                    決済は Apple App Store によって処理されます。
+                    決済は Apple App Store または Google Play によって処理されます。
                 </Highlight>
                 <p className="text-xs text-slate-500">
                     ※ Apple / Google のソーシャルログインで取得する情報は、本サービスのアカウント識別とログイン認証の目的にのみ利用します。
@@ -103,7 +103,7 @@ export default function PrivacyPage() {
                         <><strong>RevenueCat（RevenueCat, Inc.）</strong>: サブスクリプションの状態管理</>,
                         <><strong>Apple（App Store / Sign in with Apple）</strong>: サブスクリプション課金処理および Sign in with Apple のソーシャルログイン認証。Apple のプライバシーポリシーは <a href="https://www.apple.com/legal/privacy/jp/" target="_blank" rel="noopener noreferrer" className="text-[#533afd] underline">Apple 公式</a> をご確認ください</>,
                         <><strong>Apple Push Notification Service (APNs)</strong>: iOS アプリへのプッシュ通知配信</>,
-                        <><strong>Google（Sign in with Google / Google Analytics）</strong>: ソーシャルログイン認証およびアクセス解析。Google のプライバシーポリシーは <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-[#533afd] underline">Google 公式</a> をご確認ください</>,
+                        <><strong>Google（Google Play / Sign in with Google / Google Analytics）</strong>: サブスクリプション課金処理、ソーシャルログイン認証およびアクセス解析。Google のプライバシーポリシーは <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-[#533afd] underline">Google 公式</a> をご確認ください</>,
                         <><strong>A8.net（株式会社ファンコミュニケーションズ）</strong>: アフィリエイト広告の表示・効果測定</>,
                     ]}
                 />

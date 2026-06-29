@@ -72,7 +72,8 @@ export async function submitBets(payload: SubmitBetsPayload) {
 
         const raceDate = new Date(payload.raceDate);
 
-        // 2.6. Deadline guard: reject bets after the race has closed
+        // 2.6. 収支登録は「実際に賭けた舟券の記録」なので締切後（レース後）でも登録可。
+        // 対象レースの存在確認のみ行い、締切ガードはかけない。
         const schedule = await prisma.raceSchedule.findUnique({
             where: {
                 placeName_raceNumber_raceDate: {
@@ -87,10 +88,7 @@ export async function submitBets(payload: SubmitBetsPayload) {
         if (!schedule) {
             return { success: false, error: "対象レースが見つかりません。" };
         }
-        if (schedule.deadlineAt < new Date()) {
-            return { success: false, error: "このレースは既に締切時刻を過ぎています。" };
-        }
-        // raceDate が過去すぎる（24時間以上前）場合も拒否
+        // raceDate が過去すぎる（24時間以上前）場合は拒否
         const now = new Date();
         if (raceDate.getTime() < now.getTime() - 24 * 60 * 60 * 1000) {
             return { success: false, error: "過去のレースには投票できません。" };

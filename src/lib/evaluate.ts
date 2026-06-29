@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Formation } from "@/lib/bet-logic";
+import { Formation, normalizeCombo } from "@/lib/bet-logic";
 import { parseJsonSafely } from "@/lib/utils";
 
 export interface PayoutData {
@@ -72,7 +72,7 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
 
                 // 2. 的中チェック (WIN) - WIDEなど複数的中がある券種に対応
                 for (const officialPayout of officialPayoutsForType) {
-                    if (comb.id === officialPayout.numbers) {
+                    if (normalizeCombo(comb.id, formation.betType) === normalizeCombo(officialPayout.numbers, formation.betType)) {
                         isHit = true;
                         // 例: 払戻金1540円(100円あたり)で 500pt 賭けていたら -> (1540 / 100) * 500 = 7700pt
                         const winPayout = Math.round((officialPayout.amount / 100) * comb.amount);
@@ -123,18 +123,22 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
         const betNumbers = bet.combination!.split(/[-=]/).map(n => parseInt(n, 10));
         const containsRefundedBoat = betNumbers.some(n => refundedBoats.includes(n));
 
+        // 返還と的中は排他（予想側 settleRacePredictions と同じ設計）。
+        // 返還: hitAmount=0 / refundAmount=賭け金 / isHit=false（返還は的中ではない）
+        // 的中: hitAmount=払戻 / refundAmount=0 / isHit=true
+        // 回収額は常に hitAmount + refundAmount で算出する（二重計上を防ぐ）
         let hitAmount = 0;
+        let refundAmount = 0;
         let isHit = false;
 
         if (containsRefundedBoat) {
-            // 返還: 賭け金そのまま返す
-            hitAmount = bet.betAmount;
-            isHit = true;
+            // 返還: 賭け金そのまま返す（的中判定は行わない）
+            refundAmount = bet.betAmount;
         } else {
             // 的中チェック
             const officialPayouts = payoutsList.filter(p => p.type === bet.betType);
             for (const payout of officialPayouts) {
-                if (bet.combination === payout.numbers) {
+                if (normalizeCombo(bet.combination!, bet.betType!) === normalizeCombo(payout.numbers, bet.betType!)) {
                     hitAmount = Math.round((payout.amount / 100) * bet.betAmount);
                     isHit = true;
                 }
@@ -147,7 +151,7 @@ export async function settleRacePredictions(placeName: string, raceNumber: numbe
                 isSettled: true,
                 isHit,
                 hitAmount,
-                refundAmount: containsRefundedBoat ? bet.betAmount : 0,
+                refundAmount,
             },
         });
 
@@ -203,7 +207,7 @@ export async function settleEventBets(placeName: string, raceNumber: number, rac
             // 的中チェック
             const officialPayouts = payoutsList.filter(p => p.type === bet.betType);
             for (const payout of officialPayouts) {
-                if (bet.combination === payout.numbers) {
+                if (normalizeCombo(bet.combination!, bet.betType!) === normalizeCombo(payout.numbers, bet.betType!)) {
                     hitAmount = Math.round((payout.amount / 100) * bet.betAmount);
                     isHit = true;
                 }
@@ -213,8 +217,10 @@ export async function settleEventBets(placeName: string, raceNumber: number, rac
         const totalEarned = hitAmount + refundAmount;
 
         await prisma.$transaction(async (tx) => {
-            await tx.eventBet.update({
-                where: { id: bet.id },
+            // isSettled:false を条件に更新することで冪等化する。
+            // 別の精算処理が先に確定させていれば count===0 となり、加算をスキップ＝二重払い戻し防止。
+            const updated = await tx.eventBet.updateMany({
+                where: { id: bet.id, isSettled: false },
                 data: {
                     isSettled: true,
                     isHit,
@@ -223,8 +229,8 @@ export async function settleEventBets(placeName: string, raceNumber: number, rac
                 },
             });
 
-            // ポイントをEventParticipantに加算
-            if (totalEarned > 0) {
+            // ポイントをEventParticipantに加算（今回の精算で確定させたときだけ）
+            if (updated.count === 1 && totalEarned > 0) {
                 await tx.eventParticipant.updateMany({
                     where: { eventId: bet.eventId, userId: bet.userId },
                     data: { points: { increment: totalEarned } },

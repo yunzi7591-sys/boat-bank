@@ -5,11 +5,15 @@ import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Toaster } from "@/components/ui/sonner";
 import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
+import { AppReviewPrompt } from "@/components/AppReviewPrompt";
+import { SubscriptionPromoModal } from "@/components/SubscriptionPromoModal";
+import { isSubscriptionActive } from "@/lib/subscription";
 import { SharePromoModal } from "@/components/predictions/SharePromoModal";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { RevenueCatInit } from "@/components/RevenueCatInit";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { HideOnLp, MainWrapper } from "@/components/layout/ChromeWrapper";
 import { KeyboardScrollFix } from "@/components/KeyboardScrollFix";
 
@@ -75,6 +79,20 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
   const userId = session?.user?.id ?? null;
+  // 登録時に入るメール認証日時を「アカウントの古さ」の代用にする
+  // （既存ユーザーは登録が3日以上前 → レビュー促進の即対象になる）
+  let accountCreatedAt: string | null = null;
+  let showSubscriptionPromo = false;
+  if (userId) {
+    const u = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { emailVerified: true, role: true, subscription: true },
+    });
+    accountCreatedAt = u?.emailVerified?.toISOString() ?? null;
+    // ADMIN/MONITORは常に閲覧可能なので勧誘しない
+    const privileged = u?.role === "ADMIN" || u?.role === "MONITOR";
+    showSubscriptionPromo = Boolean(u) && !privileged && !isSubscriptionActive(u?.subscription);
+  }
   return (
     <html lang="ja">
       <body
@@ -94,6 +112,8 @@ export default async function RootLayout({
         <HideOnLp>
           <PushPermissionPrompt isLoggedIn={Boolean(userId)} />
         </HideOnLp>
+        <AppReviewPrompt accountCreatedAt={accountCreatedAt} />
+        <SubscriptionPromoModal enabled={showSubscriptionPromo} />
         <SharePromoModal />
         <Toaster position="top-center" />
         {process.env.NEXT_PUBLIC_GA_ID?.trim() && (

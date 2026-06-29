@@ -17,7 +17,7 @@ export default function SctPage() {
             <article className="prose prose-sm prose-slate max-w-none">
                 <h1 className="text-xl font-bold text-[#061b31] mb-6">特定商取引法に基づく表記</h1>
 
-                <p className="text-xs text-slate-400 mb-8">最終更新日: 2026年5月6日</p>
+                <p className="text-xs text-slate-400 mb-8">最終更新日: 2026年6月17日</p>
 
                 <table className="w-full text-sm border-collapse">
                     <tbody>
@@ -52,7 +52,7 @@ export default function SctPage() {
                             その他の追加料金は発生しません。
                         </Row>
                         <Row label="お支払い方法">
-                            Apple App Store のアカウントに登録された支払い方法（クレジットカード、デビットカード、キャリア決済、Apple ID残高等）
+                            Apple App Store または Google Play のアカウントに登録された支払い方法（クレジットカード、デビットカード、キャリア決済、各ストアの残高等）
                         </Row>
                         <Row label="お支払い時期">
                             お申込み時に課金されます（無料トライアル期間中は課金されません）。
@@ -67,17 +67,25 @@ export default function SctPage() {
                             <br />
                             無料トライアル期間中に解約された場合、料金は発生しません。
                             <br />
-                            なお、課金処理は Apple App Store によって行われるため、返金につきましては Apple の規約に基づき Apple が判断します。返金のご相談は{" "}
+                            なお、課金処理は Apple App Store または Google Play によって行われるため、返金につきましては各ストアの規約に基づき判断されます。返金のご相談は、ご利用のストア（{" "}
                             <a href="https://support.apple.com/ja-jp/HT204084" className="text-[#533afd] underline" target="_blank" rel="noopener noreferrer">
                                 Apple サポート
                             </a>
-                            までご連絡ください。
+                            {" / "}
+                            <a href="https://support.google.com/googleplay/answer/2479637" className="text-[#533afd] underline" target="_blank" rel="noopener noreferrer">
+                                Google Play ヘルプ
+                            </a>
+                            ）までご連絡ください。
                         </Row>
                         <Row label="サブスクリプションの解約方法">
-                            iPhone「設定」＞「Apple ID」＞「サブスクリプション」から、いつでも解約手続きが可能です。
+                            iOS: iPhone「設定」＞「Apple ID」＞「サブスクリプション」から。
+                            <br />
+                            Android: 「Google Play」アプリ ＞「お支払いと定期購入」＞「定期購入」から。
+                            <br />
+                            いずれもいつでも解約手続きが可能です。
                         </Row>
                         <Row label="動作環境">
-                            iOS 15 以上 / 最新のSafari, Chrome 等のモダンブラウザ
+                            iOS 15 以上 / Android 7.0 以上 / 最新のSafari, Chrome 等のモダンブラウザ
                         </Row>
                     </tbody>
                 </table>

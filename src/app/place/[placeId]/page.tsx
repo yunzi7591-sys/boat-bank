@@ -40,7 +40,7 @@ export default async function PlacePage(props: {
             where: { placeName: venue.name, raceDate: raceDateFilter, isPrivate: false },
             include: {
                 author: { select: { name: true, image: true } },
-                _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
+                _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } },
             },
             orderBy: { createdAt: 'desc' }
         }),

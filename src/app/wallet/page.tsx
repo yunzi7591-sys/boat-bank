@@ -39,6 +39,8 @@ export default async function WalletPage() {
                 return `【購入】${prediction?.placeName || ''} ${prediction?.raceNumber || ''}R 予想`;
             case 'SELL_PREDICTION':
                 return `【売上】${prediction?.placeName || ''} ${prediction?.raceNumber || ''}R 予想`;
+            case 'SUBSCRIBER_UNLOCK':
+                return `【閲覧】${prediction?.placeName || ''} ${prediction?.raceNumber || ''}R 予想（会員特典）`;
             case 'WIN':
                 return `【的中】${prediction?.placeName || ''} ${prediction?.raceNumber || ''}R 払戻`;
             case 'REFUND':

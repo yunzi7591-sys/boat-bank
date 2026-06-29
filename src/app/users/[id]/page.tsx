@@ -6,8 +6,42 @@ import Link from "next/link";
 import { FollowButton } from "@/components/market/FollowButton";
 import { CalendarPnLWrapper } from "@/components/mypage/CalendarPnLWrapper";
 import { auth } from "@/auth";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 import { PredictionList } from "@/components/mypage/PredictionList";
+import { ProfileShareButton } from "@/components/mypage/ProfileShareButton";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+    const { id } = await params;
+    const user = await prisma.user.findUnique({ where: { id }, select: { name: true } });
+    if (!user) return { title: 'BOAT BANK' };
+
+    const stats = await getPublicUserStats(id);
+    const name = user.name || 'プレイヤー';
+    const title = `${name}の競艇収支・予想 | BOAT BANK`;
+    const description = `回収率 ${stats.recoveryRate.toFixed(1)}% / 的中 ${stats.hitCount}・${stats.totalPredictions}R。${name}さんのガチ予想と収支をBOAT BANKでチェック。`;
+    const ogImage = `https://boatbank.jp/api/og/profile/${id}`;
+
+    return {
+        title,
+        description,
+        openGraph: {
+            title,
+            description,
+            url: `https://boatbank.jp/users/${id}`,
+            siteName: 'BOAT BANK',
+            type: 'profile',
+            images: [{ url: ogImage, width: 1200, height: 630, type: 'image/png', alt: title }],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
+        },
+    };
+}
 
 export default async function UserProfilePage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
@@ -45,7 +79,7 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
     const publishedPredictions = await prisma.prediction.findMany({
         where: { authorId: userId, isPrivate: false, publishType: "internal" },
         orderBy: { createdAt: 'desc' },
-        include: { _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } } },
+        include: { _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } } },
     });
 
     // Check if current user is following this profile
@@ -74,10 +108,11 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
             {/* Header Profile */}
             <div className="bg-[#1c1e54] text-white p-6 pb-12 rounded-b-lg shadow-[0_30px_45px_-30px_rgba(50,50,93,0.25),0_18px_36px_-18px_rgba(0,0,0,0.1)] relative overflow-hidden">
                 <div className="max-w-4xl mx-auto">
-                    <Link href={currentUserId === userId ? "/mypage" : "/"} className="inline-flex items-center gap-1 text-white/60 hover:text-white text-sm mb-3">
-                        <ArrowLeft className="w-4 h-4" />
-                        戻る
-                    </Link>
+                    <BackButton
+                        label="戻る"
+                        className="inline-flex items-center gap-1 text-white/60 hover:text-white text-sm mb-3"
+                        iconClassName="w-4 h-4"
+                    />
                     <div className="flex justify-between items-start mb-4">
                         <div>
                             <div className="flex items-center gap-2">
@@ -88,11 +123,12 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
                             </div>
                         </div>
 
-                        {currentUserId && currentUserId !== userId && (
-                            <div className="mt-2">
+                        <div className="mt-2 flex items-center gap-1">
+                            <ProfileShareButton userId={userId} userName={user.name} />
+                            {currentUserId && currentUserId !== userId && (
                                 <FollowButton targetUserId={userId} initialIsFollowing={isFollowing} />
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-4 mb-2 text-sm">

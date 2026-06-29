@@ -64,6 +64,48 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
     const [userPoints, setUserPoints] = useState<number>(initialUserPoints ?? 0);
     const [pointsLoaded, setPointsLoaded] = useState(initialUserPoints !== undefined);
 
+    // 自動資金配分: 合計金額（100円単位の数値文字列）
+    const [allocTotal, setAllocTotal] = useState('');
+
+    // キーボードの高さ（公開ポップアップを開いている間だけ検知）。
+    // resize:'none' のため画面が縮まらない → この分の余白を下に足してスクロール可能にする。
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+    useEffect(() => {
+        if (!publishDialogOpen) {
+            setKeyboardHeight(0);
+            return;
+        }
+        let cleanup: (() => void) | undefined;
+        let cancelled = false;
+        (async () => {
+            try {
+                const { Capacitor } = await import("@capacitor/core");
+                if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("Keyboard")) {
+                    const { Keyboard } = await import("@capacitor/keyboard");
+                    const showH = await Keyboard.addListener("keyboardWillShow", (info) => {
+                        if (!cancelled) setKeyboardHeight(info.keyboardHeight || 0);
+                    });
+                    const hideH = await Keyboard.addListener("keyboardWillHide", () => {
+                        if (!cancelled) setKeyboardHeight(0);
+                    });
+                    cleanup = () => { showH.remove(); hideH.remove(); };
+                    return;
+                }
+            } catch {}
+            // Web フォールバック: visualViewport で隠れた高さを推定
+            const vv = typeof window !== "undefined" ? window.visualViewport : null;
+            if (!vv) return;
+            const onResize = () => {
+                const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+                if (!cancelled) setKeyboardHeight(hidden);
+            };
+            vv.addEventListener("resize", onResize);
+            vv.addEventListener("scroll", onResize);
+            cleanup = () => { vv.removeEventListener("resize", onResize); vv.removeEventListener("scroll", onResize); };
+        })();
+        return () => { cancelled = true; cleanup?.(); };
+    }, [publishDialogOpen]);
+
     useEffect(() => {
         if (initialUserPoints === undefined) {
             getUserPoints().then((pts) => {
@@ -107,6 +149,67 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
             hasMissing,
         };
     })();
+
+    // 自動資金配分: どの買い目が当たっても払戻が均等になるよう、合計金額をオッズに反比例して配分
+    const handleAutoAllocate = () => {
+        const units = parseInt((allocTotal || '').replace(/[^0-9]/g, '')) || 0;
+        const budgetYen = units * 100;
+        if (budgetYen <= 0) {
+            toast.error('配分する合計金額を入力してください', { position: 'top-center' });
+            return;
+        }
+        // オッズが取得できる買い目だけを対象にする
+        const targets: { formationId: string; combId: string; odds: number }[] = [];
+        const excluded: { formationId: string; combId: string }[] = [];
+        for (const f of cart) {
+            for (const c of f.combinations) {
+                const o = getOddsForCombination(odds, f.betType, c.id);
+                if (o && o > 0) targets.push({ formationId: f.id, combId: c.id, odds: o });
+                else excluded.push({ formationId: f.id, combId: c.id });
+            }
+        }
+        if (targets.length === 0) {
+            toast.error('オッズが取得できる買い目がありません', { position: 'top-center' });
+            return;
+        }
+        if (budgetYen < targets.length * 100) {
+            toast.error(`金額が少なすぎます（最低 ¥${(targets.length * 100).toLocaleString()}）`, { position: 'top-center' });
+            return;
+        }
+        // オッズの逆数に比例 → 各買い目を100円単位で配分（最低1単位＝100円）
+        const totalUnits = Math.floor(budgetYen / 100);
+        const sumInv = targets.reduce((s, t) => s + 1 / t.odds, 0);
+        const ideal = targets.map((t) => (totalUnits * (1 / t.odds)) / sumInv);
+        const alloc = ideal.map((x) => Math.max(1, Math.floor(x)));
+        let diff = totalUnits - alloc.reduce((a, b) => a + b, 0);
+        const fracOrder = ideal.map((x, i) => ({ i, frac: x - Math.floor(x) }));
+        if (diff > 0) {
+            const order = [...fracOrder].sort((a, b) => b.frac - a.frac);
+            let k = 0;
+            while (diff > 0) { alloc[order[k % order.length].i]++; diff--; k++; }
+        } else if (diff < 0) {
+            const order = [...fracOrder].sort((a, b) => a.frac - b.frac);
+            let k = 0, guard = 0;
+            while (diff < 0 && guard < order.length * 1000) {
+                const idx = order[k % order.length].i;
+                if (alloc[idx] > 1) { alloc[idx]--; diff++; }
+                k++; guard++;
+            }
+        }
+        // 反映（対象は配分額、オッズ未取得は0に）
+        targets.forEach((t, i) => updateCartItemAmount(t.formationId, t.combId, alloc[i] * 100));
+        excluded.forEach((e) => updateCartItemAmount(e.formationId, e.combId, 0));
+        // トリガミ判定
+        const payouts = targets.map((t, i) => alloc[i] * 100 * t.odds);
+        const minPayout = Math.min(...payouts);
+        if (excluded.length > 0) {
+            toast.warning(`オッズ未取得の${excluded.length}点を除外して配分しました`, { position: 'top-center' });
+        } else if (minPayout < budgetYen) {
+            toast.warning(`トリガミ注意: 最低払戻 約¥${Math.round(minPayout).toLocaleString()} が投資 ¥${budgetYen.toLocaleString()} を下回ります`, { position: 'top-center' });
+        } else {
+            toast.success(`配分しました（目標払戻 約¥${Math.round(minPayout).toLocaleString()}）`, { position: 'top-center' });
+        }
+    };
 
     // 締切チェック: 30秒ごとに更新
     const [now, setNow] = useState(() => new Date());
@@ -207,6 +310,35 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                             </span>
                         </p>
                         <p className="text-[10px] text-amber-500 mt-0.5">確定オッズとは異なります</p>
+                    </div>
+                )}
+
+                {/* 自動資金配分 */}
+                {odds && Object.keys(odds).length > 0 && totalCombinations > 0 && (
+                    <div className="bg-white border border-slate-200 rounded-lg px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">自動資金配分</span>
+                            <div className="flex-1 flex items-center bg-white border border-slate-200 rounded-md h-8 focus-within:border-blue-400">
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    placeholder="合計"
+                                    className="flex-1 w-0 h-full text-right font-bold text-xs px-2 bg-transparent outline-none border-0"
+                                    value={allocTotal}
+                                    onChange={(e) => setAllocTotal(e.target.value.replace(/[^0-9]/g, ''))}
+                                />
+                                <span className="text-xs font-bold text-slate-400 pr-2 whitespace-nowrap select-none">00円</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleAutoAllocate}
+                                className="h-8 px-3 rounded-md bg-[#533afd] text-white text-xs font-bold hover:bg-[#4434d4] whitespace-nowrap transition-colors"
+                            >
+                                配分
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">どの買い目が当たっても払戻が均等になるよう配分します</p>
                     </div>
                 )}
 
@@ -383,7 +515,16 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                         予想を公開する
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="sm:max-w-md">
+                                <DialogContent
+                                    className="sm:max-w-md max-h-[85dvh] overflow-y-auto"
+                                    style={{ paddingBottom: keyboardHeight ? keyboardHeight + 24 : undefined }}
+                                    onFocusCapture={(e) => {
+                                        const t = e.target as HTMLElement;
+                                        if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) {
+                                            setTimeout(() => t.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
+                                        }
+                                    }}
+                                >
                                     <DialogHeader>
                                         <DialogTitle className="text-[#061b31]">予想記事の公開設定</DialogTitle>
                                         <DialogDescription className="text-[#64748d]">

@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'jp.boatbank.app',
@@ -22,7 +23,7 @@ const config: CapacitorConfig = {
     Keyboard: {
       // 'none' = キーボードを画面に重ねて表示するだけで body は変えない
       // → スクロール領域が壊れない
-      resize: 'none',
+      resize: KeyboardResize.None,
     },
   },
 };

@@ -12,7 +12,7 @@ import { Loader2 } from "lucide-react";
 import { AppleSignInButton } from "@/components/AppleSignInButton";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
-export function LoginForm() {
+export function LoginForm({ callbackUrl = "/mypage" }: { callbackUrl?: string }) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
@@ -43,7 +43,7 @@ export function LoginForm() {
                 setIsLoading(false);
             } else {
                 toast.success("ログインしました");
-                router.push("/mypage");
+                router.push(callbackUrl);
                 router.refresh();
             }
         } catch (error) {

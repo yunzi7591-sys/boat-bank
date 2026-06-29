@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Flame, Coins, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import { setLoginBonusOpen } from "@/lib/modal-coordination";
 
 type Props = {
     streak: number;
@@ -14,13 +15,24 @@ type Props = {
 export function LoginBonusModal({ streak, dailyPoints, isStreakUp }: Props) {
     const [open, setOpen] = useState(false);
 
+    // 他のポップアップと被らないよう、開閉を共有しつつ状態を更新する
+    const changeOpen = (next: boolean) => {
+        setOpen(next);
+        setLoginBonusOpen(next);
+    };
+
     useEffect(() => {
+        // 表示前から「これから開くよ」と合図しておく（他ポップアップの先走り防止）
+        setLoginBonusOpen(true);
         const t = setTimeout(() => setOpen(true), 250);
-        return () => clearTimeout(t);
+        return () => {
+            clearTimeout(t);
+            setLoginBonusOpen(false);
+        };
     }, []);
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={changeOpen}>
             <DialogContent className="max-w-sm p-0 border-0 overflow-hidden bg-gradient-to-br from-[#1c1e54] via-[#2d2f7a] to-[#533afd] text-white rounded-2xl">
                 <DialogTitle className="sr-only">ログインボーナス</DialogTitle>
 
@@ -111,7 +123,7 @@ export function LoginBonusModal({ streak, dailyPoints, isStreakUp }: Props) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.5 }}
-                        onClick={() => setOpen(false)}
+                        onClick={() => changeOpen(false)}
                         className="w-full bg-white text-[#1c1e54] font-bold py-3 rounded-xl hover:bg-white/90 transition-colors"
                     >
                         受け取る

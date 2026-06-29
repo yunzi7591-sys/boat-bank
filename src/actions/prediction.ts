@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Formation } from "@/lib/bet-logic";
 import { sendPushToMultipleUsers } from "@/lib/push";
+import { rateLimit } from "@/lib/rate-limit";
 
 async function notifyFollowers(authorId: string, placeName: string, raceNumber: number, predictionId: string) {
     try {
@@ -44,6 +45,22 @@ export async function publishPrediction(data: {
 
         const userId = session.user.id;
 
+        // 連続投稿スパム対策: 公開予想は10分で10件まで（非公開予想は制限対象外）
+        if (!data.isPrivate) {
+            const { allowed, retryAfterMs } = await rateLimit(
+                `publish:${userId}`,
+                10,
+                10 * 60 * 1000,
+            );
+            if (!allowed) {
+                const mins = Math.ceil(retryAfterMs / 60000);
+                return {
+                    success: false,
+                    error: `投稿が早すぎます。10分間に公開できる予想は10件までです。約${mins}分後に再度お試しください。`,
+                };
+            }
+        }
+
         if (data.cartData.length === 0) {
             return { success: false, error: "買い目が選択されていません。" };
         }
@@ -67,10 +84,25 @@ export async function publishPrediction(data: {
         if (!schedule) {
             return { success: false, error: "対象レースが見つかりません。" };
         }
-        if (schedule.deadlineAt < new Date()) {
+        // 締切後は「公開予想」のみ禁止。非公開（自分用の収支記録）は締切後でも登録可
+        if (!data.isPrivate && schedule.deadlineAt < new Date()) {
             return { success: false, error: "締切時刻を過ぎたレースの予想は公開できません。" };
         }
         data.deadlineAt = schedule.deadlineAt;
+
+        // 1レースにつき1人1予想まで（同じ場・レース番号・日付への重複公開を禁止）
+        const existing = await prisma.prediction.findFirst({
+            where: {
+                authorId: userId,
+                placeName: data.placeName,
+                raceNumber: data.raceNumber,
+                raceDate: raceDateForLookup,
+            },
+            select: { id: true },
+        });
+        if (existing) {
+            return { success: false, error: "このレースには既に予想を公開しています。1レースにつき1予想までです。" };
+        }
 
         if (data.publishType === "internal") {
             if (!data.title) {

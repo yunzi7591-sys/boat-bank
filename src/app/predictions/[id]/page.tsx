@@ -1,12 +1,16 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { isSubscriber } from "@/lib/subscription";
 import { notFound } from "next/navigation";
 import { UnlockButton } from "@/components/predictions/UnlockButton";
-import { Formation } from "@/lib/bet-logic";
+import { Formation, normalizeCombo } from "@/lib/bet-logic";
+import { BackButton } from "@/components/BackButton";
 import { parseJsonSafely } from "@/lib/utils";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Lock, ExternalLink } from "lucide-react";
 import { ShareButton } from "@/components/predictions/ShareButton";
+import { SubscriberUnlockButton } from "@/components/predictions/SubscriberUnlockButton";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ref?: string | string[] }> }): Promise<Metadata> {
@@ -95,6 +99,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
     }
 
     let isUnlocked = false;
+    let unlockedBySubscription = false;
     const isClosed = new Date(prediction.deadlineAt) < new Date();
 
     if (userId) {
@@ -105,16 +110,36 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                 where: {
                     userId,
                     predictionId: params.id,
-                    action: "BUY_PREDICTION",
+                    action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] },
                 },
+                select: { action: true },
             });
             if (transaction) {
                 isUnlocked = true;
+                if (transaction.action === "SUBSCRIBER_UNLOCK") unlockedBySubscription = true;
             }
         }
     }
 
+    // 会員特典: サブスク会員は「当日のレース」かつ「締切済み」の予想をpt消費なしでアンロックできる
+    // （締切前は通常の購入フロー。アンロックは明示操作が必要で、押下時に公開者へ通知される）
+    let canSubscriberUnlock = false;
+    let promptSubscribeForClosed = false; // 締切後・当日の非会員にサブスク誘導を出す
+    if (!isUnlocked && isClosed) {
+        const jstDate = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
+        const isRaceToday = jstDate(new Date(prediction.raceDate)) === jstDate(new Date());
+        if (isRaceToday && userId && (await isSubscriber(userId))) {
+            canSubscriberUnlock = true;
+        } else if (isRaceToday) {
+            // 当日のレースなので、会員になれば閲覧できる → サブスク誘導
+            promptSubscribeForClosed = true;
+        }
+    }
+
     // Safe parse
+    // 投稿者本人かどうか（本人なら買い目非公開でも自分の買い目は見られる）
+    const isAuthor = !!userId && prediction.authorId === userId;
+
     let formations: Formation[] = [];
     try {
         formations = parseJsonSafely<Formation[]>(prediction.predictedNumbers);
@@ -144,6 +169,10 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
         <div className="min-h-screen bg-slate-50 font-sans pb-24">
             {/* Top Details Header */}
             <div className="bg-white px-5 pt-8 pb-6 border-b border-slate-200">
+                <BackButton
+                    label="戻る"
+                    className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors mb-4"
+                />
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-black tracking-widest text-slate-400 uppercase">予想詳細</span>
@@ -167,15 +196,24 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                 <h1 className="text-2xl font-black text-slate-900 leading-tight mb-4">{prediction.title || `渾身の勝負レース`}</h1>
 
                 <div className="flex items-center gap-3">
-                    <div className="flex flex-col">
-                        <span className="font-extrabold text-[13px] text-slate-800">{prediction.author?.name || "Anonymous"}</span>
+                    <Link href={`/users/${prediction.authorId}`} className="flex flex-col -m-1 p-1 rounded-lg active:bg-slate-100 transition-colors">
+                        <span className="font-extrabold text-[13px] text-slate-800 hover:underline">{prediction.author?.name || "Anonymous"}</span>
                         <span className="text-[10px] text-slate-400 font-medium">{new Date(prediction.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>
-                    </div>
+                    </Link>
                 </div>
             </div>
 
             {/* Main Content Body */}
             <div className="p-5">
+
+                {unlockedBySubscription && (
+                    <div className="mb-5 flex items-center gap-2 rounded-xl border border-[#533afd]/20 bg-[#533afd]/5 px-4 py-3">
+                        <span className="text-xs font-black bg-[#533afd] text-white px-1.5 py-0.5 rounded leading-none">会員特典</span>
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                            締切済みの当日レースのため、会員特典でアンロック済みです。
+                        </p>
+                    </div>
+                )}
 
                 {/* Commentary Section */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6 relative overflow-hidden">
@@ -206,7 +244,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                     </h3>
 
                     {isUnlocked ? (
-                        prediction.betsPublic === false ? (
+                        prediction.betsPublic === false && !isAuthor ? (
                             <div className="w-full bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-slate-200 shadow-sm">
                                 <div className="w-12 h-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center mb-4">
                                     <Lock className="w-5 h-5" />
@@ -227,6 +265,12 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                             </div>
                         ) : (
                         <div className="flex flex-col gap-4">
+                            {prediction.betsPublic === false && isAuthor && (
+                                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold px-3 py-2 rounded-xl">
+                                    <Lock className="w-3.5 h-3.5" />
+                                    買い目は非公開です。この買い目はあなた（投稿者本人）だけに表示されています。
+                                </div>
+                            )}
                             {formations.map((f, i) => (
                                 <Card key={`form-${i}`} className="border-slate-200 shadow-sm rounded-xl overflow-hidden">
                                     <div className="bg-slate-50 px-4 py-2 border-b border-slate-100 flex justify-between items-center">
@@ -249,7 +293,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                                         // 的中チェック（返還対象でない場合のみ）
                                                         const officialPayouts = payoutsMap.get(f.betType) || [];
                                                         for (const op of officialPayouts) {
-                                                            if (c.id === op.numbers) {
+                                                            if (normalizeCombo(c.id, f.betType) === normalizeCombo(op.numbers, f.betType)) {
                                                                 combHit = true;
                                                                 combPayout = Math.floor((op.amount / 100) * c.amount);
                                                             }
@@ -320,16 +364,26 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                 </div>
 
                                 <h4 className="font-black text-slate-800 text-lg mb-1">
-                                    {!userId ? "会員登録が必要です" : "予想をアンロック"}
+                                    {!userId
+                                        ? "会員登録が必要です"
+                                        : canSubscriberUnlock
+                                            ? "会員特典でアンロック"
+                                            : promptSubscribeForClosed
+                                                ? "サブスク会員限定"
+                                                : "予想をアンロック"}
                                 </h4>
                                 <p className="text-xs font-semibold text-slate-500 mb-6 max-w-[220px]">
                                     {!userId
                                         ? "この予想を閲覧するにはログインまたは会員登録が必要です。"
-                                        : isClosed
-                                            ? "このレースは締切時刻を過ぎているため、購入できません。"
-                                            : prediction.price === 0
-                                                ? "無料予想です。ログインすると閲覧できます。"
-                                                : "買い目と金額配分を確認するにはポイントが必要です。"
+                                        : canSubscriberUnlock
+                                            ? "締切済みの当日レースです。会員特典でpt消費なしでアンロックできます。"
+                                            : promptSubscribeForClosed
+                                                ? "このレースは締切時刻を過ぎました。サブスク会員なら当日のレースの予想を閲覧できます。"
+                                                : isClosed
+                                                    ? "締切時刻を過ぎたため購入できません。当日のレースはサブスク会員のみ閲覧できます。"
+                                                    : prediction.price === 0
+                                                        ? "無料予想です。ログインすると閲覧できます。"
+                                                        : "買い目と金額配分を確認するにはポイントが必要です。"
                                     }
                                 </p>
 
@@ -337,6 +391,12 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                     <a href="/login" className="inline-flex items-center justify-center bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm px-6 py-3 rounded-lg transition-colors">
                                         ログイン / 新規登録
                                     </a>
+                                ) : canSubscriberUnlock ? (
+                                    <SubscriberUnlockButton predictionId={prediction.id} />
+                                ) : promptSubscribeForClosed ? (
+                                    <Link href="/subscribe" className="inline-flex items-center justify-center bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm px-6 py-3 rounded-lg transition-colors shadow-md">
+                                        サブスク会員になって閲覧する
+                                    </Link>
                                 ) : (
                                     <UnlockButton
                                         predictionId={prediction.id}

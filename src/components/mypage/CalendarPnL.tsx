@@ -309,10 +309,19 @@ function DailyDetail({
     );
   }
 
-  const total = predictions.reduce((sum, p) => {
-    if (!p.isSettled) return sum;
-    return sum + (p.hitAmount + (p.refundAmount || 0) - p.betAmount);
-  }, 0);
+  // 確定したレースのみで投資・回収を集計（回収率の分母を意味のある値にするため）
+  const { investment, refund } = predictions.reduce(
+    (acc, p) => {
+      if (p.isSettled) {
+        acc.investment += p.betAmount;
+        acc.refund += p.hitAmount + (p.refundAmount || 0);
+      }
+      return acc;
+    },
+    { investment: 0, refund: 0 }
+  );
+  const total = refund - investment;
+  const recoveryRate = investment > 0 ? (refund / investment) * 100 : 0;
 
   return (
     <div className="mt-3 bg-[#f8fafc] rounded-lg p-4">
@@ -409,8 +418,17 @@ function DailyDetail({
       </div>
 
       <div className="border-t border-[#e5edf5] mt-2 pt-2">
-        <div className="flex items-center justify-between text-xs font-black">
-          <span className="text-[#061b31]">合計</span>
+        <div className="grid grid-cols-3 gap-1.5 mb-2">
+          <DayStatCell label="投資" value={`¥${formatCurrency(investment)}`} />
+          <DayStatCell label="回収" value={`¥${formatCurrency(refund)}`} />
+          <DayStatCell
+            label="回収率"
+            value={`${investment > 0 ? recoveryRate.toFixed(1) : "0.0"}%`}
+            accent={investment > 0 && recoveryRate >= 100}
+          />
+        </div>
+        <div className="flex items-center justify-between text-xs font-black px-0.5">
+          <span className="text-[#061b31]">収支</span>
           <span
             className={
               total > 0
@@ -430,20 +448,40 @@ function DailyDetail({
 
 function MonthlySummary({
   dailyStats,
+  dailyPredictions,
 }: {
   dailyStats: DailyPnLItem[];
+  dailyPredictions: { [date: string]: DailyPredictionItem[] };
 }) {
   const totals = useMemo(() => {
     let investment = 0;
     let refund = 0;
-    let predictions = 0;
     for (const d of dailyStats) {
       investment += d.investment;
       refund += d.refund;
-      predictions += d.predictions;
     }
-    return { investment, refund, pnl: refund - investment, predictions };
+    return { investment, refund, pnl: refund - investment };
   }, [dailyStats]);
+
+  // レース単位の参加数・的中数（同一レースは1Rとして数え、賭けが1つでも当たれば的中）
+  const raceStats = useMemo(() => {
+    let total = 0;
+    let hit = 0;
+    for (const items of Object.values(dailyPredictions)) {
+      const byRace = new Map<string, DailyPredictionItem[]>();
+      for (const p of items) {
+        const k = `${p.placeName}-${p.raceNumber}`;
+        const arr = byRace.get(k) || [];
+        arr.push(p);
+        byRace.set(k, arr);
+      }
+      for (const arr of byRace.values()) {
+        total++;
+        if (arr.some((i) => i.isSettled && i.isHit)) hit++;
+      }
+    }
+    return { total, hit, rate: total > 0 ? (hit / total) * 100 : 0 };
+  }, [dailyPredictions]);
 
   return (
     <div className="mb-4 bg-[#f1f5f9] rounded-lg p-3">
@@ -471,7 +509,26 @@ function MonthlySummary({
             {totals.investment > 0 ? ((totals.refund / totals.investment) * 100).toFixed(1) : "0.0"}%
           </div>
         </div>
+        <SummaryCell
+          label="的中"
+          value={`${raceStats.hit} / ${raceStats.total}R`}
+        />
+        <div className="bg-white rounded-lg p-2.5 text-center">
+          <div className="text-[10px] font-bold text-[#64748d] mb-0.5">的中率</div>
+          <div className={`text-sm font-black ${raceStats.rate >= 50 ? "text-[#533afd]" : "text-[#061b31]"}`}>
+            {raceStats.total > 0 ? raceStats.rate.toFixed(1) : "0.0"}%
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function DayStatCell({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="bg-white rounded-md py-1.5 px-1 text-center border border-[#e5edf5]">
+      <div className="text-[9px] font-bold text-[#64748d] mb-0.5">{label}</div>
+      <div className={`text-xs font-black ${accent ? "text-[#533afd]" : "text-[#061b31]"}`}>{value}</div>
     </div>
   );
 }
@@ -622,7 +679,7 @@ export function CalendarPnL({
         onMonthChange={onMonthChange}
       />
 
-      <MonthlySummary dailyStats={dailyStats} />
+      <MonthlySummary dailyStats={dailyStats} dailyPredictions={filteredPredictions} />
 
       <CalendarGrid
         year={currentYear}

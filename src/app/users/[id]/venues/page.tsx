@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getPublicVenueStatsAll } from "@/lib/stats";
+import { getPublicStatsLeaves, buildSampleStatsLeaves } from "@/lib/stats";
 import { VenueStatsGrid } from "@/components/mypage/VenueStatsGrid";
 import { BackButton } from "@/components/BackButton";
 import { SubscriptionGate } from "@/components/SubscriptionGate";
@@ -16,7 +16,8 @@ export default async function UserVenuesPage(props: { params: Promise<{ id: stri
 
     if (!user) notFound();
 
-    const { all, year, monthly, byRaceType } = await getPublicVenueStatsAll(userId);
+    const leaves = await getPublicStatsLeaves(userId);
+    const currentYear = new Date().getFullYear();
 
     return (
         <div className="min-h-screen bg-white font-sans pb-24">
@@ -24,21 +25,9 @@ export default async function UserVenuesPage(props: { params: Promise<{ id: stri
                 <BackButton label={`${user.name}のプロフィールに戻る`} />
                 <h1 className="text-xl font-black text-[#061b31] mb-4">{user.name}の詳細成績</h1>
                 <SubscriptionGate
-                    preview={
-                        <VenueStatsGrid
-                            allTimeStats={all}
-                            yearStats={year}
-                            monthlyStats={monthly}
-                            byRaceType={byRaceType}
-                        />
-                    }
+                    preview={<VenueStatsGrid leaves={buildSampleStatsLeaves(currentYear)} year={currentYear} />}
                 >
-                    <VenueStatsGrid
-                        allTimeStats={all}
-                        yearStats={year}
-                        monthlyStats={monthly}
-                        byRaceType={byRaceType}
-                    />
+                    <VenueStatsGrid leaves={leaves} year={currentYear} />
                 </SubscriptionGate>
             </div>
         </div>

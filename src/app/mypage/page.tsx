@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight, Crown } from "lucide-react";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { ReloadButton } from "@/components/ReloadButton";
+import { ProfileShareButton } from "@/components/mypage/ProfileShareButton";
 import { PredictionList } from "@/components/mypage/PredictionList";
+import { BetList } from "@/components/mypage/BetList";
 import { A8Banner } from "@/components/ads/A8Banner";
 import { A8_BANNER_MIDDLE } from "@/components/ads/A8BannerConfig";
 
@@ -46,22 +48,23 @@ export default async function MyPage() {
         getUserDailyPredictions(userId, currentYear, currentMonth),
     ]);
 
-    // 2. Get Published Predictions
-    const publishedPredictions = await prisma.prediction.findMany({
-        where: { authorId: userId },
-        orderBy: { createdAt: 'desc' },
-        take: 30,
+    // 2. Get registered bets (登録した収支 / UserBet)
+    const userBets = await prisma.userBet.findMany({
+        where: { userId },
+        orderBy: [{ raceDate: 'desc' }, { createdAt: 'desc' }],
+        take: 50,
         select: {
             id: true,
             placeName: true,
             raceNumber: true,
-            title: true,
-            price: true,
+            raceDate: true,
+            betType: true,
+            combination: true,
+            betAmount: true,
+            hitAmount: true,
+            refundAmount: true,
             isSettled: true,
             isHit: true,
-            refundAmount: true,
-            createdAt: true,
-            _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
         },
     });
 
@@ -82,7 +85,7 @@ export default async function MyPage() {
                     refundAmount: true,
                     createdAt: true,
                     author: { select: { name: true } },
-                    _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
+                    _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } },
                 }
             }
         },
@@ -90,6 +93,9 @@ export default async function MyPage() {
     });
 
     const purchasedPredictions = purchases.map(p => p.prediction).filter(p => p !== null);
+
+    // 収支タブの件数はレース単位（同一レースの複数買い目はまとめる）
+    const betRaceCount = new Set(userBets.map(b => `${b.placeName}-${b.raceNumber}-${b.raceDate?.toISOString()}`)).size;
 
     const isPositiveReturn = stats.recoveryRate >= 100;
 
@@ -110,7 +116,10 @@ export default async function MyPage() {
                                 <span className="text-[9px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">公式</span>
                             )}
                             </div>
-                            <ReloadButton className="text-white/60" />
+                            <div className="flex items-center gap-1">
+                                <ProfileShareButton userId={userId} userName={user.name} />
+                                <ReloadButton className="text-white/60" />
+                            </div>
                         </div>
                     </div>
 
@@ -190,7 +199,7 @@ export default async function MyPage() {
                             <div>
                                 <h3 className="text-sm font-black tracking-tight">BOAT BANK スタンダード</h3>
                                 <p className="text-[11px] opacity-90 mt-0.5">
-                                    {subActive ? "ご利用中の会員プラン" : "初月無料・月500円で詳細分析がすべて見られる"}
+                                    {subActive ? "ご利用中の会員プラン" : "初月無料｜24場の得意・苦手がわかれば無駄舟券が減る"}
                                 </p>
                             </div>
                         </div>
@@ -239,24 +248,25 @@ export default async function MyPage() {
 
             {/* Tabs Section */}
             <div className="max-w-4xl mx-auto px-4">
-                <Tabs defaultValue="published" className="w-full">
+                <Tabs defaultValue="bets" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-6">
-                        <TabsTrigger value="published" className="font-bold">公開した予想 ({publishedPredictions.length})</TabsTrigger>
+                        <TabsTrigger value="bets" className="font-bold">収支 ({betRaceCount})</TabsTrigger>
                         <TabsTrigger value="purchased" className="font-bold">購入した予想 ({purchasedPredictions.length})</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="published">
-                        <PredictionList items={publishedPredictions.map(pred => ({
-                            id: pred.id,
-                            placeName: pred.placeName,
-                            raceNumber: pred.raceNumber,
-                            title: pred.title,
-                            price: pred.price,
-                            isSettled: pred.isSettled,
-                            isHit: pred.isHit,
-                            refundAmount: pred.refundAmount,
-                            createdAt: pred.createdAt.toISOString(),
-                            purchaseCount: pred._count?.transactions || 0,
+                    <TabsContent value="bets">
+                        <BetList items={userBets.map(bet => ({
+                            id: bet.id,
+                            placeName: bet.placeName,
+                            raceNumber: bet.raceNumber,
+                            raceDate: bet.raceDate ? bet.raceDate.toISOString() : null,
+                            betType: bet.betType,
+                            combination: bet.combination,
+                            betAmount: bet.betAmount,
+                            hitAmount: bet.isSettled ? bet.hitAmount : 0,
+                            refundAmount: bet.isSettled ? bet.refundAmount : 0,
+                            isSettled: bet.isSettled,
+                            isHit: bet.isHit,
                         }))} />
                     </TabsContent>
 

@@ -96,11 +96,16 @@ export async function submitEventBets(payload: SubmitEventBetsPayload) {
         }));
 
         await prisma.$transaction(async (tx) => {
-            await tx.eventBet.createMany({ data: betDataArray });
-            await tx.eventParticipant.update({
-                where: { eventId_userId: { eventId: payload.eventId, userId } },
+            // 残高条件付きの原子的減算。同時ベットで残高チェックをすり抜けて
+            // 二重に減算され、限定ptが負になるのを防ぐ（count===0 なら残高不足）。
+            const dec = await tx.eventParticipant.updateMany({
+                where: { eventId: payload.eventId, userId, points: { gte: totalBetAmount } },
                 data: { points: { decrement: totalBetAmount } },
             });
+            if (dec.count === 0) {
+                throw new Error("INSUFFICIENT_POINTS");
+            }
+            await tx.eventBet.createMany({ data: betDataArray });
         });
 
         console.log(`[EventBet] User ${userId} submitted ${payload.bets.length} event bets for ${payload.placeName} R${payload.raceNumber} (event: ${payload.eventId})`);
@@ -121,6 +126,9 @@ export async function submitEventBets(payload: SubmitEventBetsPayload) {
         revalidatePath('/events');
         return { success: true, count: payload.bets.length };
     } catch (e) {
+        if (e instanceof Error && e.message === "INSUFFICIENT_POINTS") {
+            return { success: false, error: "限定ptが不足しています。" };
+        }
         console.error("[EventBet Error] Failed to submit event bets:", e);
         return { success: false, error: "限定ptベットの登録に失敗しました。" };
     }

@@ -14,6 +14,7 @@ interface RankEntry {
     role: string;
     value: number;
     sub: string;
+    races?: number;
 }
 
 export default async function RankingPage() {
@@ -37,8 +38,14 @@ export default async function RankingPage() {
     const userNameMap = new Map(users.map(u => [u.id, u.name || "Unknown"]));
     const userRoleMap = new Map(users.map(u => [u.id, u.role]));
 
+    // 当月の範囲（回収率・収支・獲得ptの当月集計で共通利用）
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+    const monthEnd = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
+    const monthPredictions = predictions.filter(p => p.raceDate >= monthStart && p.raceDate < monthEnd);
+
     // --- 回収率ランキング（全場+各場） ---
-    function buildRecoveryRanking(preds: typeof predictions): RankEntry[] {
+    function buildRecoveryRanking(preds: typeof predictions, minRaces: number): RankEntry[] {
         const map = new Map<string, { inv: number; ref: number; count: number }>();
         for (const pred of preds) {
             const entry = map.get(pred.authorId) || { inv: 0, ref: 0, count: 0 };
@@ -49,27 +56,57 @@ export default async function RankingPage() {
         }
         const ranking: RankEntry[] = [];
         for (const [userId, stats] of map) {
-            if (stats.count < 3) continue;
+            if (userRoleMap.get(userId) === 'ADMIN') continue; // 公式アカウントは除外
+            if (stats.count < minRaces) continue;
             ranking.push({
                 id: userId,
                 name: userNameMap.get(userId) || "Unknown",
             role: userRoleMap.get(userId) || "BUYER",
                 value: stats.inv > 0 ? (stats.ref / stats.inv) * 100 : 0,
                 sub: `${stats.count}R`,
+                races: stats.count,
             });
         }
         return ranking.sort((a, b) => b.value - a.value);
     }
 
-    // 全場
-    const recoveryAll = buildRecoveryRanking(predictions);
-
-    // 全24場（データがない場も空配列で含める）
-    const recoveryByVenue: { [venue: string]: RankEntry[] } = {};
-    for (const venue of VENUES) {
-        const venuePreds = predictions.filter(p => p.placeName === venue.name);
-        recoveryByVenue[venue.name] = buildRecoveryRanking(venuePreds);
+    // --- 収支ランキング（全場、回収額 - 投資額の合計） ---
+    function buildBalanceRanking(preds: typeof predictions): RankEntry[] {
+        const map = new Map<string, { balance: number; count: number }>();
+        for (const pred of preds) {
+            const entry = map.get(pred.authorId) || { balance: 0, count: 0 };
+            entry.balance += (pred.hitAmount || pred.refundAmount || 0) - (pred.betAmount || 0);
+            entry.count++;
+            map.set(pred.authorId, entry);
+        }
+        const ranking: RankEntry[] = [];
+        for (const [userId, stats] of map) {
+            if (userRoleMap.get(userId) === 'ADMIN') continue; // 公式アカウントは除外
+            if (stats.count < 10) continue;
+            ranking.push({
+                id: userId,
+                name: userNameMap.get(userId) || "Unknown",
+                role: userRoleMap.get(userId) || "BUYER",
+                value: stats.balance,
+                sub: `${stats.count}R`,
+            });
+        }
+        return ranking.sort((a, b) => b.value - a.value);
     }
+
+    // 回収率: 最低10R以上で集計（10R/100Rの絞り込みはクライアント側のプルダウンで切替）
+    const recoveryAll = buildRecoveryRanking(predictions, 10);
+    const recoveryAllMonth = buildRecoveryRanking(monthPredictions, 10);
+    const recoveryByVenue: { [venue: string]: RankEntry[] } = {};
+    const recoveryByVenueMonth: { [venue: string]: RankEntry[] } = {};
+    for (const venue of VENUES) {
+        recoveryByVenue[venue.name] = buildRecoveryRanking(predictions.filter(p => p.placeName === venue.name), 10);
+        recoveryByVenueMonth[venue.name] = buildRecoveryRanking(monthPredictions.filter(p => p.placeName === venue.name), 10);
+    }
+
+    // 収支: 全場 × 全期間・当月
+    const balanceAll = buildBalanceRanking(predictions);
+    const balanceAllMonth = buildBalanceRanking(monthPredictions);
 
     // --- 獲得ptランキング(通算) ---
     const ptAllMap = new Map<string, number>();
@@ -79,6 +116,7 @@ export default async function RankingPage() {
 
     const ptAllRanking: RankEntry[] = [];
     for (const [userId, pts] of ptAllMap) {
+        if (userRoleMap.get(userId) === 'ADMIN') continue; // 公式アカウントは除外
         ptAllRanking.push({
             id: userId,
             name: userNameMap.get(userId) || "Unknown",
@@ -90,10 +128,6 @@ export default async function RankingPage() {
     ptAllRanking.sort((a, b) => b.value - a.value);
 
     // --- 獲得ptランキング(今月) ---
-    const now = new Date();
-    const monthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-    const monthEnd = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
-
     const ptMonthMap = new Map<string, number>();
     for (const tx of sellTransactions) {
         if (tx.createdAt >= monthStart && tx.createdAt < monthEnd) {
@@ -103,6 +137,7 @@ export default async function RankingPage() {
 
     const ptMonthRanking: RankEntry[] = [];
     for (const [userId, pts] of ptMonthMap) {
+        if (userRoleMap.get(userId) === 'ADMIN') continue; // 公式アカウントは除外
         ptMonthRanking.push({
             id: userId,
             name: userNameMap.get(userId) || "Unknown",
@@ -129,13 +164,15 @@ export default async function RankingPage() {
             orderBy: { points: 'desc' },
             include: { user: { select: { name: true, role: true } } },
         });
-        eventRanking = participants.map(p => ({
-            id: p.userId,
-            name: p.user.name || "Unknown",
-            role: p.user.role,
-            value: p.points,
-            sub: eventName,
-        }));
+        eventRanking = participants
+            .filter(p => p.user.role !== 'ADMIN') // 公式アカウントは除外
+            .map(p => ({
+                id: p.userId,
+                name: p.user.name || "Unknown",
+                role: p.user.role,
+                value: p.points,
+                sub: eventName,
+            }));
     }
 
     return (
@@ -151,7 +188,11 @@ export default async function RankingPage() {
             <div className="px-4 -mt-4 relative z-10">
                 <RankingClient
                     recoveryAll={recoveryAll}
+                    recoveryAllMonth={recoveryAllMonth}
                     recoveryByVenue={recoveryByVenue}
+                    recoveryByVenueMonth={recoveryByVenueMonth}
+                    balanceAll={balanceAll}
+                    balanceAllMonth={balanceAllMonth}
                     ptAllRanking={ptAllRanking}
                     ptMonthRanking={ptMonthRanking}
                     currentMonth={now.getMonth() + 1}

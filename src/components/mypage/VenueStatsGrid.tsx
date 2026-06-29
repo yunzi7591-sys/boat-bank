@@ -1,12 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { VENUES } from "@/lib/constants/venues";
+
+type RaceType = "morning" | "day" | "nighter" | "midnight";
+type Grade = "一般" | "G1" | "G2" | "G3" | "SG";
+
+interface StatsLeaf {
+  venueId: string;
+  placeName: string;
+  raceType: RaceType | null;
+  grade: Grade | null;
+  ym: string; // "2026-05"
+  inv: number;
+  ref: number;
+  hit: number;
+  total: number;
+}
 
 interface VenueStatsItem {
   placeName: string;
@@ -18,26 +34,16 @@ interface VenueStatsItem {
   totalPredictions: number;
 }
 
-type RaceType = "morning" | "day" | "nighter" | "midnight";
-
-interface PeriodStats {
-  all: VenueStatsItem[];
-  year: VenueStatsItem[];
-  monthly: { [key: string]: VenueStatsItem[] };
-}
-
 interface VenueStatsGridProps {
-  allTimeStats: VenueStatsItem[];
-  yearStats: VenueStatsItem[];
-  monthlyStats: { [key: string]: VenueStatsItem[] };
-  byRaceType: { [K in RaceType]: PeriodStats };
+  leaves: StatsLeaf[];
+  year: number;
 }
 
 type Period = "allTime" | "year" | "monthly";
 
 const PERIOD_LABELS: Record<Period, string> = {
   allTime: "通算",
-  year: "2026年",
+  year: "年別",
   monthly: "月別",
 };
 
@@ -51,54 +57,89 @@ const RACE_TYPE_LABELS: Record<RaceTypeFilter, string> = {
   midnight: "ミッドナイト",
 };
 
+type GradeFilter = "all" | Grade;
+
+const GRADE_LABELS: Record<GradeFilter, string> = {
+  all: "全て",
+  一般: "一般",
+  G1: "G1",
+  G2: "G2",
+  G3: "G3",
+  SG: "SG",
+};
+
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 function formatCurrency(value: number): string {
   return value.toLocaleString("ja-JP");
 }
 
-function getMonthKey(month: number): string {
-  return `2026-${String(month).padStart(2, "0")}`;
-}
-
-export function VenueStatsGrid({
-  allTimeStats,
-  yearStats,
-  monthlyStats,
-  byRaceType,
-}: VenueStatsGridProps) {
+export function VenueStatsGrid({ leaves, year }: VenueStatsGridProps) {
   const currentMonth = new Date().getMonth() + 1;
   const [period, setPeriod] = useState<Period>("allTime");
+  const [selectedYear, setSelectedYear] = useState(year);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const [selectedVenue, setSelectedVenue] = useState<VenueStatsItem | null>(
-    null,
-  );
+
+  // データに存在する年（降順）。今年は必ず含める。
+  const availableYears = useMemo(() => {
+    const set = new Set<number>([year]);
+    for (const leaf of leaves) {
+      const y = parseInt(leaf.ym.slice(0, 4), 10);
+      if (!Number.isNaN(y)) set.add(y);
+    }
+    return Array.from(set).sort((a, b) => b - a);
+  }, [leaves, year]);
+  const [selectedVenue, setSelectedVenue] = useState<VenueStatsItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [displayMode, setDisplayMode] = useState<"recovery" | "profit">("recovery");
   const [raceTypeFilter, setRaceTypeFilter] = useState<RaceTypeFilter>("all");
+  const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");
 
-  const activePeriodSource: PeriodStats =
-    raceTypeFilter !== "all"
-      ? byRaceType[raceTypeFilter]
-      : { all: allTimeStats, year: yearStats, monthly: monthlyStats };
+  // フィルタ条件で葉を絞り、24場に再集計
+  const stats: VenueStatsItem[] = useMemo(() => {
+    const monthKey = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}`;
 
-  const stats: VenueStatsItem[] =
-    period === "allTime"
-      ? activePeriodSource.all
-      : period === "year"
-        ? activePeriodSource.year
-        : (activePeriodSource.monthly[getMonthKey(selectedMonth)] ?? []);
+    const map = new Map<string, { inv: number; ref: number; hit: number; total: number }>();
+    for (const leaf of leaves) {
+      if (raceTypeFilter !== "all" && leaf.raceType !== raceTypeFilter) continue;
+      if (gradeFilter !== "all" && leaf.grade !== gradeFilter) continue;
+      if (period === "year" && !leaf.ym.startsWith(`${selectedYear}-`)) continue;
+      if (period === "monthly" && leaf.ym !== monthKey) continue;
+
+      const e = map.get(leaf.venueId) || { inv: 0, ref: 0, hit: 0, total: 0 };
+      e.inv += leaf.inv;
+      e.ref += leaf.ref;
+      e.hit += leaf.hit;
+      e.total += leaf.total;
+      map.set(leaf.venueId, e);
+    }
+
+    return VENUES.map((v) => {
+      const d = map.get(v.id) || { inv: 0, ref: 0, hit: 0, total: 0 };
+      return {
+        placeName: v.name,
+        venueId: v.id,
+        totalInvestment: d.inv,
+        totalRefund: d.ref,
+        recoveryRate: d.inv > 0 ? (d.ref / d.inv) * 100 : 0,
+        hitCount: d.hit,
+        totalPredictions: d.total,
+      };
+    });
+  }, [leaves, raceTypeFilter, gradeFilter, period, selectedYear, selectedMonth]);
 
   const basePeriodLabel =
     period === "allTime"
       ? "通算"
       : period === "year"
-        ? "2026年"
-        : `2026年${selectedMonth}月`;
+        ? `${selectedYear}年`
+        : `${selectedYear}年${selectedMonth}月`;
+  const filterParts = [
+    raceTypeFilter !== "all" ? RACE_TYPE_LABELS[raceTypeFilter] : null,
+    gradeFilter !== "all" ? GRADE_LABELS[gradeFilter] : null,
+  ].filter(Boolean);
   const periodLabel =
-    raceTypeFilter !== "all"
-      ? `${basePeriodLabel} / ${RACE_TYPE_LABELS[raceTypeFilter]}`
-      : basePeriodLabel;
+    filterParts.length > 0 ? `${basePeriodLabel} / ${filterParts.join(" / ")}` : basePeriodLabel;
 
   function handleCellClick(item: VenueStatsItem) {
     setSelectedVenue(item);
@@ -108,7 +149,7 @@ export function VenueStatsGrid({
   return (
     <div className="w-full">
       {/* 開催形態フィルタ */}
-      <div className="flex gap-1 mb-3 bg-[#f1f5f9] rounded-lg p-1">
+      <div className="flex gap-1 mb-2 bg-[#f1f5f9] rounded-lg p-1">
         {(Object.keys(RACE_TYPE_LABELS) as RaceTypeFilter[]).map((key) => (
           <button
             key={key}
@@ -121,6 +162,24 @@ export function VenueStatsGrid({
             }`}
           >
             {RACE_TYPE_LABELS[key]}
+          </button>
+        ))}
+      </div>
+
+      {/* グレードフィルタ */}
+      <div className="flex gap-1 mb-3 bg-[#f1f5f9] rounded-lg p-1">
+        {(Object.keys(GRADE_LABELS) as GradeFilter[]).map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setGradeFilter(key)}
+            className={`flex-1 text-[10px] font-bold py-2 rounded-md transition-colors ${
+              gradeFilter === key
+                ? "bg-white text-[#061b31] shadow-sm"
+                : "text-[#64748d] hover:text-[#061b31]"
+            }`}
+          >
+            {GRADE_LABELS[key]}
           </button>
         ))}
       </div>
@@ -142,6 +201,26 @@ export function VenueStatsGrid({
           </button>
         ))}
       </div>
+
+      {/* 年セレクター（年別・月別のとき） */}
+      {(period === "year" || period === "monthly") && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {availableYears.map((y) => (
+            <button
+              key={y}
+              type="button"
+              onClick={() => setSelectedYear(y)}
+              className={`text-xs font-bold px-2.5 py-1.5 rounded-md transition-colors ${
+                selectedYear === y
+                  ? "bg-[#533afd] text-white"
+                  : "bg-[#f1f5f9] text-[#64748d] hover:text-[#061b31]"
+              }`}
+            >
+              {y}年
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 月セレクター */}
       {period === "monthly" && (

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { TrendingUp, Coins, Trophy } from "lucide-react";
+import { TrendingUp, Coins, Trophy, Wallet } from "lucide-react";
 
 interface RankEntry {
     id: string;
@@ -10,9 +10,24 @@ interface RankEntry {
     role: string;
     value: number;
     sub: string;
+    races?: number;
 }
 
-function RankRow({ entry, rank, type, isYou }: { entry: RankEntry; rank: number; type: "recovery" | "pt"; isYou?: boolean }) {
+type RankType = "recovery" | "pt" | "balance";
+
+function formatValue(entry: RankEntry, type: RankType): string {
+    if (type === "recovery") return `${entry.value.toFixed(1)}%`;
+    if (type === "balance") return `${entry.value >= 0 ? "+" : "−"}${Math.abs(entry.value).toLocaleString()}円`;
+    return `${entry.value.toLocaleString()}pt`;
+}
+
+function valueColor(entry: RankEntry, type: RankType): string {
+    if (type === "recovery") return entry.value >= 100 ? "text-[#533afd]" : "text-[#061b31]";
+    if (type === "balance") return entry.value > 0 ? "text-[#533afd]" : entry.value < 0 ? "text-red-500" : "text-[#061b31]";
+    return "text-[#061b31]";
+}
+
+function RankRow({ entry, rank, type, isYou }: { entry: RankEntry; rank: number; type: RankType; isYou?: boolean }) {
     const medalColors = [
         "bg-amber-50 text-amber-600 ring-1 ring-amber-200",
         "bg-[#f6f8fa] text-[#64748d] ring-1 ring-[#e5edf5]",
@@ -35,22 +50,46 @@ function RankRow({ entry, rank, type, isYou }: { entry: RankEntry; rank: number;
                         </p>
                     </div>
                 </div>
-                <p className={`text-base font-light tabular-nums ${type === "recovery" && entry.value >= 100 ? 'text-[#533afd]' : 'text-[#061b31]'}`}>
-                    {type === "recovery" ? `${entry.value.toFixed(1)}%` : `${entry.value.toLocaleString()}pt`}
-                </p>
+                <div className="text-right">
+                    <p className={`text-base font-light tabular-nums ${valueColor(entry, type)}`}>
+                        {formatValue(entry, type)}
+                    </p>
+                    {(type === "recovery" || type === "balance") && (
+                        <p className="text-[10px] text-[#64748d] tabular-nums leading-none mt-0.5">{entry.sub}</p>
+                    )}
+                </div>
             </div>
         </Link>
     );
 }
 
-function RankList({ list, type, currentUserId }: { list: RankEntry[]; type: "recovery" | "pt"; currentUserId?: string }) {
+function PeriodToggle({ period, onChange, allLabel, monthLabel }: { period: "all" | "month"; onChange: (p: "all" | "month") => void; allLabel: string; monthLabel: string }) {
+    return (
+        <div className="flex gap-1 mb-3 bg-[#f6f8fa] rounded-md p-0.5 w-fit">
+            <button
+                onClick={() => onChange("all")}
+                className={`text-xs font-bold px-3 py-1.5 rounded ${period === "all" ? "bg-white text-[#533afd] shadow-sm" : "text-[#64748d]"}`}
+            >
+                {allLabel}
+            </button>
+            <button
+                onClick={() => onChange("month")}
+                className={`text-xs font-bold px-3 py-1.5 rounded ${period === "month" ? "bg-white text-[#533afd] shadow-sm" : "text-[#64748d]"}`}
+            >
+                {monthLabel}
+            </button>
+        </div>
+    );
+}
+
+function RankList({ list, type, currentUserId, minRaces = 10 }: { list: RankEntry[]; type: RankType; currentUserId?: string; minRaces?: number }) {
     if (list.length === 0) {
         return (
             <div className="text-center py-16 px-4">
                 <Trophy className="w-10 h-10 mx-auto text-[#e5edf5] mb-3" />
                 <p className="text-[#64748d] font-semibold mb-1">ランキング集計中</p>
                 <p className="text-xs text-[#64748d]">
-                    {type === "recovery" ? "判定済みの予想が3R以上あるユーザーが表示されます" : "予想を販売してポイントを獲得しましょう"}
+                    {type === "recovery" || type === "balance" ? `判定済みの予想が${minRaces}R以上あるユーザーが表示されます` : "予想を販売してポイントを獲得しましょう"}
                 </p>
             </div>
         );
@@ -84,7 +123,11 @@ function RankList({ list, type, currentUserId }: { list: RankEntry[]; type: "rec
 
 export function RankingClient({
     recoveryAll,
+    recoveryAllMonth,
     recoveryByVenue,
+    recoveryByVenueMonth,
+    balanceAll,
+    balanceAllMonth,
     ptAllRanking,
     ptMonthRanking,
     currentMonth,
@@ -94,7 +137,11 @@ export function RankingClient({
     currentUserId,
 }: {
     recoveryAll: RankEntry[];
+    recoveryAllMonth: RankEntry[];
     recoveryByVenue: { [venue: string]: RankEntry[] };
+    recoveryByVenueMonth: { [venue: string]: RankEntry[] };
+    balanceAll: RankEntry[];
+    balanceAllMonth: RankEntry[];
     ptAllRanking: RankEntry[];
     ptMonthRanking: RankEntry[];
     currentMonth: number;
@@ -104,27 +151,41 @@ export function RankingClient({
     currentUserId?: string;
 }) {
     const hasEvent = eventRanking.length > 0;
-    const [activeTab, setActiveTab] = useState<"recovery" | "pt" | "event">("recovery");
+    const [activeTab, setActiveTab] = useState<"recovery" | "balance" | "pt" | "event">("recovery");
+    const [recoveryPeriod, setRecoveryPeriod] = useState<"all" | "month">("all");
+    const [balancePeriod, setBalancePeriod] = useState<"all" | "month">("all");
     const [ptPeriod, setPtPeriod] = useState<"all" | "month">("all");
     const [selectedVenue, setSelectedVenue] = useState<string>("all");
+    const [recoveryMinRaces, setRecoveryMinRaces] = useState<number>(100);
 
     const venueNames = Object.keys(recoveryByVenue).sort();
-    const currentRecovery = selectedVenue === "all" ? recoveryAll : (recoveryByVenue[selectedVenue] || []);
+    const recoverySource = recoveryPeriod === "all"
+        ? { all: recoveryAll, byVenue: recoveryByVenue }
+        : { all: recoveryAllMonth, byVenue: recoveryByVenueMonth };
+    const recoveryBase = selectedVenue === "all" ? recoverySource.all : (recoverySource.byVenue[selectedVenue] || []);
+    const currentRecovery = recoveryBase.filter(e => (e.races ?? 0) >= recoveryMinRaces);
 
     return (
         <div>
-            {/* Main tabs: 回収率 → 獲得pt → 限定pt */}
-            <div className={`grid ${hasEvent ? 'grid-cols-3' : 'grid-cols-2'} mb-4 h-11 bg-white shadow-sm border border-[#e5edf5] rounded-lg p-1`}>
+            {/* Main tabs: 回収率 → 収支 → 獲得pt → 限定pt */}
+            <div className={`grid ${hasEvent ? 'grid-cols-4' : 'grid-cols-3'} mb-4 h-11 bg-white shadow-sm border border-[#e5edf5] rounded-lg p-1`}>
                 <button
                     onClick={() => setActiveTab("recovery")}
-                    className={`font-semibold text-sm rounded-md transition-all flex items-center justify-center gap-1.5 ${activeTab === "recovery" ? "bg-[#533afd] text-white" : "text-[#64748d]"}`}
+                    className={`font-semibold text-sm rounded-md transition-all flex items-center justify-center gap-1 ${activeTab === "recovery" ? "bg-[#533afd] text-white" : "text-[#64748d]"}`}
                 >
                     <TrendingUp className="w-3.5 h-3.5" />
                     回収率
                 </button>
                 <button
+                    onClick={() => setActiveTab("balance")}
+                    className={`font-semibold text-sm rounded-md transition-all flex items-center justify-center gap-1 ${activeTab === "balance" ? "bg-[#533afd] text-white" : "text-[#64748d]"}`}
+                >
+                    <Wallet className="w-3.5 h-3.5" />
+                    収支
+                </button>
+                <button
                     onClick={() => setActiveTab("pt")}
-                    className={`font-semibold text-sm rounded-md transition-all flex items-center justify-center gap-1.5 ${activeTab === "pt" ? "bg-[#533afd] text-white" : "text-[#64748d]"}`}
+                    className={`font-semibold text-sm rounded-md transition-all flex items-center justify-center gap-1 ${activeTab === "pt" ? "bg-[#533afd] text-white" : "text-[#64748d]"}`}
                 >
                     <Coins className="w-3.5 h-3.5" />
                     獲得pt
@@ -151,17 +212,38 @@ export function RankingClient({
 
             {activeTab === "recovery" && (
                 <>
-                    <select
-                        value={selectedVenue}
-                        onChange={(e) => setSelectedVenue(e.target.value)}
-                        className="mb-3 w-full bg-white border border-[#e5edf5] rounded-lg px-3 py-2 text-sm font-bold text-[#061b31] focus:outline-none focus:ring-2 focus:ring-[#533afd]"
-                    >
-                        <option value="all">全場</option>
-                        {venueNames.map(v => (
-                            <option key={v} value={v}>{v}</option>
-                        ))}
-                    </select>
-                    <RankList list={currentRecovery} type="recovery" currentUserId={currentUserId} />
+                    <PeriodToggle period={recoveryPeriod} onChange={setRecoveryPeriod} allLabel="全期間" monthLabel={`${currentMonth}月`} />
+                    <div className="flex gap-2 mb-3">
+                        <select
+                            value={selectedVenue}
+                            onChange={(e) => setSelectedVenue(e.target.value)}
+                            className="flex-1 bg-white border border-[#e5edf5] rounded-lg px-3 py-2 text-sm font-bold text-[#061b31] focus:outline-none focus:ring-2 focus:ring-[#533afd]"
+                        >
+                            <option value="all">全場</option>
+                            {venueNames.map(v => (
+                                <option key={v} value={v}>{v}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={recoveryMinRaces}
+                            onChange={(e) => setRecoveryMinRaces(Number(e.target.value))}
+                            className="w-32 bg-white border border-[#e5edf5] rounded-lg px-3 py-2 text-sm font-bold text-[#061b31] focus:outline-none focus:ring-2 focus:ring-[#533afd]"
+                        >
+                            <option value={100}>100R以上</option>
+                            <option value={10}>10R以上</option>
+                        </select>
+                    </div>
+                    <RankList list={currentRecovery} type="recovery" currentUserId={currentUserId} minRaces={recoveryMinRaces} />
+                    <p className="mt-3 text-[10px] text-[#64748d] leading-relaxed text-center px-2">
+                        ※ このランキングは、判定済みの予想が{recoveryMinRaces}R以上あるユーザーが対象です
+                    </p>
+                </>
+            )}
+
+            {activeTab === "balance" && (
+                <>
+                    <PeriodToggle period={balancePeriod} onChange={setBalancePeriod} allLabel="全期間" monthLabel={`${currentMonth}月`} />
+                    <RankList list={balancePeriod === "all" ? balanceAll : balanceAllMonth} type="balance" currentUserId={currentUserId} />
                 </>
             )}
 

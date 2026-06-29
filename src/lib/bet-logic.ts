@@ -113,3 +113,21 @@ export const BOAT_COLORS = [
     { no: 5, colorCls: 'bg-yellow-400 text-black' },
     { no: 6, colorCls: 'bg-green-600 text-white' },
 ];
+
+/**
+ * 順不同で組番を扱う券種（2連複・3連複・拡連複）。
+ * 比較時に番号をソートし、表記ゆれ（社内"1=3" と 公式"1-3"）を吸収する。
+ */
+export const UNORDERED_BET_TYPES = new Set<string>(["2PL", "3PL", "WIDE"]);
+
+/**
+ * 買い目の区切り（"="・"-"）と並び順の違いを正規化し、券種ルールに沿った比較用キーを返す。
+ * 例: 2連複 "1=3"（社内表記）も 公式 "1-3" も → "1-3" に揃い、一致判定できる。
+ */
+export function normalizeCombo(combo: string, betType: string): string {
+    const nums = combo.split(/[-=]/).map((n) => n.trim()).filter(Boolean);
+    if (UNORDERED_BET_TYPES.has(betType)) {
+        nums.sort((a, b) => Number(a) - Number(b));
+    }
+    return nums.join("-");
+}

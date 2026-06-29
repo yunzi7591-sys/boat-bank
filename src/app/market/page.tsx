@@ -21,7 +21,7 @@ export default async function MarketPage() {
         take: 30,
         include: {
             author: { select: { name: true, role: true } },
-            _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
+            _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } },
         }
     });
 
@@ -43,7 +43,7 @@ export default async function MarketPage() {
                 take: 30,
                 include: {
                     author: { select: { name: true, role: true } },
-                    _count: { select: { transactions: { where: { action: "BUY_PREDICTION" } } } },
+                    _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } },
                 }
             });
         }

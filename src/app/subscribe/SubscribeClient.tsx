@@ -108,7 +108,7 @@ export function SubscribeClient({ userId, status, currentPeriodEnd, trialEnd, wi
         <div className="min-h-screen bg-slate-50 font-sans">
             <div className="max-w-md mx-auto px-5 pt-10 pb-24">
                 <h1 className="text-2xl font-black text-slate-900 mb-2">BOAT BANK スタンダード</h1>
-                <p className="text-sm text-slate-600 mb-6">詳細分析がすべて見られる会員プラン</p>
+                <p className="text-sm text-slate-600 mb-6">24場の得意・苦手を丸裸にする会員プラン。無駄な舟券が減れば、月500円は舟券1点分で元が取れる。</p>
 
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
                     <div className="flex items-baseline gap-2 mb-1">
@@ -120,6 +120,7 @@ export function SubscribeClient({ userId, status, currentPeriodEnd, trialEnd, wi
 
                     <ul className="space-y-2.5 mb-6">
                         {[
+                            "当日のレースは締切後も予想を閲覧できる",
                             "24場ごとの詳細成績・回収率",
                             "月ごとのPnLカレンダー",
                             "他ユーザーの詳細分析も閲覧可能",
@@ -192,6 +193,14 @@ export function SubscribeClient({ userId, status, currentPeriodEnd, trialEnd, wi
                                 >
                                     App Store からダウンロード <ExternalLink className="w-4 h-4" />
                                 </a>
+                                <a
+                                    className="bg-slate-900 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"
+                                    href="https://play.google.com/store/apps/details?id=jp.boatbank.app"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    Google Play で手に入れる <ExternalLink className="w-4 h-4" />
+                                </a>
                             </div>
                         </div>
                     )}
@@ -204,9 +213,24 @@ export function SubscribeClient({ userId, status, currentPeriodEnd, trialEnd, wi
                         <li>・期間: 1か月単位（自動更新）</li>
                         <li>・価格: 月額 {priceLabel}（税込）</li>
                         <li>・無料トライアル: 30日間（初回のみ）</li>
-                        <li>・支払いはApp Storeアカウントに請求されます</li>
+                        <li>
+                            ・支払いは
+                            {platform === "android"
+                                ? "Google Play"
+                                : platform === "ios"
+                                ? "App Store"
+                                : "ご利用のストア（App Store / Google Play）"}
+                            アカウントに請求されます
+                        </li>
                         <li>・自動更新は、現在の期間終了の24時間前までに解約しない限り継続されます</li>
-                        <li>・解約は iPhone「設定」＞「Apple ID」＞「サブスクリプション」から</li>
+                        <li>
+                            ・解約は
+                            {platform === "android"
+                                ? "「Google Play」アプリ ＞「お支払いと定期購入」＞「定期購入」から"
+                                : platform === "ios"
+                                ? "iPhone「設定」＞「Apple ID」＞「サブスクリプション」から"
+                                : "各ストアのサブスクリプション設定から"}
+                        </li>
                     </ul>
                 </div>
 

@@ -4,10 +4,21 @@ import Link from "next/link";
 import { BotIdClient } from "botid/client";
 import { LoginForm } from "./form";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ callbackUrl?: string }>;
+}) {
+    const { callbackUrl } = await searchParams;
+    // 外部サイトへのリダイレクトを防ぐため、サイト内パスのみ許可
+    const safeCallbackUrl =
+        callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//")
+            ? callbackUrl
+            : "/mypage";
+
     const session = await auth();
     if (session) {
-        redirect("/mypage");
+        redirect(safeCallbackUrl);
     }
 
     return (
@@ -29,7 +40,7 @@ export default async function LoginPage() {
 
                 <div className="p-6">
                     <h2 className="text-lg font-light text-[#061b31] mb-6 text-center">ログイン</h2>
-                    <LoginForm />
+                    <LoginForm callbackUrl={safeCallbackUrl} />
 
                     <div className="mt-6 text-center text-sm text-slate-500">
                         アカウントをお持ちでないですか？{" "}

@@ -34,15 +34,20 @@ export async function SubscriptionGate({ children, preview }: Props) {
                 <div className="bg-slate-900/5 p-4 rounded-full mb-3 border border-white/20 shadow-lg">
                     <Lock className="w-6 h-6 text-slate-700" />
                 </div>
-                <p className="font-bold text-slate-900 text-sm mb-1">会員限定コンテンツ</p>
-                <p className="text-xs text-slate-600 mb-4 text-center max-w-xs">
-                    月500円（初月無料）で詳細分析がすべて見られます
+                <p className="font-bold text-slate-900 text-sm mb-1">負けている場、把握できていますか？</p>
+                <p className="text-xs text-slate-600 mb-1 text-center max-w-xs">
+                    24場ごとの回収率・収支がすべて見られます。
+                    <br />
+                    苦手な場がわかれば、無駄な舟券が減る。
+                </p>
+                <p className="text-xs font-bold text-emerald-600 mb-4 text-center">
+                    月500円 — 舟券1点分。初月は無料。
                 </p>
                 <Link
                     href="/subscribe"
                     className="bg-[#533afd] text-white font-bold text-sm px-6 py-2.5 rounded-lg hover:bg-[#4125d1] transition-colors shadow-md"
                 >
-                    会員になる
+                    初月無料で試す
                 </Link>
             </div>
         </div>
