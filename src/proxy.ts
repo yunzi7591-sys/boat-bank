@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const host = request.headers.get("host") || "";
 
     // 正規化: www.boatbank.jp や他のドメインは boatbank.jp にリダイレクト（重複インデックス防止）
