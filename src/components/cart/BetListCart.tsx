@@ -20,6 +20,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { VENUES } from '@/lib/constants/venues';
 import { cn } from '@/lib/utils';
+import { usePublishShareStore } from '@/store/publish-share-store';
 
 interface OddsMap {
     [oddsType: string]: { data: Record<string, number>; fetchedAt: string };
@@ -48,6 +49,7 @@ function getOddsForCombination(odds: OddsMap | undefined, betType: string, combi
 export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initialPublishType, eventId, eventPoints, odds }: BetListCartProps = {}) {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const openPublishShare = usePublishShareStore((s) => s.open);
     const { cart, updateCartItemAmount, updateCartFormationAmount, removeCombination, removeFormation, clearCart } = useBetStore();
     const [isPending, startTransition] = useTransition();
     const [isBetPending, startBetTransition] = useTransition();
@@ -635,6 +637,14 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                                     ? '予想を公開しました'
                                                                     : '外部サイトへの誘導を公開しました'
                                                             );
+                                                            // 公開直後に「Xに投稿」ポップを出す（layout常駐モーダルなので遷移後も表示される）
+                                                            if (res.predictionId) {
+                                                                openPublishShare({
+                                                                    predictionId: res.predictionId,
+                                                                    placeName: (formData.get('placeName') as string) || qPlaceName,
+                                                                    raceNumber: parseInt(formData.get('raceNumber') as string) || parseInt(qRaceNumber),
+                                                                });
+                                                            }
                                                             router.push(`/predictions/${res.predictionId}`);
                                                         } else {
                                                             setError(res?.error || '公開に失敗しました');
