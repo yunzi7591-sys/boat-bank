@@ -8,8 +8,8 @@ import { isLoginBonusOpen, onLoginBonusClosed } from "@/lib/modal-coordination";
 
 // 最後にポップアップを見せた日時（端末ローカル）
 const LAST_SHOWN_KEY = "subscription-promo-last-shown-at";
-// 表示間隔: 週1回まで
-const SHOW_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+// 表示間隔: 週2回まで（約3.5日に1回）
+const SHOW_INTERVAL_MS = 3.5 * 24 * 60 * 60 * 1000;
 // 起動直後は避け、画面が落ち着いてから出す
 const SHOW_DELAY_MS = 2500;
 // ログインボーナスが閉じられてから出すまでの間
@@ -76,13 +76,13 @@ export function SubscriptionPromoModal({ enabled }: { enabled: boolean }) {
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-[2px] p-4 pb-8"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4"
             onClick={() => setOpen(false)}
         >
             <div
                 role="dialog"
                 aria-label="会員プランのご案内"
-                className="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300"
+                className="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 fade-in duration-300"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="relative bg-gradient-to-r from-[#533afd] to-[#7c3aed] px-5 py-4">
