@@ -50,7 +50,12 @@ export async function GET(request: Request) {
         }
         for (const b of eventBets) usedKeys.add(keyOf(b.placeName, b.raceNumber));
 
-        const targets = schedules.filter(s => !usedKeys.has(keyOf(s.placeName, s.raceNumber)));
+        // 未使用レースを削除対象にする。ただし R1 は開催形態（モーニング/デイ/ナイター/
+        // ミッドナイト）判定の基準になる一番早いレースなので、使われていなくても残す。
+        // R1 を消すと残った遅いレースで代表時刻がずれ、ナイターがミッドナイトに誤分類される。
+        const targets = schedules.filter(
+            s => !usedKeys.has(keyOf(s.placeName, s.raceNumber)) && s.raceNumber !== 1
+        );
 
         let deletedSchedule = 0;
         let deletedResult = 0;

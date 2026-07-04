@@ -460,11 +460,47 @@ export interface StatsLeaf {
 
 const NAME_TO_VENUE_ID = new Map(VENUES.map((v) => [v.name, v.id]));
 
+// レースの平均間隔（約30分）。残りレースが1本しかないときの1R締切推定に使う。
+const AVG_RACE_INTERVAL_MS = 30 * 60 * 1000;
+
+/**
+ * その日・その場に残っているレース群から「1R相当の締切時刻」を推定し、開催形態を分類する。
+ *
+ * 開催形態は本来1R（一番早いレース）の締切時刻で決まるが、cleanup-unused-races で
+ * 使われていないR1が消えることがある。その場合に残った最小Rの締切をそのまま使うと、
+ * 本来より遅い時刻になり、ナイターがミッドナイトに誤分類される。
+ * そこで、残ったレースの締切間隔から1R相当の締切を逆算して分類する。
+ * - R1が残っていればそのまま
+ * - 2レース以上残っていれば実測間隔で外挿（正確）
+ * - 1レースしか残っていなければ平均間隔でフォールバック
+ */
+function classifyOpeningType(races: { raceNumber: number; deadlineAt: Date }[]): RaceType {
+    let min = races[0];
+    let max = races[0];
+    for (const r of races) {
+        if (r.raceNumber < min.raceNumber) min = r;
+        if (r.raceNumber > max.raceNumber) max = r;
+    }
+
+    let r1Deadline: Date;
+    if (min.raceNumber === 1) {
+        r1Deadline = min.deadlineAt;
+    } else if (max.raceNumber > min.raceNumber) {
+        // 実測間隔 = (最遅締切 - 最早締切) / (Rの差)。これで1R締切を逆算。
+        const interval = (max.deadlineAt.getTime() - min.deadlineAt.getTime()) / (max.raceNumber - min.raceNumber);
+        r1Deadline = new Date(min.deadlineAt.getTime() - (min.raceNumber - 1) * interval);
+    } else {
+        // 残り1本のみ: 平均間隔で近似
+        r1Deadline = new Date(min.deadlineAt.getTime() - (min.raceNumber - 1) * AVG_RACE_INTERVAL_MS);
+    }
+
+    return classifyRaceType(r1Deadline);
+}
+
 /**
  * RaceSchedule から (placeName|raceDateISO) → grade / raceType のマップを作る。
  * グレードは「その日のその場」共通なので任意のレースから取得。
- * 開催形態(raceType)は最小レース番号の締切時刻を1日の代表として分類する
- * （クリーンアップでR1が消えていても残っている最小Rで代替）。
+ * 開催形態(raceType)は、その日・その場に残るレース群から1R締切を推定して分類する。
  */
 async function buildScheduleMaps(): Promise<{
     gradeMap: Map<string, Grade>;
@@ -475,9 +511,8 @@ async function buildScheduleMaps(): Promise<{
     });
 
     const gradeMap = new Map<string, Grade>();
-    // 代表締切を選ぶための「現在の最小レース番号」記録
-    const minRaceNum = new Map<string, number>();
-    const raceTypeMap = new Map<string, RaceType>();
+    // (placeName|raceDate) ごとに残っているレースを集約する
+    const racesByKey = new Map<string, { raceNumber: number; deadlineAt: Date }[]>();
 
     const validGrades = new Set<string>(GRADE_VALUES);
 
@@ -488,11 +523,14 @@ async function buildScheduleMaps(): Promise<{
             gradeMap.set(key, s.grade as Grade);
         }
 
-        const prevMin = minRaceNum.get(key);
-        if (prevMin === undefined || s.raceNumber < prevMin) {
-            minRaceNum.set(key, s.raceNumber);
-            raceTypeMap.set(key, classifyRaceType(s.deadlineAt));
-        }
+        const arr = racesByKey.get(key) ?? [];
+        arr.push({ raceNumber: s.raceNumber, deadlineAt: s.deadlineAt });
+        racesByKey.set(key, arr);
+    }
+
+    const raceTypeMap = new Map<string, RaceType>();
+    for (const [key, races] of racesByKey) {
+        raceTypeMap.set(key, classifyOpeningType(races));
     }
 
     return { gradeMap, raceTypeMap };

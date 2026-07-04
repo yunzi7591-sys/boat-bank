@@ -76,8 +76,10 @@ async function main() {
             }),
         ]);
 
+        // R1 は開催形態（モーニング/デイ/ナイター/ミッドナイト）判定の基準になる
+        // 一番早いレースなので、使われていなくても RaceSchedule は残す。
         const scheduleTargets = schedules.filter(
-            s => !usedKeys.has(keyOf(s.placeName, s.raceNumber, s.raceDate))
+            s => !usedKeys.has(keyOf(s.placeName, s.raceNumber, s.raceDate)) && s.raceNumber !== 1
         );
         const resultTargets = results.filter(
             r => !usedKeys.has(keyOf(r.placeName, r.raceNumber, r.raceDate))
