@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { isNativeApp, isIOS } from "@/lib/platform";
+import { isNativeApp } from "@/lib/platform";
 
 // 初回起動日を保存しておくキー（端末ローカル）
 const FIRST_SEEN_KEY = "app-first-seen-at";
@@ -11,18 +11,19 @@ const REVIEW_ASKED_KEY = "app-review-asked-v1";
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 /**
- * App Store レビュー促進（iOS / StoreKit）
+ * ストアレビュー促進（iOS: StoreKit / Android: Google Play In-App Review）
  *
  * 「初回ダウンロードから3日以上アプリを開いている人」に対して、
- * アプリ内からシームレスに評価ダイアログ（SKStoreReviewController）を表示する。
+ * アプリ内からシームレスに評価ダイアログを表示する。
+ * 同一プラグイン（@capacitor-community/in-app-review）で iOS/Android 両対応。
  *
  * - accountCreatedAt: ログイン中ユーザーのアカウント作成日時(ISO文字列)。
  *   既存ユーザーは登録が3日以上前 → 即対象になる。
  */
 export function AppReviewPrompt({ accountCreatedAt }: { accountCreatedAt?: string | null }) {
     useEffect(() => {
-        // ネイティブiOSアプリ内でのみ動作（Web/Androidでは何もしない）
-        if (!isNativeApp() || !isIOS()) return;
+        // ネイティブアプリ内（iOS/Android）でのみ動作（Webでは何もしない）
+        if (!isNativeApp()) return;
 
         // すでに一度促していたら終了
         try {
