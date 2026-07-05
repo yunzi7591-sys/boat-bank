@@ -83,3 +83,6 @@ promo/out/
 /fcm-key.json
 /google-services.json
 android/app/google-services.json
+
+# Android build artifacts (local)
+*.aab
