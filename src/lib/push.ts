@@ -2,6 +2,7 @@ import webpush from "web-push";
 import apn from "@parse/node-apn";
 import { prisma } from "@/lib/prisma";
 import { getApnsProvider, getApnsBundleId } from "@/lib/apns";
+import { getFcmMessaging } from "@/lib/fcm";
 
 let vapidConfigured = false;
 
@@ -72,6 +73,7 @@ export async function sendPushNotification(
 
     const vapidReady = ensureVapid();
     const apnsProvider = getApnsProvider();
+    const fcmMessaging = getFcmMessaging();
 
     const results = await Promise.allSettled(
         subscriptions.map(async (sub) => {
@@ -96,6 +98,36 @@ export async function sendPushNotification(
                 } catch (err) {
                     console.error("[APNs] send failed", err);
                     throw err;
+                }
+                return;
+            }
+
+            if (sub.platform === "android") {
+                // Android: FCM で送信（endpoint は "android:<FCMトークン>" 形式で保存）
+                if (!fcmMessaging) return;
+                const token = sub.endpoint.startsWith("android:")
+                    ? sub.endpoint.slice("android:".length)
+                    : sub.endpoint;
+                try {
+                    await fcmMessaging.send({
+                        token,
+                        notification: { title: "BOAT BANK", body: message },
+                        data: url ? { url } : {},
+                        android: { priority: "high" },
+                    });
+                } catch (err: any) {
+                    const code = err?.errorInfo?.code || err?.code;
+                    // 無効・失効したトークンは購読を削除
+                    if (
+                        code === "messaging/registration-token-not-registered" ||
+                        code === "messaging/invalid-registration-token" ||
+                        code === "messaging/invalid-argument"
+                    ) {
+                        await prisma.pushSubscription.delete({ where: { id: sub.id } });
+                    } else {
+                        console.error("[FCM] send failed", err);
+                        throw err;
+                    }
                 }
                 return;
             }
