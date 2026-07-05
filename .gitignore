@@ -78,3 +78,8 @@ ios/App/CapApp-SPM/
 promo/node_modules/
 promo/.next/
 promo/out/
+
+# Firebase (secrets / local config — never commit)
+/fcm-key.json
+/google-services.json
+android/app/google-services.json
