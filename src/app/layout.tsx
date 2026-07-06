@@ -8,7 +8,6 @@ import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
 import { AppReviewPrompt } from "@/components/AppReviewPrompt";
 import { SubscriptionPromoModal } from "@/components/SubscriptionPromoModal";
 import { isSubscriptionActive } from "@/lib/subscription";
-import { SharePromoModal } from "@/components/predictions/SharePromoModal";
 import { PublishShareModal } from "@/components/predictions/PublishShareModal";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { RevenueCatInit } from "@/components/RevenueCatInit";
@@ -115,7 +114,6 @@ export default async function RootLayout({
         </HideOnLp>
         <AppReviewPrompt accountCreatedAt={accountCreatedAt} />
         <SubscriptionPromoModal enabled={showSubscriptionPromo} />
-        <SharePromoModal />
         <PublishShareModal />
         <Toaster position="top-center" />
         {process.env.NEXT_PUBLIC_GA_ID?.trim() && (

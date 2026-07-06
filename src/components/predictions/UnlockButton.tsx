@@ -4,7 +4,6 @@ import { useState } from "react";
 import { unlockPrediction } from "@/actions/transaction";
 import { Button } from "@/components/ui/button";
 import { Lock, Loader2, Clock } from "lucide-react";
-import { useSharePromoStore } from "@/store/share-modal-store";
 
 type Props = {
     predictionId: string;
@@ -19,19 +18,13 @@ type Props = {
 export function UnlockButton({ predictionId, price, isClosed = false, placeName, raceNumber, authorId, currentUserId }: Props) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const openSharePromo = useSharePromoStore((s) => s.open);
 
     const handleUnlock = async () => {
         setLoading(true);
         setError(null);
         try {
             const result = await unlockPrediction(predictionId);
-            if (result?.success) {
-                const isOthers = authorId && currentUserId && authorId !== currentUserId;
-                if (isOthers && placeName && raceNumber) {
-                    openSharePromo({ predictionId, placeName, raceNumber });
-                }
-            } else {
+            if (!result?.success) {
                 setError(result?.error || "Failed to unlock prediction.");
             }
         } catch (err: any) {
