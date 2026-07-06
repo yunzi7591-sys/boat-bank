@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import styles from "./lp.module.css";
 import { FeatureCard } from "./FeatureCard";
-import { IntroAnimation } from "./IntroAnimation";
+import { StoreBadges } from "./StoreBadges";
 
 export const metadata: Metadata = {
     title: "BOAT BANK — 競艇を、データで。",
@@ -27,7 +27,6 @@ export const metadata: Metadata = {
 export default function LPPage() {
     return (
         <div className={styles.root}>
-            <IntroAnimation />
             <div className={styles.rootWave} aria-hidden="true" />
 
             {/* ==================== ALERT RIBBON ==================== */}
@@ -72,6 +71,8 @@ export default function LPPage() {
                     </Link>
                     <Link href="/guide" className={styles.ctaSecondary}>使い方を見る</Link>
                 </div>
+
+                <StoreBadges />
 
                 <div className={styles.manifesto}>
                     <p className={styles.manifestoText}>
@@ -132,6 +133,7 @@ export default function LPPage() {
                         </Link>
                         <Link href="/login" className={styles.ctaSecondary}>ログイン</Link>
                     </div>
+                    <StoreBadges />
                 </div>
             </section>
 

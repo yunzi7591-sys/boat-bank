@@ -969,6 +969,61 @@
     gap: 0.5rem;
 }
 
+/* ---------- STORE BADGES ---------- */
+.storeBadges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1rem;
+    animation: bbFadeUp 0.7s 0.4s ease-out both;
+}
+.finalCtaInner .storeBadges {
+    justify-content: center;
+}
+.storeBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 1.15rem;
+    background: var(--bb-navy);
+    color: #fff;
+    border: 2px solid var(--bb-ink);
+    border-radius: var(--bb-r);
+    text-decoration: none;
+    box-shadow: 4px 4px 0 var(--bb-red);
+    transition: background 0.18s, transform 0.15s, box-shadow 0.15s;
+}
+.storeBadge:hover {
+    background: #12264d;
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--bb-red);
+}
+.storeBadgeIcon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    color: #fff;
+}
+.storeBadgeText {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+    text-align: left;
+}
+.storeBadgeSmall {
+    font-family: var(--bb-font-mono);
+    font-size: 8.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+.storeBadgeBig {
+    font-family: var(--bb-font-disp);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
 /* ---------- FOOTER ---------- */
 .footer {
     padding: 2rem 1rem 1.5rem;
