@@ -68,6 +68,7 @@ export function LoginForm({ callbackUrl = "/mypage" }: { callbackUrl?: string })
                     id="email"
                     name="email"
                     type="email"
+                    autoComplete="email"
                     required
                     placeholder="name@example.com"
                     className="bg-slate-50 border-slate-200"
@@ -79,6 +80,7 @@ export function LoginForm({ callbackUrl = "/mypage" }: { callbackUrl?: string })
                     id="password"
                     name="password"
                     type="password"
+                    autoComplete="current-password"
                     required
                     className="bg-slate-50 border-slate-200"
                 />

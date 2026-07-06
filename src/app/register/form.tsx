@@ -52,11 +52,11 @@ export function RegisterForm() {
             </div>
             <div className="space-y-2">
                 <Label htmlFor="email" className="text-slate-700 font-bold">メールアドレス</Label>
-                <Input id="email" name="email" type="email" required placeholder="name@example.com" className="bg-slate-50 border-slate-200" />
+                <Input id="email" name="email" type="email" autoComplete="email" required placeholder="name@example.com" className="bg-slate-50 border-slate-200" />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="password" className="text-slate-700 font-bold">パスワード</Label>
-                <Input id="password" name="password" type="password" required placeholder="8文字以上" className="bg-slate-50 border-slate-200" />
+                <Input id="password" name="password" type="password" autoComplete="new-password" required placeholder="8文字以上" className="bg-slate-50 border-slate-200" />
             </div>
 
             <div className="space-y-3 pt-2">

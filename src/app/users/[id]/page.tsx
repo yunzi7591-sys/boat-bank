@@ -1,5 +1,9 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { getPublicUserStats, getPublicDailyStats, getPublicDailyPredictions } from "@/lib/stats";
+import { getPublicUserStats as _getPublicUserStats, getPublicDailyStats, getPublicDailyPredictions } from "@/lib/stats";
+
+// generateMetadata と本体で同一idの重い集計が2回走るのを、リクエスト内で1回に集約
+const getPublicUserStats = cache(_getPublicUserStats);
 import { fetchPublicDailyStats } from "@/actions/stats";
 import { notFound } from "next/navigation";
 import Link from "next/link";

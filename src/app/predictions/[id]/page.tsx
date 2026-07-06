@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isSubscriber } from "@/lib/subscription";
@@ -91,10 +92,14 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
     }
 
     // Increment viewCount only for logged-in users other than the author (prevents bot inflation & self-view spam)
+    // レスポンスをブロックしないよう after() で応答後に実行する
     if (userId && prediction.authorId !== userId) {
-        await prisma.prediction.update({
-            where: { id: params.id },
-            data: { viewCount: { increment: 1 } },
+        const pid = params.id;
+        after(async () => {
+            await prisma.prediction.update({
+                where: { id: pid },
+                data: { viewCount: { increment: 1 } },
+            });
         });
     }
 
