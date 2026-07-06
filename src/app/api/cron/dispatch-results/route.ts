@@ -87,7 +87,8 @@ export async function GET(request: Request) {
         }
         return result as NextResponse;
     } catch (e: any) {
-        console.error('[DISPATCH ERROR]', e);
+        // 間欠的に発生する既存の不具合の切り分けのため、エラーメッセージはログに詳細を残す
+        console.error('[DISPATCH ERROR]', e?.message, e?.stack);
         return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
     }
 }
