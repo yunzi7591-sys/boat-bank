@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 /**
- * 毎日のポイントリセット: dailyPointsを500にリセット
+ * 毎日のポイントリセット: dailyPointsを300にリセット
  * 前日の未使用dailyPointsは持ち越さない
  */
 export async function GET(request: Request) {
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
         const _auth = verifyCronAuth(request);
         if (!_auth.ok) return _auth.response;
 
-        // 全ユーザーのdailyPointsを500にリセット
+        // 全ユーザーのdailyPointsを300にリセット
         const result = await prisma.user.updateMany({
             data: {
                 dailyPoints: 300,

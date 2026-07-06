@@ -17,11 +17,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
             deadlineAt: true,
             isSettled: true,
             isHit: true,
+            isPrivate: true,
             author: { select: { name: true } },
         },
     });
 
-    if (!prediction) return new Response('Not found', { status: 404 });
+    // 非公開予想は情報を漏らさないため404
+    if (!prediction || prediction.isPrivate) return new Response('Not found', { status: 404 });
 
     const title = prediction.title || '渾身の勝負レース';
     const deadlineStr = new Date(prediction.deadlineAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' });

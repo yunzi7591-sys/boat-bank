@@ -1,3 +1,13 @@
+import { timingSafeEqual } from "crypto";
+
+/** 長さ差でも早期returnせず、タイミング攻撃を避けて文字列を比較する */
+function safeEqual(a: string, b: string): boolean {
+    const ab = Buffer.from(a);
+    const bb = Buffer.from(b);
+    if (ab.length !== bb.length) return false;
+    return timingSafeEqual(ab, bb);
+}
+
 export function verifyCronAuth(req: Request): { ok: true } | { ok: false; response: Response } {
     const authHeader = req.headers.get("authorization");
     const secret = process.env.CRON_SECRET;
@@ -15,7 +25,7 @@ export function verifyCronAuth(req: Request): { ok: true } | { ok: false; respon
         return { ok: true };
     }
 
-    if (authHeader !== `Bearer ${secret}`) {
+    if (!authHeader || !safeEqual(authHeader, `Bearer ${secret}`)) {
         return {
             ok: false,
             response: new Response(JSON.stringify({ error: "Unauthorized" }), {

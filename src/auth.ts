@@ -48,6 +48,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const appleSub = payload.sub;
         const email = payload.email?.toLowerCase();
         const displayName = (credentials?.name as string | undefined) || undefined;
+        // Appleがメール検証済みと明示した場合のみ、そのメールを既存アカウントとの
+        // 突き合わせ/紐付けに使う。未検証メールでの自動連携はアカウント乗っ取りに
+        // 繋がるため、その場合はメール無しの独立アカウントとして扱う。
+        const emailVerified = payload.email_verified === true || payload.email_verified === "true";
+        const linkableEmail = emailVerified ? email : undefined;
 
         const existingAccount = await prisma.account.findUnique({
           where: {
@@ -68,16 +73,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         }
 
-        let user = email
-          ? await prisma.user.findUnique({ where: { email } })
+        let user = linkableEmail
+          ? await prisma.user.findUnique({ where: { email: linkableEmail } })
           : null;
 
         if (!user) {
           user = await prisma.user.create({
             data: {
-              email: email ?? null,
+              email: linkableEmail ?? null,
               name: displayName ?? null,
-              emailVerified: new Date(),
+              emailVerified: linkableEmail ? new Date() : null,
             },
           });
         }

@@ -1,5 +1,14 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
+
+/** タイミング攻撃を避けて秘密トークンを比較する */
+function safeEqual(a: string, b: string): boolean {
+    const ab = Buffer.from(a);
+    const bb = Buffer.from(b);
+    if (ab.length !== bb.length) return false;
+    return timingSafeEqual(ab, bb);
+}
 
 type RCEvent = {
     type: string;
@@ -57,7 +66,7 @@ export async function POST(req: Request) {
     const expected = process.env.REVENUECAT_WEBHOOK_SECRET
         ? `Bearer ${process.env.REVENUECAT_WEBHOOK_SECRET}`
         : null;
-    if (!expected || authHeader !== expected) {
+    if (!expected || !authHeader || !safeEqual(authHeader, expected)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
