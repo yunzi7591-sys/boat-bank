@@ -1,8 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MarketFeed } from "@/components/market/MarketFeed";
-import { Globe, Users } from "lucide-react";
+import { MarketTabs } from "@/components/market/MarketTabs";
 import { ReloadButton } from "@/components/ReloadButton";
 import { A8Banner } from "@/components/ads/A8Banner";
 import { A8_BANNER_BOTTOM } from "@/components/ads/A8BannerConfig";
@@ -57,44 +55,12 @@ export default async function MarketPage() {
                     <ReloadButton className="text-[#64748d]" />
                 </div>
 
-                <Tabs defaultValue="all" className="w-full">
-                    <TabsList className="w-full h-10 bg-[#f6f8fa] p-1 rounded-lg">
-                        <TabsTrigger
-                            value="all"
-                            className="w-full data-[state=active]:bg-white data-[state=active]:text-[#533afd] data-[state=active]:shadow-sm rounded-md font-semibold text-sm text-[#64748d]"
-                        >
-                            <Globe className="w-3.5 h-3.5 mr-1.5" />
-                            全員
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="following"
-                            className="w-full data-[state=active]:bg-white data-[state=active]:text-[#533afd] data-[state=active]:shadow-sm rounded-md font-semibold text-sm text-[#64748d]"
-                            disabled={!userId}
-                        >
-                            <Users className="w-3.5 h-3.5 mr-1.5" />
-                            フォロー中
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <div className="mt-4 bg-[#f8fafc] rounded-lg p-2">
-                        <TabsContent value="all" className="m-0 focus-visible:outline-none focus-visible:ring-0">
-                            <MarketFeed predictions={allPredictions} currentUserId={userId} followingIds={followingIds} />
-                        </TabsContent>
-
-                        <TabsContent value="following" className="m-0 focus-visible:outline-none focus-visible:ring-0">
-                            {!userId ? (
-                                <div className="py-16 text-center text-[#64748d]">ログインしてフォロー機能を利用する</div>
-                            ) : followingPredictions.length === 0 ? (
-                                <div className="py-16 text-center text-[#64748d]">
-                                    <p className="font-semibold text-[#061b31] mb-1">フィードが空です</p>
-                                    <p className="text-sm">お気に入りの予想家をフォローしましょう</p>
-                                </div>
-                            ) : (
-                                <MarketFeed predictions={followingPredictions} currentUserId={userId} followingIds={followingIds} />
-                            )}
-                        </TabsContent>
-                    </div>
-                </Tabs>
+                <MarketTabs
+                    allPredictions={allPredictions}
+                    followingPredictions={followingPredictions}
+                    userId={userId}
+                    followingIds={followingIds}
+                />
             </div>
 
             {/* A8 広告バナー */}
