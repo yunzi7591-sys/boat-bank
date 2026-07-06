@@ -1024,6 +1024,54 @@
     letter-spacing: 0.02em;
 }
 
+/* ---------- SEO CONTENT ---------- */
+.lpSeo {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 0.5rem;
+    color: var(--bb-ink);
+}
+.lpSeoTitle {
+    font-family: var(--bb-font-disp);
+    font-size: clamp(20px, 5vw, 26px);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    margin-bottom: 1rem;
+}
+.lpSeoText {
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--bb-ink-2, #33415a);
+    margin-bottom: 1.75rem;
+}
+.lpSeoSub {
+    font-family: var(--bb-font-disp);
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+}
+.lpSeoList {
+    list-style: disc;
+    padding-left: 1.2rem;
+    font-size: 13px;
+    line-height: 1.85;
+    color: var(--bb-ink-2, #33415a);
+    margin-bottom: 1.75rem;
+}
+.lpSeoList li { margin-bottom: 0.35rem; }
+.lpFaq { display: flex; flex-direction: column; gap: 1rem; }
+.lpFaqQ {
+    font-weight: 700;
+    font-size: 13.5px;
+    color: var(--bb-ink);
+    margin-bottom: 0.25rem;
+}
+.lpFaqA {
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--bb-ink-2, #33415a);
+}
+
 /* ---------- FOOTER ---------- */
 .footer {
     padding: 2rem 1rem 1.5rem;

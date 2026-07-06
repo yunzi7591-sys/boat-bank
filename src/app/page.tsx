@@ -5,7 +5,6 @@ import { BOAT_COLORS } from "@/lib/bet-logic";
 import { VenueGrid } from "@/components/dashboard/VenueGrid";
 import { A8Banner } from "@/components/ads/A8Banner";
 import { A8_BANNER_BOTTOM, A8_BANNER_MIDDLE } from "@/components/ads/A8BannerConfig";
-import { HomeSeoSection } from "@/components/HomeSeoSection";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
@@ -13,16 +12,16 @@ import type { Metadata } from "next";
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-    title: "BOAT BANK | 競艇予想マーケットプレイス・収支管理アプリ",
+    title: "BOAT BANK | 競艇予想マーケットプレイス",
     description:
         "BOAT BANK は、競艇（ボートレース）の予想を売買できるマーケットプレイス。回収率・的中率・販売数まで全公開された予想家から買い目を購入でき、自分の舟券収支も24場ごとに自動記録。月別PnLカレンダーで日々の収支を一目で把握できます。",
     keywords: [
-        "競艇", "ボートレース", "予想", "舟券", "収支管理", "回収率", "的中率",
-        "マーケットプレイス", "PnL", "競艇予想", "ボートレース予想", "予想屋",
+        "競艇", "ボートレース", "予想", "舟券", "回収率", "的中率",
+        "マーケットプレイス", "競艇予想", "ボートレース予想", "予想屋",
         "買い目", "BOAT BANK", "ボートバンク",
     ],
     openGraph: {
-        title: "BOAT BANK | 競艇予想マーケットプレイス・収支管理アプリ",
+        title: "BOAT BANK | 競艇予想マーケットプレイス",
         description:
             "ガチ予想のマーケットプレイス。回収率・的中率まで全公開された予想家から買い目を購入できる。自分の舟券収支も24場ごとに自動記録。",
         url: "https://boatbank.jp",
@@ -138,71 +137,33 @@ export default async function DashboardPage() {
       {/* A8 広告バナー（下部） */}
       <A8Banner {...A8_BANNER_BOTTOM} />
 
-      {/* SEO: 収支管理アプリとしてのサービス説明（Webのみ表示・アプリでは非表示） */}
-      <HomeSeoSection />
-
-      {/* 構造化データ: 収支管理アプリとして検索エンジンに認識させる */}
+      {/* 構造化データ: 予想マーケットプレイスとして検索エンジンに認識させる（収支管理の訴求は /lp に集約） */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",
-            "@graph": [
-              {
-                "@type": "WebApplication",
-                name: "BOAT BANK",
-                alternateName: "ボートバンク",
-                url: "https://boatbank.jp",
-                applicationCategory: "FinanceApplication",
-                operatingSystem: "iOS, Android, Web",
-                description:
-                  "競艇（ボートレース）の舟券の収支を自動で記録・管理できるアプリ。回収率・的中率・累計収支を自動集計し、24場ごとの成績やカレンダー、収益推移グラフで可視化する。",
-                inLanguage: "ja",
-                offers: {
-                  "@type": "Offer",
-                  price: "0",
-                  priceCurrency: "JPY",
-                  description:
-                    "基本無料。スタンダードプラン（月500円・初月無料）で24場ごとの詳細分析が利用可能。",
-                },
-                featureList: [
-                  "舟券の収支を自動記録・管理",
-                  "24場ごとの回収率・収支を自動集計",
-                  "月別収支カレンダー",
-                  "収益推移グラフ",
-                  "グレード別・時間帯別・期間別の成績分析",
-                  "競艇予想マーケットプレイス",
-                ],
-              },
-              {
-                "@type": "FAQPage",
-                mainEntity: [
-                  {
-                    "@type": "Question",
-                    name: "競艇の収支を自動で管理できますか？",
-                    acceptedAnswer: {
-                      "@type": "Answer",
-                      text: "はい。買い目と金額を登録すれば、回収率・的中率・累計収支が自動で計算されます。手書きや表計算で集計する必要はありません。",
-                    },
-                  },
-                  {
-                    "@type": "Question",
-                    name: "無料で使えますか？",
-                    acceptedAnswer: {
-                      "@type": "Answer",
-                      text: "収支管理の基本機能は無料でお使いいただけます。24場ごとの詳細分析などが使えるスタンダードプラン（月額）は初月無料でお試しいただけます。",
-                    },
-                  },
-                  {
-                    "@type": "Question",
-                    name: "スマホアプリはありますか？",
-                    acceptedAnswer: {
-                      "@type": "Answer",
-                      text: "iPhone・Android向けアプリに加え、Webブラウザからもご利用いただけます。",
-                    },
-                  },
-                ],
-              },
+            "@type": "WebApplication",
+            name: "BOAT BANK",
+            alternateName: "ボートバンク",
+            url: "https://boatbank.jp",
+            applicationCategory: "FinanceApplication",
+            operatingSystem: "iOS, Android, Web",
+            description:
+              "競艇（ボートレース）の予想を売買できるマーケットプレイス。回収率・的中率・販売数まで全公開された予想家から買い目を購入でき、自分の舟券収支も24場ごとに自動記録できる。",
+            inLanguage: "ja",
+            offers: {
+              "@type": "Offer",
+              price: "0",
+              priceCurrency: "JPY",
+              description:
+                "基本無料。スタンダードプラン（月500円・初月無料）で24場ごとの詳細分析が利用可能。",
+            },
+            featureList: [
+              "回収率・的中率まで公開された予想家の買い目を売買",
+              "予想家ランキング",
+              "舟券の収支を24場ごとに自動記録",
+              "全24場 × 全レース対応",
             ],
           }),
         }}

@@ -7,5 +7,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: "daily",
             priority: 1.0,
         },
+        {
+            url: "https://boatbank.jp/lp",
+            changeFrequency: "weekly",
+            priority: 0.9,
+        },
     ];
 }
