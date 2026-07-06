@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Bell, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { isNativeApp, isIOS } from "@/lib/platform";
+import { isNativeApp, getPlatform } from "@/lib/platform";
 
 const STORAGE_KEY = "push-permission-asked-v2";
 
@@ -37,7 +37,7 @@ export function PushPermissionPrompt({ isLoggedIn = false }: { isLoggedIn?: bool
     useEffect(() => {
         if (!isLoggedIn) return;
 
-        const onNative = isNativeApp() && isIOS();
+        const onNative = isNativeApp();
         setNative(onNative);
 
         // クールダウンチェック (24時間)
@@ -111,6 +111,13 @@ export function PushPermissionPrompt({ isLoggedIn = false }: { isLoggedIn?: bool
                 try {
                     await PushNotifications.register();
                     deviceToken = await tokenPromise;
+                } catch (regErr) {
+                    // トークン取得失敗（FCM未設定の旧ビルド / タイムアウト等）は静かに終了。
+                    // 未更新の旧アプリで失敗トーストが出るのを防ぐ。
+                    console.warn("[Push] token registration skipped", regErr);
+                    setLoading(false);
+                    close();
+                    return;
                 } finally {
                     clearTimeout(timeoutId);
                     regHandle.remove();
@@ -120,7 +127,7 @@ export function PushPermissionPrompt({ isLoggedIn = false }: { isLoggedIn?: bool
                 const res = await fetch("/api/push/subscribe", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ platform: "ios", token: deviceToken }),
+                    body: JSON.stringify({ platform: getPlatform(), token: deviceToken }),
                 });
 
                 if (res.ok) {
