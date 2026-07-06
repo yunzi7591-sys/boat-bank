@@ -1,4 +1,3 @@
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Trophy, ChevronRight } from "lucide-react";
 import { BOAT_COLORS } from "@/lib/bet-logic";
@@ -38,10 +37,6 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const session = await auth();
-
-  const userId = session?.user?.id;
-
   const latestNews = await prisma.news.findFirst({
     where: { isPublished: true },
     orderBy: { createdAt: 'desc' },

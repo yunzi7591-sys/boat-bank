@@ -402,10 +402,6 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                         predictionId={prediction.id}
                                         price={prediction.price}
                                         isClosed={isClosed}
-                                        placeName={prediction.placeName}
-                                        raceNumber={prediction.raceNumber}
-                                        authorId={prediction.authorId}
-                                        currentUserId={userId}
                                     />
                                 )}
                             </div>

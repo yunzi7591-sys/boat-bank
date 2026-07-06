@@ -9,13 +9,9 @@ type Props = {
     predictionId: string;
     price: number;
     isClosed?: boolean;
-    placeName?: string;
-    raceNumber?: number;
-    authorId?: string;
-    currentUserId?: string;
 };
 
-export function UnlockButton({ predictionId, price, isClosed = false, placeName, raceNumber, authorId, currentUserId }: Props) {
+export function UnlockButton({ predictionId, price, isClosed = false }: Props) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 

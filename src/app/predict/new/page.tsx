@@ -236,7 +236,7 @@ function PredictContent() {
                             initial={{ y: 100, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 100, opacity: 0 }}
-                            className="fixed bottom-[84px] left-0 right-0 z-30 px-4 flex justify-center w-full max-w-md mx-auto"
+                            className="fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-0 right-0 z-30 px-4 flex justify-center w-full max-w-md mx-auto"
                         >
                             <button
                                 onClick={() => setIsCartOpen(true)}
@@ -275,7 +275,7 @@ function PredictContent() {
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
                             className="fixed inset-0 z-50 bg-slate-50 flex flex-col w-full max-w-md mx-auto"
                         >
-                            <header className="bg-white px-4 py-4 shadow-sm flex items-center justify-between z-10">
+                            <header className="bg-white px-4 py-4 shadow-sm flex items-center justify-between z-10" style={{ paddingTop: "calc(1rem + env(safe-area-inset-top))" }}>
                                 <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
                                     <ShoppingCart className="w-5 h-5" />
                                     ベットリスト確認

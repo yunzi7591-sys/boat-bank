@@ -175,6 +175,7 @@ model Transaction {
   createdAt    DateTime   @default(now())
 
   @@index([userId, action, createdAt])
+  @@index([predictionId])
 }
 
 // レース結果モデル (成績バッチ照合用)
@@ -345,6 +346,9 @@ model UserBet {
 
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  @@index([userId, raceDate])
+  @@index([placeName, raceNumber, raceDate, isSettled])
 }
 
 // -------------------------------------------------------------
