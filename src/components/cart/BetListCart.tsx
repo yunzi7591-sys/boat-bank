@@ -264,7 +264,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                     <span className="text-[11px] font-bold text-slate-400 pr-1.5 whitespace-nowrap select-none">00円</span>
                                 </div>
                             </div>
-                            <button onClick={() => removeFormation(formation.id)} className="text-slate-300 hover:text-red-500 p-0.5">
+                            <button aria-label="削除" onClick={() => removeFormation(formation.id)} className="text-slate-300 hover:text-red-500 p-2 -m-1">
                                 <Trash2 className="w-3 h-3" />
                             </button>
                         </div>
@@ -292,7 +292,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                             />
                                             <span className="text-xs font-bold text-slate-400 pr-2 whitespace-nowrap select-none">00円</span>
                                         </div>
-                                        <button onClick={() => removeCombination(formation.id, comb.id)} className="text-slate-300 hover:text-red-500 p-0.5">
+                                        <button aria-label="削除" onClick={() => removeCombination(formation.id, comb.id)} className="text-slate-300 hover:text-red-500 p-2 -m-1">
                                             <Trash2 className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
@@ -311,7 +311,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                 (更新: {new Date(Object.values(odds)[0].fetchedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}時点)
                             </span>
                         </p>
-                        <p className="text-[10px] text-amber-500 mt-0.5">確定オッズとは異なります</p>
+                        <p className="text-xs text-amber-700 mt-0.5">確定オッズとは異なります</p>
                     </div>
                 )}
 
@@ -340,7 +340,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                 配分
                             </button>
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-1">どの買い目が当たっても払戻が均等になるよう配分します</p>
+                        <p className="text-xs text-slate-600 mt-1">どの買い目が当たっても払戻が均等になるよう配分します</p>
                     </div>
                 )}
 
@@ -350,7 +350,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[11px] font-black text-indigo-700 tracking-wider">合成オッズ</span>
                             {compositeOdds.hasMissing && (
-                                <span className="text-[9px] text-indigo-400 font-bold">一部オッズ未取得</span>
+                                <span className="text-xs text-indigo-700 font-bold">一部オッズ未取得</span>
                             )}
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-center">

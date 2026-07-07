@@ -61,20 +61,23 @@ export async function GET(request: Request) {
         let deletedResult = 0;
         let deletedEntry = 0;
 
-        for (const t of targets) {
+        if (targets.length > 0) {
+            // 1件ずつではなく OR 条件でまとめて削除（削除対象の条件は同一）
             const where = {
-                placeName: t.placeName,
-                raceNumber: t.raceNumber,
                 raceDate: { gte: dayStart, lt: dayEnd },
+                OR: targets.map((t) => ({
+                    placeName: t.placeName,
+                    raceNumber: t.raceNumber,
+                })),
             };
-            const [s, r, e] = await prisma.$transaction([
+            const [entryRes, resultRes, scheduleRes] = await prisma.$transaction([
                 prisma.raceEntry.deleteMany({ where }),
                 prisma.raceResult.deleteMany({ where }),
                 prisma.raceSchedule.deleteMany({ where }),
             ]);
-            deletedEntry += s.count;
-            deletedResult += r.count;
-            deletedSchedule += e.count;
+            deletedEntry = entryRes.count;
+            deletedResult = resultRes.count;
+            deletedSchedule = scheduleRes.count;
         }
 
         console.log(

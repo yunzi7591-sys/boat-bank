@@ -13,6 +13,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Edit2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function ProfileEditModal({ initialName, initialBio, initialLink }: { initialName: string; initialBio: string; initialLink?: string }) {
     const [open, setOpen] = useState(false);
@@ -26,13 +27,23 @@ export function ProfileEditModal({ initialName, initialBio, initialLink }: { ini
         const bio = formData.get("bio") as string;
         const link = formData.get("link") as string;
 
-        const res = await updateProfile({ name, bio, link });
-        setLoading(false);
+        try {
+            const res = await updateProfile({ name, bio, link });
 
-        if (res.success) {
-            setOpen(false);
-        } else {
-            setError(res.error || "Failed to update profile");
+            if (res.success) {
+                setOpen(false);
+                toast.success("プロフィールを保存しました");
+            } else {
+                const msg = res.error || "保存に失敗しました";
+                setError(msg);
+                toast.error(msg);
+            }
+        } catch {
+            const msg = "保存に失敗しました。しばらくしてから再度お試しください。";
+            setError(msg);
+            toast.error(msg);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -50,16 +61,16 @@ export function ProfileEditModal({ initialName, initialBio, initialLink }: { ini
                 </DialogHeader>
                 <form action={handleSubmit} className="space-y-4 mt-4">
                     <div>
-                        <label className="text-xs font-bold text-slate-500 mb-1 block">名前</label>
-                        <Input name="name" defaultValue={initialName} placeholder="予想家名" required />
+                        <label htmlFor="profile-name" className="text-xs font-bold text-slate-500 mb-1 block">名前</label>
+                        <Input id="profile-name" name="name" defaultValue={initialName} placeholder="予想家名" required />
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-slate-500 mb-1 block">自己紹介 (Bio)</label>
-                        <Textarea name="bio" defaultValue={initialBio} placeholder="得意な場、予想スタイルなど" rows={4} />
+                        <label htmlFor="profile-bio" className="text-xs font-bold text-slate-500 mb-1 block">自己紹介 (Bio)</label>
+                        <Textarea id="profile-bio" name="bio" defaultValue={initialBio} placeholder="得意な場、予想スタイルなど" rows={4} />
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-slate-500 mb-1 block">リンク</label>
-                        <Input name="link" defaultValue={initialLink} placeholder="https://example.com" type="url" />
+                        <label htmlFor="profile-link" className="text-xs font-bold text-slate-500 mb-1 block">リンク</label>
+                        <Input id="profile-link" name="link" defaultValue={initialLink} placeholder="https://example.com" type="url" />
                     </div>
                     {error && <p className="text-xs text-red-500 font-bold">{error}</p>}
                     <Button type="submit" disabled={loading} className="w-full font-bold bg-slate-900 hover:bg-slate-800 text-white h-12 rounded-xl">

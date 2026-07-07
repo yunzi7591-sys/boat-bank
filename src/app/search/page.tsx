@@ -53,8 +53,9 @@ export default function SearchPage() {
             {/* Search bar */}
             <div className="sticky top-0 z-10 bg-white border-b border-[#e5edf5] px-4 py-3">
                 <input
-                    type="text"
-                    inputMode="text"
+                    type="search"
+                    aria-label="ユーザーを検索"
+                    enterKeyHint="search"
                     placeholder="ユーザーを検索"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}

@@ -89,6 +89,7 @@ export default function ForgotPasswordPage() {
                                         id="email"
                                         name="email"
                                         type="email"
+                                        autoComplete="email"
                                         required
                                         placeholder="name@example.com"
                                         className="bg-slate-50 border-slate-200"

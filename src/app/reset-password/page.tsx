@@ -99,6 +99,7 @@ function ResetPasswordForm() {
                         id="password"
                         name="password"
                         type="password"
+                        autoComplete="new-password"
                         required
                         minLength={8}
                         placeholder="8文字以上"
@@ -111,6 +112,7 @@ function ResetPasswordForm() {
                         id="confirmPassword"
                         name="confirmPassword"
                         type="password"
+                        autoComplete="new-password"
                         required
                         minLength={8}
                         placeholder="もう一度入力"

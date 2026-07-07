@@ -164,11 +164,8 @@ export async function sendPushToMultipleUsers(
     message: string,
     url?: string,
 ) {
-    for (const userId of userIds) {
-        try {
-            await sendPushNotification(userId, type, message, url);
-        } catch {
-            // 個別のエラーは無視して続行
-        }
-    }
+    // 直列awaitをやめ、全ユーザーへ並列送信。個別の失敗は allSettled で握りつぶす
+    await Promise.allSettled(
+        userIds.map((userId) => sendPushNotification(userId, type, message, url)),
+    );
 }

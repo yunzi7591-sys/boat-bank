@@ -65,8 +65,8 @@ export default async function EventsPage() {
             <div className="bg-gradient-to-br from-amber-600 to-amber-800 text-white p-4 pb-10 rounded-b-3xl shadow-lg">
                 <div className="max-w-2xl mx-auto">
                     <div className="flex items-center justify-between mb-4">
-                        <Link href="/">
-                            <Button variant="ghost" size="icon" className="text-white hover:bg-amber-700 shrink-0">
+                        <Link href="/" aria-label="戻る">
+                            <Button variant="ghost" size="icon" aria-label="戻る" className="text-white hover:bg-amber-700 shrink-0">
                                 <ArrowLeft className="w-5 h-5" />
                             </Button>
                         </Link>

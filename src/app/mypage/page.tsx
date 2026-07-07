@@ -23,74 +23,76 @@ export default async function MyPage() {
 
     const userId = session.user.id;
 
-    // Fetch full user for points
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { name: true, points: true, role: true, bio: true, link: true, password: true,
-            _count: { select: { followers: true, following: true } },
-        }
-    });
+    // カレンダー対象月（当月）
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    // userId さえあれば実行できる独立クエリはすべて並列取得する
+    const [user, stats, [dailyStats, dailyPredictions], userBets, purchases, subscription] = await Promise.all([
+        // Fetch full user for points
+        prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true, points: true, role: true, bio: true, link: true, password: true,
+                _count: { select: { followers: true, following: true } },
+            }
+        }),
+        // 1. Get Calculated Stats
+        getUserStats(userId),
+        // 1b. Calendar data
+        Promise.all([
+            getUserDailyStats(userId, currentYear, currentMonth),
+            getUserDailyPredictions(userId, currentYear, currentMonth),
+        ]),
+        // 2. Get registered bets (登録した収支 / UserBet)
+        prisma.userBet.findMany({
+            where: { userId },
+            orderBy: [{ raceDate: 'desc' }, { createdAt: 'desc' }],
+            take: 50,
+            select: {
+                id: true,
+                placeName: true,
+                raceNumber: true,
+                raceDate: true,
+                betType: true,
+                combination: true,
+                betAmount: true,
+                hitAmount: true,
+                refundAmount: true,
+                isSettled: true,
+                isHit: true,
+            },
+        }),
+        // 3. Get Purchased Predictions
+        prisma.transaction.findMany({
+            where: { userId, action: 'BUY_PREDICTION' },
+            take: 30,
+            select: {
+                prediction: {
+                    select: {
+                        id: true,
+                        placeName: true,
+                        raceNumber: true,
+                        title: true,
+                        price: true,
+                        isSettled: true,
+                        isHit: true,
+                        refundAmount: true,
+                        createdAt: true,
+                        author: { select: { name: true } },
+                        _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } },
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' },
+        }),
+        getUserSubscription(userId),
+    ]);
 
     if (!user) notFound();
 
     const followerCount = user._count.followers;
     const followingCount = user._count.following;
-
-    // 1. Get Calculated Stats
-    const stats = await getUserStats(userId);
-
-    // 1b. Calendar data
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    const [dailyStats, dailyPredictions] = await Promise.all([
-        getUserDailyStats(userId, currentYear, currentMonth),
-        getUserDailyPredictions(userId, currentYear, currentMonth),
-    ]);
-
-    // 2. Get registered bets (登録した収支 / UserBet)
-    const userBets = await prisma.userBet.findMany({
-        where: { userId },
-        orderBy: [{ raceDate: 'desc' }, { createdAt: 'desc' }],
-        take: 50,
-        select: {
-            id: true,
-            placeName: true,
-            raceNumber: true,
-            raceDate: true,
-            betType: true,
-            combination: true,
-            betAmount: true,
-            hitAmount: true,
-            refundAmount: true,
-            isSettled: true,
-            isHit: true,
-        },
-    });
-
-    // 3. Get Purchased Predictions
-    const purchases = await prisma.transaction.findMany({
-        where: { userId, action: 'BUY_PREDICTION' },
-        take: 30,
-        select: {
-            prediction: {
-                select: {
-                    id: true,
-                    placeName: true,
-                    raceNumber: true,
-                    title: true,
-                    price: true,
-                    isSettled: true,
-                    isHit: true,
-                    refundAmount: true,
-                    createdAt: true,
-                    author: { select: { name: true } },
-                    _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } },
-                }
-            }
-        },
-        orderBy: { createdAt: 'desc' },
-    });
 
     const purchasedPredictions = purchases.map(p => p.prediction).filter(p => p !== null);
 
@@ -99,7 +101,6 @@ export default async function MyPage() {
 
     const isPositiveReturn = stats.recoveryRate >= 100;
 
-    const subscription = await getUserSubscription(userId);
     const subActive = isSubscriptionActive(subscription);
 
     return (

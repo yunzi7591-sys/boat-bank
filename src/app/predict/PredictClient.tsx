@@ -61,8 +61,8 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
         return (
             <div className="min-h-screen bg-white flex flex-col font-sans">
                 <header className="bg-white px-4 py-3 border-b border-[#e5edf5] sticky top-0 z-10 flex items-center gap-2">
-                    <Link href={venue ? `/place/${venue.id}` : "/"}>
-                        <Button variant="ghost" size="icon" className="text-[#64748d] hover:bg-[#f6f8fa] h-9 w-9">
+                    <Link href={venue ? `/place/${venue.id}` : "/"} aria-label="戻る">
+                        <Button variant="ghost" size="icon" aria-label="戻る" className="text-[#64748d] hover:bg-[#f6f8fa] h-9 w-9">
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
                     </Link>
@@ -103,14 +103,15 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
                         <Button
                             variant="ghost"
                             size="icon"
+                            aria-label="戻る"
                             className="text-white hover:bg-slate-800 h-9 w-9"
                             onClick={() => setViewCart(false)}
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
                     ) : (
-                        <Link href={venue ? `/place/${venue.id}` : "/"}>
-                            <Button variant="ghost" size="icon" className="text-white hover:bg-slate-800 h-9 w-9">
+                        <Link href={venue ? `/place/${venue.id}` : "/"} aria-label="戻る">
+                            <Button variant="ghost" size="icon" aria-label="戻る" className="text-white hover:bg-slate-800 h-9 w-9">
                                 <ArrowLeft className="w-5 h-5" />
                             </Button>
                         </Link>

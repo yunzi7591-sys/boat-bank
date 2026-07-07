@@ -58,8 +58,8 @@ export default async function WalletPage() {
         <div className="min-h-screen bg-neutral-100 font-sans pb-24">
             {/* Header */}
             <div className="bg-slate-900 text-white p-4 flex items-center shadow-md sticky top-0 z-20">
-                <Link href="/mypage">
-                    <Button variant="ghost" size="icon" className="text-white hover:bg-slate-800 shrink-0">
+                <Link href="/mypage" aria-label="戻る">
+                    <Button variant="ghost" size="icon" aria-label="戻る" className="text-white hover:bg-slate-800 shrink-0">
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                 </Link>

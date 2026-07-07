@@ -54,8 +54,9 @@ export function ShareButton({ title, urlPath, placeName, raceNumber }: Props) {
         <Button
             variant="ghost"
             size="icon"
+            aria-label="共有"
             onClick={handleShare}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-indigo-600 transition-colors"
+            className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-indigo-600 transition-colors"
         >
             <Share2 className="w-4 h-4" />
         </Button>

@@ -49,8 +49,13 @@ export default async function PlacePage(props: {
         }),
         prisma.raceEntry.findMany({
             where: { placeName: venue.name, raceDate: raceDateFilter },
-            include: {
-                racer: true
+            select: {
+                boatNumber: true,
+                raceNumber: true,
+                localWinRate: true,
+                motorRate: true,
+                isAbsent: true,
+                racer: { select: { name: true, grade: true } },
             },
             orderBy: { boatNumber: 'asc' }
         }),

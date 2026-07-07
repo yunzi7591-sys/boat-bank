@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Formation } from "@/lib/bet-logic";
@@ -170,8 +171,8 @@ export async function publishPrediction(data: {
                 return pred;
             });
 
-            // フォロワーに通知
-            notifyFollowers(userId, data.placeName, data.raceNumber, prediction.id).catch(() => {});
+            // フォロワーに通知（応答をブロックしないよう after で送信）
+            after(() => notifyFollowers(userId, data.placeName, data.raceNumber, prediction.id));
             return { success: true, predictionId: prediction.id };
         }
 
@@ -194,8 +195,8 @@ export async function publishPrediction(data: {
             },
         });
 
-        // フォロワーに通知
-        await notifyFollowers(userId, data.placeName, data.raceNumber, prediction.id);
+        // フォロワーに通知（応答をブロックしないよう after で送信）
+        after(() => notifyFollowers(userId, data.placeName, data.raceNumber, prediction.id));
         return { success: true, predictionId: prediction.id };
     } catch (e: any) {
         console.error("[publishPrediction Error]", e);
