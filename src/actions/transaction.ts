@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -170,6 +171,25 @@ export async function unlockPrediction(predictionId: string) {
                 ? `${txResult.buyerName || '誰か'}さんがあなたの${raceLabel}無料予想を購入しました`
                 : `${txResult.buyerName || '誰か'}さんがあなたの${raceLabel}予想を購入しました（+${txResult.price}pt）`;
             sendPushNotification(txResult.authorId, "SALE", message, `/predictions/${predictionId}`).catch(() => {});
+        }
+
+        // 自己取引の監視（非ブロッキング・記録のみ／挙動は変えない）:
+        // 有料購入で、買い手↔売り手が相互に売買している＝自己経済圏の典型パターンを
+        // 検知したらログに残す。規模拡大時の本対策の判断材料にする。
+        if (txResult.authorId && txResult.price > 0) {
+            const buyerId = userId;
+            const sellerId = txResult.authorId;
+            after(async () => {
+                try {
+                    const reciprocal = await prisma.transaction.findFirst({
+                        where: { userId: sellerId, action: "BUY_PREDICTION", prediction: { authorId: buyerId } },
+                        select: { id: true },
+                    });
+                    if (reciprocal) {
+                        console.warn(`[SELF-DEAL-WATCH] reciprocal trade buyer=${buyerId} seller=${sellerId} prediction=${predictionId}`);
+                    }
+                } catch { /* 監視失敗は無視（購入には影響させない） */ }
+            });
         }
 
         // 5. Revalidate page to re-render Server Component state
