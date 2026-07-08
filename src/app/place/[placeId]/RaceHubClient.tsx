@@ -319,12 +319,12 @@ export function RaceHubClient({
             <div className="px-4 mt-4 flex gap-2">
                 {isFinished ? (
                     <div className="flex-1 bg-slate-100 border border-slate-200 rounded-lg p-3 opacity-50 text-center">
-                        <p className="text-xs font-bold text-slate-400">販売は締め切りました</p>
+                        <p className="text-xs font-bold text-slate-400">公開は締め切りました</p>
                     </div>
                 ) : (
                     <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=false`} className="flex-1">
                         <div className="bg-[#533afd] text-white rounded-lg p-3 text-center hover:bg-[#4434d4] active:scale-[0.98] transition-all">
-                            <p className="text-xs font-bold">予想を販売・公開</p>
+                            <p className="text-xs font-bold">予想を公開</p>
                         </div>
                     </Link>
                 )}
@@ -354,7 +354,7 @@ export function RaceHubClient({
                     <div className="bg-white border border-[#e5edf5] rounded-lg p-8 flex flex-col items-center justify-center text-center">
                         <Clock className="w-8 h-8 text-slate-200 mb-2" />
                         <p className="text-sm font-bold text-[#64748d]">現在、このレースの予想はありません。</p>
-                        <p className="text-[10px] text-[#64748d] mt-1">一番乗りで予想を販売してみましょう！</p>
+                        <p className="text-[10px] text-[#64748d] mt-1">一番乗りで予想を公開してみましょう！</p>
                     </div>
                 ) : (
                     <MarketFeed predictions={marketPredictions} />

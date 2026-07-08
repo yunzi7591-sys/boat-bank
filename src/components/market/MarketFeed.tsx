@@ -56,11 +56,11 @@ export function MarketFeed({
 
     return (
         <div className="space-y-6">
-            {/* 有料予想 */}
+            {/* pt予想 */}
             {paid.length > 0 && (
                 <section>
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xs font-bold text-[#061b31]">有料予想</h3>
+                        <h3 className="text-xs font-bold text-[#061b31]">pt予想</h3>
                         <SortToggle value={paidSort} onChange={setPaidSort} />
                     </div>
                     {sortedPaid.map(pred => (
