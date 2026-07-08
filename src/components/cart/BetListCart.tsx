@@ -530,7 +530,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                     <DialogHeader>
                                         <DialogTitle className="text-[#061b31]">予想記事の公開設定</DialogTitle>
                                         <DialogDescription className="text-[#64748d]">
-                                            カートの予想データを記事として作成・販売します。
+                                            カートの予想データを記事として作成・公開します。
                                         </DialogDescription>
                                     </DialogHeader>
 
@@ -554,8 +554,8 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                 <h4 className={cn(
                                                     "font-bold text-sm",
                                                     publishType === "internal" ? "text-[#533afd]" : "text-[#061b31]"
-                                                )}>自サイトで販売</h4>
-                                                <p className="text-xs text-[#64748d] mt-1">買い目を公開して販売</p>
+                                                )}>自サイトで公開</h4>
+                                                <p className="text-xs text-[#64748d] mt-1">買い目を公開する</p>
                                             </div>
                                         </button>
                                         <button
@@ -713,7 +713,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-xs font-bold text-[#64748d]">販売価格 — 未入力で無料</label>
+                                                        <label className="text-xs font-bold text-[#64748d]">価格（pt）— 未入力で無料</label>
                                                         <div className="flex items-center gap-1">
                                                             <Input name="price" type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0" defaultValue="" className="border-[#e5edf5] text-right w-24" />
                                                             <span className="text-sm font-bold text-[#64748d] whitespace-nowrap">00 pt</span>

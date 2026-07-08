@@ -48,7 +48,7 @@ export function UnlockButton({ predictionId, price, isClosed = false }: Props) {
                     <Lock className="w-4 h-4 mr-2 text-slate-400" />
                 )}
 
-                {isClosed ? "販売終了" : "この情報をアンロック"}
+                {isClosed ? "公開終了" : "この情報をアンロック"}
                 <span className={`ml-2 font-normal ${isClosed ? "text-slate-300" : "text-slate-400"}`}>|</span>
                 <span className={`ml-2 font-black ${isClosed ? "text-slate-400" : "text-green-400"}`}>{price} pt</span>
             </Button>

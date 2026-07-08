@@ -89,7 +89,7 @@ function RankList({ list, type, currentUserId, minRaces = 10 }: { list: RankEntr
                 <Trophy className="w-10 h-10 mx-auto text-[#e5edf5] mb-3" />
                 <p className="text-[#64748d] font-semibold mb-1">ランキング集計中</p>
                 <p className="text-xs text-[#64748d]">
-                    {type === "recovery" || type === "balance" ? `判定済みの予想が${minRaces}R以上あるユーザーが表示されます` : "予想を販売してポイントを獲得しましょう"}
+                    {type === "recovery" || type === "balance" ? `判定済みの予想が${minRaces}R以上あるユーザーが表示されます` : "予想を公開してポイントを獲得しましょう"}
                 </p>
             </div>
         );

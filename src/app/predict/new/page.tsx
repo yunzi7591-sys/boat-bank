@@ -87,8 +87,8 @@ function PredictContent() {
                             className="w-full p-5 bg-white border-2 border-[#e5edf5] rounded-lg text-left hover:border-[#533afd] transition-colors"
                             style={{ boxShadow: 'rgba(50,50,93,0.08) 0px 4px 12px' }}
                         >
-                            <h3 className="text-base font-bold text-[#061b31] mb-1">自サイトで販売</h3>
-                            <p className="text-xs text-[#64748d]">買い目を公開して他ユーザーに販売します</p>
+                            <h3 className="text-base font-bold text-[#061b31] mb-1">自サイトで公開</h3>
+                            <p className="text-xs text-[#64748d]">買い目を公開して他ユーザーに見てもらいます</p>
                         </button>
                         <button
                             onClick={() => setPublishType("external")}
