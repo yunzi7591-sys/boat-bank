@@ -8,6 +8,7 @@ import { MarketFeed } from "@/components/market/MarketFeed";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BOAT_COLORS } from "@/lib/bet-logic";
+import { canPublishNow, formatPublishOpenTime } from "@/lib/prediction-window";
 
 export function RaceHubClient({
     venue,
@@ -50,6 +51,15 @@ export function RaceHubClient({
     // Filter data for the active race
     const currentSchedule = schedules.find(s => s.raceNumber === activeRaceNumber);
     const isFinished = currentSchedule ? new Date(currentSchedule.deadlineAt) < now : false;
+
+    // 展示前の早すぎる公開を防ぐ: 開放時刻（1R=締切30分前 / 2R以降=前R締切）に達したか
+    const prevSchedule = schedules.find(s => s.raceNumber === activeRaceNumber - 1);
+    const canPublish = currentSchedule
+        ? canPublishNow(activeRaceNumber, currentSchedule.deadlineAt, prevSchedule?.deadlineAt ?? null, now)
+        : false;
+    const publishOpenAt = currentSchedule
+        ? formatPublishOpenTime(activeRaceNumber, currentSchedule.deadlineAt, prevSchedule?.deadlineAt ?? null)
+        : "";
 
     const marketPredictions = allMarketPredictions.filter(p => p.raceNumber === activeRaceNumber);
     const raceResult = allRaceResults.find(r => r.raceNumber === activeRaceNumber);
@@ -320,6 +330,10 @@ export function RaceHubClient({
                 {isFinished ? (
                     <div className="flex-1 bg-slate-100 border border-slate-200 rounded-lg p-3 opacity-50 text-center">
                         <p className="text-xs font-bold text-slate-400">公開は締め切りました</p>
+                    </div>
+                ) : !canPublish ? (
+                    <div className="flex-1 bg-slate-100 border border-slate-200 rounded-lg p-3 text-center cursor-not-allowed" aria-disabled="true" title="展示後に公開できるようになります">
+                        <p className="text-xs font-bold text-slate-400">{publishOpenAt}から公開可能</p>
                     </div>
                 ) : (
                     <Link href={`/predict?placeId=${venue.id}&raceNumber=${activeRaceNumber}&isPrivate=false`} className="flex-1">

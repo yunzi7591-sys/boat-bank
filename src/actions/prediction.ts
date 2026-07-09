@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { Formation } from "@/lib/bet-logic";
 import { sendPushToMultipleUsers } from "@/lib/push";
 import { rateLimit } from "@/lib/rate-limit";
+import { canPublishNow, formatPublishOpenTime } from "@/lib/prediction-window";
 
 async function notifyFollowers(authorId: string, placeName: string, raceNumber: number, predictionId: string) {
     try {
@@ -89,6 +90,30 @@ export async function publishPrediction(data: {
         if (!data.isPrivate && schedule.deadlineAt < new Date()) {
             return { success: false, error: "締切時刻を過ぎたレースの予想は公開できません。" };
         }
+
+        // 展示前の早すぎる公開を防ぐ（公開予想のみ）。
+        // 開放時刻: 1R=締切30分前 / 2R以降=前Rの締切時刻。DB値で判定しクライアント値は信用しない。
+        if (!data.isPrivate) {
+            let prevDeadlineAt: Date | null = null;
+            if (data.raceNumber > 1) {
+                const prev = await prisma.raceSchedule.findUnique({
+                    where: {
+                        placeName_raceNumber_raceDate: {
+                            placeName: data.placeName,
+                            raceNumber: data.raceNumber - 1,
+                            raceDate: raceDateForLookup,
+                        },
+                    },
+                    select: { deadlineAt: true },
+                });
+                prevDeadlineAt = prev?.deadlineAt ?? null;
+            }
+            if (!canPublishNow(data.raceNumber, schedule.deadlineAt, prevDeadlineAt)) {
+                const openAt = formatPublishOpenTime(data.raceNumber, schedule.deadlineAt, prevDeadlineAt);
+                return { success: false, error: `この予想はまだ公開できません。展示後、${openAt}以降に公開できます。` };
+            }
+        }
+
         data.deadlineAt = schedule.deadlineAt;
 
         // 1レースにつき1人1予想まで（同じ場・レース番号・日付への重複公開を禁止）
