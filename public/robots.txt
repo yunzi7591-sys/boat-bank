@@ -1,36 +1,21 @@
-# OGP プレビュー用クローラーは全URL許可（X / Facebook / LINE / Slack 等）
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
-User-agent: facebookcatalog
-Allow: /
-
-User-agent: LinkedInBot
-Allow: /
-
-User-agent: Slackbot-LinkExpanding
-Allow: /
-
-User-agent: Slackbot
-Allow: /
-
-User-agent: line-poker
-Allow: /
-
-User-agent: Discordbot
-Allow: /
-
-User-agent: WhatsApp
-Allow: /
-
-# 通常クローラー（Google等）は TOP のみインデックス
+# 公開ページはクロール許可。会員専用・認証・取引ページのみ除外
 User-agent: *
-Allow: /$
-Allow: /sitemap.xml
-Allow: /robots.txt
-Disallow: /
+Allow: /api/og/
+Disallow: /api/
+Disallow: /admin
+Disallow: /mypage
+Disallow: /wallet
+Disallow: /points
+Disallow: /predict
+Disallow: /notifications
+Disallow: /search
+Disallow: /login
+Disallow: /register
+Disallow: /check-email
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /offline
+Allow: /
 
 Sitemap: https://boatbank.jp/sitemap.xml

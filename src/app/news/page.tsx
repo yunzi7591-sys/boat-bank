@@ -5,6 +5,12 @@ import { NewsListClient } from "@/components/news/NewsListClient";
 
 export const revalidate = 60;
 
+export const metadata = {
+    title: "競艇ニュース | BOAT BANK",
+    description: "競艇（ボートレース）の最新ニュース・注目レース・SG/G1開催情報をお届け。",
+    alternates: { canonical: "https://boatbank.jp/news" },
+};
+
 export default async function NewsPage() {
     const allNews = await prisma.news.findMany({
         where: { isPublished: true },

@@ -8,6 +8,17 @@ import { BOAT_COLORS } from "@/lib/bet-logic";
 
 import { RaceHubClient } from "./RaceHubClient";
 
+export async function generateMetadata(props: { params: Promise<{ placeId: string }> }) {
+    const params = await props.params;
+    const venue = VENUES.find(v => v.id === params.placeId);
+    if (!venue) return { title: "会場が見つかりません | BOAT BANK" };
+    return {
+        title: `${venue.name}競艇 今日の予想・レース情報・締切時刻 | BOAT BANK`,
+        description: `ボートレース${venue.name}の本日のレース一覧・締切時刻・選手データ・結果と公開予想を毎日更新。無料予想もチェックできます。`,
+        alternates: { canonical: `https://boatbank.jp/place/${venue.id}` },
+    };
+}
+
 export default async function PlacePage(props: {
     params: Promise<{ placeId: string }>;
     searchParams: Promise<{ race?: string }>;

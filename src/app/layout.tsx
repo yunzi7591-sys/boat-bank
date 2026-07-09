@@ -29,8 +29,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://boatbank.jp"),
-  title: "BOAT BANK",
-  description: "ガチ予想のマーケットプレイス＆収支管理アプリ",
+  title: "BOAT BANK（ボートバンク）| 競艇予想マーケット＆収支管理アプリ",
+  description: "競艇（ボートレース）予想のマーケットプレイス＆収支管理アプリ。回収率公開のガチ予想、全24場のレース情報・締切時刻・結果を毎日更新。",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -56,9 +56,7 @@ export const metadata: Metadata = {
     title: "BOAT BANK",
     description: "ガチ予想のマーケットプレイス＆収支管理アプリ",
   },
-  alternates: {
-    canonical: "https://boatbank.jp",
-  },
+  // canonicalはページごとに設定する（ここで固定するとGoogleが全ページをトップの複製と誤認する）
   verification: {
     google: "WZcSVEsSVyYU5GuElmykK_T3Dj2_yL8rXqHGKJKu7kQ",
   },

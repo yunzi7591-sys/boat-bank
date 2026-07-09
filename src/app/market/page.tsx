@@ -7,6 +7,12 @@ import { A8_BANNER_BOTTOM } from "@/components/ads/A8BannerConfig";
 
 export const revalidate = 0;
 
+export const metadata = {
+    title: "予想マーケット | BOAT BANK",
+    description: "本日の競艇（ボートレース）予想一覧。無料予想・pt予想を毎日更新。回収率を公開している予想家のガチ予想をチェック。",
+    alternates: { canonical: "https://boatbank.jp/market" },
+};
+
 export default async function MarketPage() {
     const session = await auth();
     const userId = session?.user?.id;

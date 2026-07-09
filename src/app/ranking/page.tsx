@@ -9,6 +9,12 @@ import { A8_BANNER_MIDDLE } from "@/components/ads/A8BannerConfig";
 
 export const revalidate = 60;
 
+export const metadata = {
+    title: "予想家ランキング | BOAT BANK",
+    description: "競艇予想家の回収率・的中率ランキング。成績はすべて自動集計で公開。当たる予想家をフォローしてガチ予想を受け取ろう。",
+    alternates: { canonical: "https://boatbank.jp/ranking" },
+};
+
 interface RankEntry {
     id: string;
     name: string;
