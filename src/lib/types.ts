@@ -26,6 +26,8 @@ export type TimelineCardPrediction = Pick<
     | "raceDate"
     | "deadlineAt"
 > & {
+    /** 見解・分析（commentary）が書かれているか。本文はアンロック制のため一覧には旗だけ渡す */
+    hasCommentary?: boolean;
     author: {
         name: string | null;
         role: string;

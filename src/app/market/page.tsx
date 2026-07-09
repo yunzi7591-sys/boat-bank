@@ -11,6 +11,12 @@ export default async function MarketPage() {
     const session = await auth();
     const userId = session?.user?.id;
 
+    // アンロック制のコンテンツ（見解本文・買い目）は一覧のクライアント送信データに含めない
+    const toTimelineCard = <T extends { commentary: string | null; analysisComment: string | null; predictedNumbers: unknown }>(p: T) => {
+        const { commentary, analysisComment, predictedNumbers, ...rest } = p;
+        return { ...rest, hasCommentary: !!commentary?.trim() };
+    };
+
     // internal + external の公開予想（締切前のみ）
     const now = new Date();
     const allPredictions = await prisma.prediction.findMany({
@@ -56,8 +62,8 @@ export default async function MarketPage() {
                 </div>
 
                 <MarketTabs
-                    allPredictions={allPredictions}
-                    followingPredictions={followingPredictions}
+                    allPredictions={allPredictions.map(toTimelineCard)}
+                    followingPredictions={followingPredictions.map(toTimelineCard)}
                     userId={userId}
                     followingIds={followingIds}
                 />

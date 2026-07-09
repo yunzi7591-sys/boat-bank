@@ -39,7 +39,7 @@ export default async function PlacePage(props: {
         prisma.prediction.findMany({
             where: { placeName: venue.name, raceDate: raceDateFilter, isPrivate: false },
             include: {
-                author: { select: { name: true, image: true } },
+                author: { select: { name: true, image: true, role: true } },
                 _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } },
             },
             orderBy: { createdAt: 'desc' }
@@ -77,11 +77,17 @@ export default async function PlacePage(props: {
         activeRaceNumber = upcomingRaces.length > 0 ? upcomingRaces[0].raceNumber : 1;
     }
 
+    // アンロック制のコンテンツ（見解本文・買い目）は一覧のクライアント送信データに含めない
+    const timelinePredictions = allMarketPredictions.map(p => {
+        const { commentary, analysisComment, predictedNumbers, ...rest } = p;
+        return { ...rest, hasCommentary: !!commentary?.trim() };
+    });
+
     return (
         <RaceHubClient
             venue={venue}
             schedules={schedules}
-            allMarketPredictions={allMarketPredictions}
+            allMarketPredictions={timelinePredictions}
             allRaceResults={allRaceResults}
             allRaceEntries={allRaceEntries}
             initialActiveRace={activeRaceNumber}

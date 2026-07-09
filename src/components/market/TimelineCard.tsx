@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Eye, Users, Clock } from "lucide-react";
+import { Eye, Users, Clock, FileText } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import { FollowButton } from "@/components/market/FollowButton";
@@ -30,6 +30,11 @@ export function TimelineCard({
                             <span className="text-[10px] text-[#64748d]">
                                 {formatDistanceToNow(new Date(prediction.createdAt), { addSuffix: true, locale: ja })}
                             </span>
+                            {prediction.hasCommentary && (
+                                <span className="flex items-center gap-0.5 text-[9px] font-bold text-[#533afd] bg-[#533afd]/10 border border-[#533afd]/20 px-1.5 py-0.5 rounded leading-none">
+                                    <FileText className="w-2.5 h-2.5" />見解分析あり
+                                </span>
+                            )}
                         </div>
                         <h3 className="font-bold text-sm text-[#061b31] leading-tight truncate group-hover:text-[#533afd] transition-colors">
                             {prediction.title || `${prediction.placeName}勝負レース`}
