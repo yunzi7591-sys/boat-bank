@@ -4,8 +4,6 @@ import { auth } from "@/auth";
 import { Trophy, TrendingUp, Coins } from "lucide-react";
 import { RankingClient } from "@/components/ranking/RankingClient";
 import { VENUES } from "@/lib/constants/venues";
-import { A8Banner } from "@/components/ads/A8Banner";
-import { A8_BANNER_MIDDLE } from "@/components/ads/A8BannerConfig";
 
 export const revalidate = 60;
 
@@ -241,8 +239,6 @@ export default async function RankingPage() {
                 />
             </div>
 
-            {/* A8 広告バナー */}
-            <A8Banner {...A8_BANNER_MIDDLE} />
         </div>
     );
 }

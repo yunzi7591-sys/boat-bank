@@ -2,8 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { Trophy, ChevronRight } from "lucide-react";
 import { BOAT_COLORS } from "@/lib/bet-logic";
 import { VenueGrid } from "@/components/dashboard/VenueGrid";
-import { A8Banner } from "@/components/ads/A8Banner";
-import { A8_BANNER_BOTTOM, A8_BANNER_MIDDLE } from "@/components/ads/A8BannerConfig";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
@@ -94,8 +92,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* A8 広告バナー（中間） */}
-      <A8Banner {...A8_BANNER_MIDDLE} />
 
       {/* 4. Latest Results */}
       <div className="mt-5 px-4">
@@ -129,8 +125,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* A8 広告バナー（下部） */}
-      <A8Banner {...A8_BANNER_BOTTOM} />
 
       {/* 構造化データ: 予想マーケットプレイスとして検索エンジンに認識させる（収支管理の訴求は /lp に集約） */}
       <script

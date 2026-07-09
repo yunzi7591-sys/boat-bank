@@ -14,8 +14,6 @@ import { ReloadButton } from "@/components/ReloadButton";
 import { ProfileShareButton } from "@/components/mypage/ProfileShareButton";
 import { PredictionList } from "@/components/mypage/PredictionList";
 import { BetList } from "@/components/mypage/BetList";
-import { A8Banner } from "@/components/ads/A8Banner";
-import { A8_BANNER_MIDDLE } from "@/components/ads/A8BannerConfig";
 
 export default async function MyPage() {
     const session = await auth();
@@ -231,10 +229,6 @@ export default async function MyPage() {
                 </Link>
             </div>
 
-            {/* A8 広告バナー */}
-            <div className="max-w-4xl mx-auto mb-8">
-                <A8Banner {...A8_BANNER_MIDDLE} />
-            </div>
 
             {/* Calendar PnL */}
             <div className="max-w-4xl mx-auto px-4 mb-8 border-b border-[#e5edf5] pb-8">

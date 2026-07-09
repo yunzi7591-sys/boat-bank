@@ -2,8 +2,6 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { MarketTabs } from "@/components/market/MarketTabs";
 import { ReloadButton } from "@/components/ReloadButton";
-import { A8Banner } from "@/components/ads/A8Banner";
-import { A8_BANNER_BOTTOM } from "@/components/ads/A8BannerConfig";
 
 export const revalidate = 0;
 
@@ -75,8 +73,6 @@ export default async function MarketPage() {
                 />
             </div>
 
-            {/* A8 広告バナー */}
-            <A8Banner {...A8_BANNER_BOTTOM} />
         </div>
     );
 }
