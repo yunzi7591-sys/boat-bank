@@ -2,13 +2,14 @@ import { LegalLayout, Section, BulletList, Highlight } from "@/components/legal/
 
 export const metadata = {
     title: "利用規約 | BOAT BANK",
+    alternates: { canonical: "https://boatbank.jp/terms" },
 };
 
 export default function TermsPage() {
     return (
         <LegalLayout
             title="利用規約"
-            updatedAt="2026年6月17日"
+            updatedAt="2026年7月9日"
             intro={
                 <p>
                     この利用規約（以下「本規約」）は、BOAT BANK（以下「本サービス」）の利用条件を定めるものです。
@@ -92,6 +93,7 @@ export default function TermsPage() {
                     items={[
                         <>不正アクセス、またはサーバーに過度な負荷をかける行為</>,
                         <>複数アカウントの作成・利用</>,
+                        <>自分の予想を自分でアンロックする等、ポイントを不正に循環させ、またはランキング・成績を偽装する行為（自己取引）</>,
                         <>スクレイピング、クローリング、その他自動化ツールによるデータ収集</>,
                         <>他のユーザーへの嫌がらせ・誹謗中傷</>,
                         <>虚偽の予想を意図的に販売する行為</>,

@@ -2,13 +2,14 @@ import { LegalLayout, Section, BulletList, Highlight } from "@/components/legal/
 
 export const metadata = {
     title: "プライバシーポリシー | BOAT BANK",
+    alternates: { canonical: "https://boatbank.jp/privacy" },
 };
 
 export default function PrivacyPage() {
     return (
         <LegalLayout
             title="プライバシーポリシー"
-            updatedAt="2026年6月17日"
+            updatedAt="2026年7月9日"
             intro={
                 <p>
                     BOAT BANK（以下「本サービス」）は、個人が運営するサービスです。
@@ -103,6 +104,7 @@ export default function PrivacyPage() {
                         <><strong>RevenueCat（RevenueCat, Inc.）</strong>: サブスクリプションの状態管理</>,
                         <><strong>Apple（App Store / Sign in with Apple）</strong>: サブスクリプション課金処理および Sign in with Apple のソーシャルログイン認証。Apple のプライバシーポリシーは <a href="https://www.apple.com/legal/privacy/jp/" target="_blank" rel="noopener noreferrer" className="text-[#533afd] underline">Apple 公式</a> をご確認ください</>,
                         <><strong>Apple Push Notification Service (APNs)</strong>: iOS アプリへのプッシュ通知配信</>,
+                        <><strong>Firebase Cloud Messaging（Google LLC）</strong>: Android アプリへのプッシュ通知配信</>,
                         <><strong>Google（Google Play / Sign in with Google / Google Analytics）</strong>: サブスクリプション課金処理、ソーシャルログイン認証およびアクセス解析。Google のプライバシーポリシーは <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-[#533afd] underline">Google 公式</a> をご確認ください</>,
                         <><strong>A8.net（株式会社ファンコミュニケーションズ）</strong>: アフィリエイト広告の表示・効果測定</>,
                     ]}
@@ -142,7 +144,7 @@ export default function PrivacyPage() {
                 <p>
                     本サービスでは、予想が購入された時、フォロー中の人が新しい予想を出した時、その他重要なお知らせを通知するためにプッシュ通知機能を提供します。
                     プッシュ通知の受信には、ブラウザまたは端末での許可が必要です。
-                    許可した場合、通知の配信に必要な購読トークン（iOS の場合は APNs デバイストークン）を保存します。
+                    許可した場合、通知の配信に必要な購読トークン（iOS の場合は APNs デバイストークン、Android の場合は FCM トークン）を保存します。
                     プッシュ通知は、ブラウザ・端末の設定または本サービスの通知設定からいつでも無効化できます。
                 </p>
             </Section>

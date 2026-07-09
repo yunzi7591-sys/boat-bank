@@ -2,6 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
     title: "特定商取引法に基づく表記 | BOAT BANK",
+    alternates: { canonical: "https://boatbank.jp/sct" },
 };
 
 export default function SctPage() {
