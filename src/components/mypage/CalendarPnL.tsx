@@ -500,7 +500,7 @@ function MonthlySummary({
                   : "text-[#64748d]"
             }`}
           >
-            {totals.pnl >= 0 ? "+" : ""}¥{formatCurrency(Math.abs(totals.pnl))}
+            {totals.pnl >= 0 ? "+" : "-"}¥{formatCurrency(Math.abs(totals.pnl))}
           </div>
         </div>
         <div className="bg-white rounded-lg p-2.5 text-center">
