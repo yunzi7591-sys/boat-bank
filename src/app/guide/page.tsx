@@ -92,7 +92,7 @@ export default function GuidePage() {
       {/* セクション2: 予想を販売する */}
       <section className="mb-14">
         <h2 className="text-lg font-bold text-[#061b31] mb-1">予想を公開する</h2>
-        <p className="text-sm text-[#64748d] mb-4">あなたの予想を公開して、的中実績と回収率を積み上げられます。予想はすべて無料で閲覧できます。</p>
+        <p className="text-sm text-[#64748d] mb-4">あなたの予想を公開して、的中実績と回収率を積み上げられます。締切前の予想は誰でも無料で閲覧できます。</p>
         <div className="border-t border-[#e5edf5]">
           <Step
             number={1}

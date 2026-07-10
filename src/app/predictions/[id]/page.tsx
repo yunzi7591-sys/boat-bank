@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { isSubscriber } from "@/lib/subscription";
 import { Formation, normalizeCombo } from "@/lib/bet-logic";
 import { BackButton } from "@/components/BackButton";
 import { parseJsonSafely } from "@/lib/utils";
@@ -104,6 +105,13 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
     // 投稿者本人かどうか（本人なら買い目非公開でも自分の買い目は見られる）
     const isAuthor = !!userId && prediction.authorId === userId;
 
+    // 閲覧ルール: 締切前は誰でも無料。締切後（過去予想）は本人またはサブスク会員のみ
+    const isClosed = new Date(prediction.deadlineAt) < new Date();
+    let canView = !isClosed || isAuthor;
+    if (!canView && userId) {
+        canView = await isSubscriber(userId);
+    }
+
     let formations: Formation[] = [];
     try {
         formations = parseJsonSafely<Formation[]>(prediction.predictedNumbers);
@@ -171,7 +179,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
             <div className="p-5">
 
                 {/* Commentary Section */}
-                {prediction.commentary?.trim() && (
+                {canView && prediction.commentary?.trim() && (
                     <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6">
                         <h3 className="text-xs font-black tracking-widest text-slate-400 uppercase mb-4 flex items-center gap-2">
                             <span className="w-1 h-3 bg-indigo-500 rounded-full"></span> 見解・分析
@@ -190,7 +198,29 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                         <span className="w-1 h-3 bg-indigo-500 rounded-full"></span> 買い目一覧
                     </h3>
 
-                    {prediction.betsPublic === false && !isAuthor ? (
+                    {!canView ? (
+                        <div className="w-full bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-slate-200 shadow-sm relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(0,0,0,0.02)_25%,transparent_25%,transparent_50%,rgba(0,0,0,0.02)_50%,rgba(0,0,0,0.02)_75%,transparent_75%,transparent)] bg-[length:20px_20px]"></div>
+                            <div className="z-10 flex flex-col items-center w-full text-center">
+                                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-indigo-100 rotate-12">
+                                    <Lock className="w-5 h-5 -rotate-12" />
+                                </div>
+                                <h4 className="font-black text-slate-800 text-lg mb-1">過去の予想はサブスク会員限定</h4>
+                                <p className="text-xs font-semibold text-slate-500 mb-6 max-w-[240px]">
+                                    このレースは締切時刻を過ぎました。締切後の予想（見解・買い目）はサブスク会員のみ閲覧できます。
+                                </p>
+                                {!userId ? (
+                                    <a href="/login" className="inline-flex items-center justify-center bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm px-6 py-3 rounded-lg transition-colors">
+                                        ログイン / 新規登録
+                                    </a>
+                                ) : (
+                                    <Link href="/subscribe" className="inline-flex items-center justify-center bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm px-6 py-3 rounded-lg transition-colors shadow-md">
+                                        サブスク会員になって閲覧する
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+                    ) : prediction.betsPublic === false && !isAuthor ? (
                             <div className="w-full bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-slate-200 shadow-sm">
                                 <div className="w-12 h-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center mb-4">
                                     <Lock className="w-5 h-5" />
