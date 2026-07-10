@@ -107,8 +107,8 @@ export default async function ShindanResultPage(props: { params: Promise<{ type:
                     <h2 className="text-sm font-black mb-2">🚤 {t.name}のあなたへ</h2>
                     <p className="text-sm text-white/95 leading-relaxed mb-4">{t.boatbank}</p>
                     <div className="flex flex-col gap-2">
-                        <Link href="/register" className="block bg-white text-[#061b31] text-center font-black rounded-xl py-3.5 active:scale-[0.99] transition-transform">
-                            無料でBOAT BANKをはじめる
+                        <Link href="/lp" className="block bg-white text-[#061b31] text-center font-black rounded-xl py-3.5 active:scale-[0.99] transition-transform">
+                            BOAT BANK とは
                         </Link>
                         <Link href="/market" className="block bg-white/15 border border-white/30 text-white text-center font-bold rounded-xl py-3 active:scale-[0.99] transition-transform">
                             今日の予想マーケットを見る
