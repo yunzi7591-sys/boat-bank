@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { searchUsers } from "@/actions/search";
+import { Star } from "lucide-react";
 
 type UserResult = {
     id: string;
     name: string | null;
     role: string;
     followerCount: number;
+    rating: { avg: number; count: number } | null;
 };
 
 export default function SearchPage() {
@@ -85,6 +87,13 @@ export default function SearchPage() {
                                     <span className="font-bold text-[#061b31] flex items-center gap-1.5">
                                         {user.name ?? "名前未設定"}
                                         {user.role === 'ADMIN' && <span className="text-[8px] font-black bg-amber-400 text-amber-900 px-1 py-0.5 rounded leading-none">公式</span>}
+                                        {user.rating && user.rating.count > 0 && (
+                                            <span className="flex items-center gap-0.5 text-xs font-bold text-amber-600">
+                                                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                                {user.rating.avg.toFixed(1)}
+                                                <span className="font-normal text-[#94a3b8]">({user.rating.count})</span>
+                                            </span>
+                                        )}
                                     </span>
                                     <span className="text-xs text-[#64748d]">
                                         {user.followerCount} フォロワー
