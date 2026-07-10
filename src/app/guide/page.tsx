@@ -91,54 +91,37 @@ export default function GuidePage() {
 
       {/* セクション2: 予想を販売する */}
       <section className="mb-14">
-        <h2 className="text-lg font-bold text-[#061b31] mb-1">予想を販売する</h2>
-        <p className="text-sm text-[#64748d] mb-4">あなたの予想を他のユーザーに販売してポイントを獲得できます。</p>
+        <h2 className="text-lg font-bold text-[#061b31] mb-1">予想を公開する</h2>
+        <p className="text-sm text-[#64748d] mb-4">あなたの予想を公開して、的中実績と回収率を積み上げられます。予想はすべて無料で閲覧できます。</p>
         <div className="border-t border-[#e5edf5]">
           <Step
             number={1}
-            title="「予想を販売・公開」をタップ"
-            description="レース詳細画面のボタンから「予想を販売・公開」を選択します。"
+            title="「予想を公開」をタップ"
+            description="レース詳細画面のボタンから「予想を公開」を選択します。"
           />
           <div className="border-t border-[#f1f5f9]" />
           <Step
             number={2}
-            title="自サイト販売 or 他サイト誘導を選択"
-            description="BOAT BANK上で直接販売するか、外部サイトへの誘導リンクを設置するかを選べます。"
+            title="自サイト公開 or 他サイト誘導を選択"
+            description="BOAT BANK上で公開するか、外部サイトへの誘導リンクを設置するかを選べます。"
           />
           <div className="border-t border-[#f1f5f9]" />
           <Step
             number={3}
-            title="買い目・価格を設定して公開"
-            description="マークシートで買い目を選び、タイトル・展開予想・販売価格を設定して公開します。価格を空欄にすると無料予想になります。"
+            title="買い目を設定して公開"
+            description="マークシートで買い目を選び、タイトル・展開予想を設定して公開します。成績は自動判定でプロフィールに反映されます。"
           />
         </div>
       </section>
 
-      {/* セクション3: ポイント */}
+      {/* セクション3: 限定ptイベント */}
       <section className="mb-14">
-        <h2 className="text-lg font-bold text-[#061b31] mb-1">ポイントの仕組み</h2>
-        <p className="text-sm text-[#64748d] mb-4">ポイントはサービス内の予想売買に使用します。換金はできません。</p>
-        <div className="border border-[#e5edf5] rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <tbody className="divide-y divide-[#e5edf5]">
-              <tr>
-                <td className="px-4 py-3 text-[#061b31]">新規登録ボーナス</td>
-                <td className="px-4 py-3 text-right font-semibold text-[#533afd]">5,000 pt</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <span className="text-[#061b31]">デイリーポイント</span>
-                  <span className="block text-xs text-[#94a3b8]">毎日0時リセット / 持ち越し不可</span>
-                </td>
-                <td className="px-4 py-3 text-right font-semibold text-[#533afd]">毎日 300 pt</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 text-[#061b31]">予想が購入された時</td>
-                <td className="px-4 py-3 text-right font-semibold text-[#533afd]">販売価格分</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <h2 className="text-lg font-bold text-[#061b31] mb-1">限定ptイベント</h2>
+        <p className="text-sm text-[#64748d] mb-4">
+          SG等の特別レース開催時には、全員参加の「限定pt」イベントを開催します。
+          参加者全員に同じ持ち点が配られ、対象レースに賭けて増やした限定ptでランキングを競います。
+          限定ptはイベント内でのみ使えるポイントで、換金はできません。イベント終了時にリセットされます。
+        </p>
       </section>
 
       {/* セクション4: もっと使いこなす */}
@@ -181,7 +164,7 @@ export default function GuidePage() {
                 ランキング
               </p>
               <p className="text-sm text-[#64748d]">
-                回収率・獲得pt・限定ptの3種類のランキング
+                回収率・収支・限定ptのランキング
               </p>
             </div>
             <span className="text-[#c4cdd5] text-sm shrink-0">&rarr;</span>

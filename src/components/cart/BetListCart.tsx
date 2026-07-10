@@ -15,7 +15,6 @@ import { ensureVisibleAboveKeyboard } from '@/lib/keyboard-scroll';
 import { publishPrediction } from '@/actions/prediction';
 import { submitBets } from '@/actions/bet';
 import { submitEventBets } from '@/actions/event-bet';
-import { getUserPoints } from '@/actions/auth';
 import { useState, useTransition, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -29,7 +28,6 @@ interface OddsMap {
 
 interface BetListCartProps {
     deadlineAt?: Date | null;
-    userPoints?: number;
     initialPublishType?: "internal" | "external";
     eventId?: string;
     eventPoints?: number;
@@ -47,7 +45,7 @@ function getOddsForCombination(odds: OddsMap | undefined, betType: string, combi
     return val && val > 0 ? val : null;
 }
 
-export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initialPublishType, eventId, eventPoints, odds }: BetListCartProps = {}) {
+export function BetListCart({ deadlineAt, initialPublishType, eventId, eventPoints, odds }: BetListCartProps = {}) {
     const searchParams = useSearchParams();
     const router = useRouter();
     const openPublishShare = usePublishShareStore((s) => s.open);
@@ -62,10 +60,6 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
     const [externalUrl, setExternalUrl] = useState('');
     const [analysisComment, setAnalysisComment] = useState('');
     const [externalConsent, setExternalConsent] = useState(false);
-
-    // User points (fetched client-side if not provided via props)
-    const [userPoints, setUserPoints] = useState<number>(initialUserPoints ?? 0);
-    const [pointsLoaded, setPointsLoaded] = useState(initialUserPoints !== undefined);
 
     // 自動資金配分: 合計金額（100円単位の数値文字列）
     const [allocTotal, setAllocTotal] = useState('');
@@ -108,15 +102,6 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
         })();
         return () => { cancelled = true; cleanup?.(); };
     }, [publishDialogOpen]);
-
-    useEffect(() => {
-        if (initialUserPoints === undefined) {
-            getUserPoints().then((pts) => {
-                setUserPoints(pts);
-                setPointsLoaded(true);
-            });
-        }
-    }, [initialUserPoints]);
 
     // Initial values from URL params
     const qPlaceId = searchParams.get('placeId');
@@ -222,8 +207,6 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
     }, []);
     const isClosed = deadlineAt ? now > deadlineAt : false;
     const isPublic = !isPrivate;
-
-    const hasInsufficientPoints = userPoints < 100;
 
     // URL validation
     const isValidUrl = (url: string) => {
@@ -578,7 +561,6 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                     "font-bold text-sm",
                                                     publishType === "external" ? "text-[#533afd]" : "text-[#061b31]"
                                                 )}>他サイトへ誘導</h4>
-                                                <p className="text-xs text-[#64748d] mt-1">100pt消費</p>
                                             </div>
                                         </button>
                                     </div>}
@@ -597,11 +579,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                                 return;
                                                             }
                                                             if (!externalConsent) {
-                                                                setError('100pt消費に同意してください');
-                                                                return;
-                                                            }
-                                                            if (hasInsufficientPoints) {
-                                                                setError('ポイントが不足しています');
+                                                                setError('注意事項に同意してください');
                                                                 return;
                                                             }
                                                         }
@@ -611,9 +589,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                             commentary: publishType === "internal"
                                                                 ? (formData.get('commentary') as string || '')
                                                                 : '',
-                                                            price: publishType === "internal"
-                                                                ? ((parseInt(formData.get('price') as string) || 0) * 100)
-                                                                : 0,
+                                                            price: 0,
                                                             placeName: formData.get('placeName') as string || qPlaceName,
                                                             raceNumber: parseInt(formData.get('raceNumber') as string) || parseInt(qRaceNumber),
                                                             raceDate: (() => {
@@ -713,13 +689,6 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                             className="border-[#e5edf5]"
                                                         />
                                                     </div>
-                                                    <div>
-                                                        <label className="text-xs font-bold text-[#64748d]">価格（pt）— 未入力で無料</label>
-                                                        <div className="flex items-center gap-1">
-                                                            <Input name="price" type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0" defaultValue="" className="border-[#e5edf5] text-right w-24" />
-                                                            <span className="text-sm font-bold text-[#64748d] whitespace-nowrap">00 pt</span>
-                                                        </div>
-                                                    </div>
                                                 </>
                                             )}
 
@@ -743,16 +712,9 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                             className="mt-0.5 w-4 h-4 rounded border-[#e5edf5] text-[#533afd] focus:ring-[#533afd]"
                                                         />
                                                         <span className="text-xs text-[#061b31] leading-relaxed">
-                                                            外部サイトへの予想公開に100ptを消費することに同意します
+                                                            上記の注意事項を確認し、外部サイトへの誘導を公開することに同意します
                                                         </span>
                                                     </label>
-
-                                                    {/* Insufficient points warning */}
-                                                    {pointsLoaded && hasInsufficientPoints && (
-                                                        <p className="text-[#ea2261] text-xs font-bold">
-                                                            ポイントが不足しています（残高: {userPoints}pt）
-                                                        </p>
-                                                    )}
                                                 </>
                                             )}
 
@@ -762,7 +724,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                                 type="submit"
                                                 disabled={
                                                     isPending ||
-                                                    (publishType === "external" && (!externalConsent || hasInsufficientPoints || !isValidUrl(externalUrl)))
+                                                    (publishType === "external" && (!externalConsent || !isValidUrl(externalUrl)))
                                                 }
                                                 className="w-full font-bold bg-[#533afd] hover:bg-[#4434d4] text-white disabled:opacity-50"
                                             >

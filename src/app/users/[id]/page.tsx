@@ -83,7 +83,6 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
     const publishedPredictions = await prisma.prediction.findMany({
         where: { authorId: userId, isPrivate: false, publishType: "internal" },
         orderBy: { createdAt: 'desc' },
-        include: { _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } } },
     });
 
     // Check if current user is following this profile
@@ -218,12 +217,10 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
                     placeName: pred.placeName,
                     raceNumber: pred.raceNumber,
                     title: pred.title,
-                    price: pred.price,
                     isSettled: pred.isSettled,
                     isHit: pred.isHit,
                     refundAmount: pred.refundAmount,
                     createdAt: pred.createdAt.toISOString(),
-                    purchaseCount: pred._count?.transactions || 0,
                 }))} />
             </div>
         </div>

@@ -128,8 +128,6 @@ export function RankingClient({
     recoveryByVenueMonth,
     balanceAll,
     balanceAllMonth,
-    ptAllRanking,
-    ptMonthRanking,
     currentMonth,
     eventRanking = [],
     eventName = "",
@@ -142,8 +140,6 @@ export function RankingClient({
     recoveryByVenueMonth: { [venue: string]: RankEntry[] };
     balanceAll: RankEntry[];
     balanceAllMonth: RankEntry[];
-    ptAllRanking: RankEntry[];
-    ptMonthRanking: RankEntry[];
     currentMonth: number;
     eventRanking?: RankEntry[];
     eventName?: string;
@@ -151,10 +147,9 @@ export function RankingClient({
     currentUserId?: string;
 }) {
     const hasEvent = eventRanking.length > 0;
-    const [activeTab, setActiveTab] = useState<"recovery" | "balance" | "pt" | "event">("recovery");
+    const [activeTab, setActiveTab] = useState<"recovery" | "balance" | "event">("recovery");
     const [recoveryPeriod, setRecoveryPeriod] = useState<"all" | "month">("all");
     const [balancePeriod, setBalancePeriod] = useState<"all" | "month">("all");
-    const [ptPeriod, setPtPeriod] = useState<"all" | "month">("all");
     const [selectedVenue, setSelectedVenue] = useState<string>("all");
     const [recoveryMinRaces, setRecoveryMinRaces] = useState<number>(100);
 
@@ -167,8 +162,8 @@ export function RankingClient({
 
     return (
         <div>
-            {/* Main tabs: 回収率 → 収支 → 獲得pt → 限定pt */}
-            <div className={`grid ${hasEvent ? 'grid-cols-4' : 'grid-cols-3'} mb-4 h-11 bg-white shadow-sm border border-[#e5edf5] rounded-lg p-1`}>
+            {/* Main tabs: 回収率 → 収支 → 限定pt */}
+            <div className={`grid ${hasEvent ? 'grid-cols-3' : 'grid-cols-2'} mb-4 h-11 bg-white shadow-sm border border-[#e5edf5] rounded-lg p-1`}>
                 <button
                     onClick={() => setActiveTab("recovery")}
                     className={`font-semibold text-sm rounded-md transition-all flex items-center justify-center gap-1 ${activeTab === "recovery" ? "bg-[#533afd] text-white" : "text-[#64748d]"}`}
@@ -182,13 +177,6 @@ export function RankingClient({
                 >
                     <Wallet className="w-3.5 h-3.5" />
                     収支
-                </button>
-                <button
-                    onClick={() => setActiveTab("pt")}
-                    className={`font-semibold text-sm rounded-md transition-all flex items-center justify-center gap-1 ${activeTab === "pt" ? "bg-[#533afd] text-white" : "text-[#64748d]"}`}
-                >
-                    <Coins className="w-3.5 h-3.5" />
-                    獲得pt
                 </button>
                 {hasEvent && (
                     <button
@@ -247,26 +235,6 @@ export function RankingClient({
                 </>
             )}
 
-            {activeTab === "pt" && (
-                <>
-                    <div className="flex gap-1 mb-3 bg-[#f6f8fa] rounded-md p-0.5 w-fit">
-                        <button
-                            onClick={() => setPtPeriod("all")}
-                            className={`text-xs font-bold px-3 py-1.5 rounded ${ptPeriod === "all" ? "bg-white text-[#533afd] shadow-sm" : "text-[#64748d]"}`}
-                        >
-                            通算
-                        </button>
-                        <button
-                            onClick={() => setPtPeriod("month")}
-                            className={`text-xs font-bold px-3 py-1.5 rounded ${ptPeriod === "month" ? "bg-white text-[#533afd] shadow-sm" : "text-[#64748d]"}`}
-                        >
-                            {currentMonth}月
-                        </button>
-                    </div>
-
-                    <RankList list={ptPeriod === "all" ? ptAllRanking : ptMonthRanking} type="pt" currentUserId={currentUserId} />
-                </>
-            )}
         </div>
     );
 }

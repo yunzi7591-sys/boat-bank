@@ -4,7 +4,6 @@ import { VENUES } from "@/lib/constants/venues";
 import { prisma } from "@/lib/prisma";
 import PredictClient from "./PredictClient";
 import { MockRacer } from "@/components/betting/VerticalGrid";
-import { getUserPoints } from "@/actions/auth";
 
 export default async function PredictPage(props: {
     searchParams: Promise<{ placeId?: string; raceNumber?: string; isPrivate?: string; eventId?: string }>;
@@ -86,7 +85,6 @@ export default async function PredictPage(props: {
         if (schedule) deadlineAt = schedule.deadlineAt;
     }
 
-    const userPoints = await getUserPoints();
 
     // Fetch event participant points if eventId is present
     let eventPoints: number | null = null;
@@ -108,7 +106,6 @@ export default async function PredictPage(props: {
             venue={venue}
             raceNumber={raceNumber}
             racers={racers}
-            userPoints={userPoints}
             isPrivate={isPrivate}
             deadlineAt={deadlineAt?.toISOString() || null}
             eventId={eventId}

@@ -26,14 +26,10 @@ interface RankEntry {
 const getRankingAggregation = unstable_cache(
     async () => {
         // 公開予想(isPrivate: false)のみで集計
-        const [predictions, sellTransactions, users] = await Promise.all([
+        const [predictions, users] = await Promise.all([
             prisma.prediction.findMany({
                 where: { isSettled: true, isPrivate: false },
                 select: { authorId: true, placeName: true, betAmount: true, hitAmount: true, refundAmount: true, isHit: true, raceDate: true },
-            }),
-            prisma.transaction.findMany({
-                where: { action: "SELL_PREDICTION" },
-                select: { userId: true, points: true, createdAt: true },
             }),
             prisma.user.findMany({
                 select: { id: true, name: true, role: true },
@@ -112,46 +108,6 @@ const getRankingAggregation = unstable_cache(
         const balanceAll = buildBalanceRanking(predictions);
         const balanceAllMonth = buildBalanceRanking(monthPredictions);
 
-        // --- 獲得ptランキング(通算) ---
-        const ptAllMap = new Map<string, number>();
-        for (const tx of sellTransactions) {
-            ptAllMap.set(tx.userId, (ptAllMap.get(tx.userId) || 0) + tx.points);
-        }
-
-        const ptAllRanking: RankEntry[] = [];
-        for (const [userId, pts] of ptAllMap) {
-            if (userRoleMap.get(userId) === 'ADMIN') continue; // 公式アカウントは除外
-            ptAllRanking.push({
-                id: userId,
-                name: userNameMap.get(userId) || "Unknown",
-                role: userRoleMap.get(userId) || "BUYER",
-                value: pts,
-                sub: "通算",
-            });
-        }
-        ptAllRanking.sort((a, b) => b.value - a.value);
-
-        // --- 獲得ptランキング(今月) ---
-        const ptMonthMap = new Map<string, number>();
-        for (const tx of sellTransactions) {
-            if (tx.createdAt >= monthStart && tx.createdAt < monthEnd) {
-                ptMonthMap.set(tx.userId, (ptMonthMap.get(tx.userId) || 0) + tx.points);
-            }
-        }
-
-        const ptMonthRanking: RankEntry[] = [];
-        for (const [userId, pts] of ptMonthMap) {
-            if (userRoleMap.get(userId) === 'ADMIN') continue; // 公式アカウントは除外
-            ptMonthRanking.push({
-                id: userId,
-                name: userNameMap.get(userId) || "Unknown",
-                role: userRoleMap.get(userId) || "BUYER",
-                value: pts,
-                sub: `${now.getMonth() + 1}月`,
-            });
-        }
-        ptMonthRanking.sort((a, b) => b.value - a.value);
-
         return {
             recoveryAll,
             recoveryAllMonth,
@@ -159,8 +115,6 @@ const getRankingAggregation = unstable_cache(
             recoveryByVenueMonth,
             balanceAll,
             balanceAllMonth,
-            ptAllRanking,
-            ptMonthRanking,
             currentMonth: now.getMonth() + 1,
         };
     },
@@ -179,8 +133,6 @@ export default async function RankingPage() {
         recoveryByVenueMonth,
         balanceAll,
         balanceAllMonth,
-        ptAllRanking,
-        ptMonthRanking,
         currentMonth,
     } = await getRankingAggregation();
 
@@ -229,8 +181,6 @@ export default async function RankingPage() {
                     recoveryByVenueMonth={recoveryByVenueMonth}
                     balanceAll={balanceAll}
                     balanceAllMonth={balanceAllMonth}
-                    ptAllRanking={ptAllRanking}
-                    ptMonthRanking={ptMonthRanking}
                     currentMonth={currentMonth}
                     eventRanking={eventRanking}
                     eventName={eventName}

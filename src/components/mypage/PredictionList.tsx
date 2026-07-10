@@ -9,12 +9,10 @@ interface PredictionItem {
     placeName: string;
     raceNumber: number;
     title: string | null;
-    price: number;
     isSettled: boolean;
     isHit: boolean;
     refundAmount?: number;
     createdAt: string;
-    purchaseCount: number;
     authorName?: string;
 }
 
@@ -53,8 +51,6 @@ export function PredictionList({ items, showAuthor = false }: { items: Predictio
                             <p className="font-bold text-sm text-[#061b31] truncate">{pred.title || '無題'}</p>
                             <div className="flex items-center gap-3 mt-1 text-[10px] text-[#64748d]">
                                 {showAuthor && pred.authorName && <span>{pred.authorName}</span>}
-                                <span>{pred.price > 0 ? `${pred.price}pt` : '無料'}</span>
-                                <span>{pred.purchaseCount}人購入</span>
                             </div>
                         </div>
                     </Link>

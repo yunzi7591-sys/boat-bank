@@ -15,7 +15,7 @@ export default async function MarketPage() {
     const session = await auth();
     const userId = session?.user?.id;
 
-    // アンロック制のコンテンツ（見解本文・買い目）は一覧のクライアント送信データに含めない
+    // 一覧に見解本文・買い目は不要なため送らない（見解の有無だけ hasCommentary で渡す）
     const toTimelineCard = <T extends { commentary: string | null; analysisComment: string | null; predictedNumbers: unknown }>(p: T) => {
         const { commentary, analysisComment, predictedNumbers, ...rest } = p;
         return { ...rest, hasCommentary: !!commentary?.trim() };
@@ -29,7 +29,6 @@ export default async function MarketPage() {
         take: 30,
         include: {
             author: { select: { name: true, role: true } },
-            _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } },
         }
     });
 
@@ -51,7 +50,6 @@ export default async function MarketPage() {
                 take: 30,
                 include: {
                     author: { select: { name: true, role: true } },
-                    _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } },
                 }
             });
         }

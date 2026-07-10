@@ -157,43 +157,23 @@ export async function publishPrediction(data: {
         const predictedNumbersStr = JSON.stringify(data.cartData);
 
         if (data.publishType === "external") {
-            const prediction = await prisma.$transaction(async (tx) => {
-                // 残高条件付きUPDATEでロストアップデートを防ぐ
-                const deducted = await tx.$executeRaw`
-                    UPDATE "User"
-                    SET "dailyPoints" = GREATEST("dailyPoints" - 100, 0),
-                        "points" = "points" - GREATEST(100 - "dailyPoints", 0)
-                    WHERE id = ${userId}
-                      AND "dailyPoints" + "points" >= 100
-                `;
-                if (deducted === 0) {
-                    throw new Error("ポイントが不足しています。外部サイトへの予想公開には100ptが必要です。");
-                }
-
-                await tx.transaction.create({
-                    data: { userId, points: -100, action: "EXTERNAL_PUBLISH" },
-                });
-
-                const pred = await tx.prediction.create({
-                    data: {
-                        title: data.title,
-                        commentary: data.commentary,
-                        price: data.price,
-                        predictedNumbers: predictedNumbersStr,
-                        authorId: userId,
-                        placeName: data.placeName,
-                        raceNumber: data.raceNumber,
-                        raceDate: data.raceDate,
-                        deadlineAt: data.deadlineAt,
-                        publishType: "external",
-                        externalUrl: data.externalUrl,
-                        betsPublic: false,
-                        isPrivate: false,
-                        betAmount: betAmount,
-                    },
-                });
-
-                return pred;
+            const prediction = await prisma.prediction.create({
+                data: {
+                    title: data.title,
+                    commentary: data.commentary,
+                    price: 0,
+                    predictedNumbers: predictedNumbersStr,
+                    authorId: userId,
+                    placeName: data.placeName,
+                    raceNumber: data.raceNumber,
+                    raceDate: data.raceDate,
+                    deadlineAt: data.deadlineAt,
+                    publishType: "external",
+                    externalUrl: data.externalUrl,
+                    betsPublic: false,
+                    isPrivate: false,
+                    betAmount: betAmount,
+                },
             });
 
             // フォロワーに通知（応答をブロックしないよう after で送信）
@@ -205,7 +185,7 @@ export async function publishPrediction(data: {
             data: {
                 title: data.title,
                 commentary: data.commentary,
-                price: data.price,
+                price: 0,
                 predictedNumbers: predictedNumbersStr,
                 authorId: userId,
                 placeName: data.placeName,

@@ -97,7 +97,6 @@ function PredictContent() {
                         >
                             <h3 className="text-base font-bold text-[#061b31] mb-1">他サイトへ誘導</h3>
                             <p className="text-xs text-[#64748d]">外部サイトのURLを設定し、買い目は収支記録用に非公開で保存</p>
-                            <span className="inline-block mt-2 text-[10px] font-bold text-[#533afd] bg-[#533afd]/10 px-2 py-0.5 rounded">100pt消費</span>
                         </button>
                     </div>
                 </main>

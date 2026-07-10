@@ -27,7 +27,6 @@ interface PredictClientProps {
     venue: { id: string; name: string } | null;
     raceNumber: number;
     racers: MockRacer[];
-    userPoints?: number;
     isPrivate?: boolean;
     deadlineAt?: string | null;
     eventId?: string | null;
@@ -35,7 +34,7 @@ interface PredictClientProps {
     raceDate?: string | null;
 }
 
-export default function PredictClient({ venue, raceNumber, racers, userPoints, isPrivate, deadlineAt, eventId, eventPoints, raceDate }: PredictClientProps) {
+export default function PredictClient({ venue, raceNumber, racers, isPrivate, deadlineAt, eventId, eventPoints, raceDate }: PredictClientProps) {
     const { activeBetType, setBetType, cart, clearSelections } = useBetStore();
     const [viewCart, setViewCart] = useState(false);
     const [publishType, setPublishType] = useState<"internal" | "external" | null>(isPrivate ? null : null);
@@ -87,7 +86,6 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
                         >
                             <h3 className="text-base font-bold text-[#061b31] mb-1">他サイトへ誘導</h3>
                             <p className="text-xs text-[#64748d]">外部サイトのURLを設定し、買い目は収支記録用に非公開で保存</p>
-                            <span className="inline-block mt-2 text-[10px] font-bold text-[#533afd] bg-[#533afd]/10 px-2 py-0.5 rounded">100pt消費</span>
                         </button>
                     </div>
                 </main>
@@ -191,7 +189,7 @@ export default function PredictClient({ venue, raceNumber, racers, userPoints, i
                                 <p className="text-sm font-bold">カートを読み込み中...</p>
                             </div>
                         }>
-                            <BetListCart deadlineAt={deadlineAt ? new Date(deadlineAt) : null} userPoints={userPoints} initialPublishType={publishType || undefined} eventId={eventId || undefined} eventPoints={eventPoints ?? undefined} odds={odds} />
+                            <BetListCart deadlineAt={deadlineAt ? new Date(deadlineAt) : null} initialPublishType={publishType || undefined} eventId={eventId || undefined} eventPoints={eventPoints ?? undefined} odds={odds} />
                         </Suspense>
                     </div>
                 )}

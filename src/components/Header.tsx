@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { auth, signIn, signOut } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
-import { Coins, HelpCircle } from "lucide-react";
-import { checkAndUpdateLoginStreak, LoginBonusResult } from "@/lib/login-streak";
-import { LoginBonusModal } from "@/components/LoginBonusModal";
+import { HelpCircle } from "lucide-react";
 import { HeaderAutoRefresh } from "@/components/HeaderAutoRefresh";
 import { HeaderShell } from "@/components/HeaderShell";
 
@@ -12,17 +10,8 @@ import { HeaderShell } from "@/components/HeaderShell";
 export async function Header() {
     const session = await auth();
 
-    let userPoints = 0;
     let eventPoints: number | null = null;
-    let loginBonus: LoginBonusResult | null = null;
     if (session?.user?.id) {
-        loginBonus = await checkAndUpdateLoginStreak(session.user.id);
-        const dbUser = await prisma.user.findUnique({
-            where: { id: session.user.id },
-            select: { points: true, dailyPoints: true }
-        });
-        userPoints = (dbUser?.points || 0) + (dbUser?.dailyPoints || 0);
-
         const activeEvent = await prisma.event.findFirst({ where: { isActive: true } });
         if (activeEvent) {
             let participant = await prisma.eventParticipant.findUnique({
@@ -57,14 +46,6 @@ export async function Header() {
                     </Link>
                     {session?.user ? (
                         <>
-                            <Link href="/points">
-                                <div className="flex items-center gap-1.5 bg-[#f6f8fa] border border-[#e5edf5] px-3 py-1.5 rounded-lg hover:border-[#b9b9f9] transition-colors cursor-pointer">
-                                    <Coins className="w-3.5 h-3.5 text-[#533afd]" />
-                                    <span className="font-bold text-sm text-[#533afd]">{userPoints.toLocaleString()}</span>
-                                    <span className="text-[10px] text-[#64748d] font-medium">pt</span>
-                                </div>
-                            </Link>
-
                             {eventPoints !== null && (
                                 <Link href="/events">
                                     <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg hover:border-amber-300 transition-colors cursor-pointer">
@@ -74,7 +55,6 @@ export async function Header() {
                                     </div>
                                 </Link>
                             )}
-
                         </>
                     ) : (
                         <div className="flex items-center gap-2">
@@ -92,13 +72,6 @@ export async function Header() {
                     )}
                 </div>
             </div>
-            {loginBonus && (
-                <LoginBonusModal
-                    streak={loginBonus.streak}
-                    dailyPoints={loginBonus.dailyPoints}
-                    isStreakUp={loginBonus.isStreakUp}
-                />
-            )}
             {session?.user && <HeaderAutoRefresh />}
         </HeaderShell>
     );

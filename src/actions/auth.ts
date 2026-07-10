@@ -69,18 +69,6 @@ const ip = await getClientIp();
     return { success: true, needsVerification: true };
 }
 
-export async function getUserPoints(): Promise<number> {
-    const { auth } = await import("@/auth");
-    const session = await auth();
-    if (!session?.user?.id) return 0;
-
-    const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { points: true },
-    });
-
-    return user?.points ?? 0;
-}
 
 export async function resendVerificationEmail(email: string) {
     if (!email) {

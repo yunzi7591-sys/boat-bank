@@ -1,5 +1,7 @@
 {
-    "regions": ["hnd1"],
+    "regions": [
+        "hnd1"
+    ],
     "crons": [
         {
             "path": "/api/cron/schedule",
@@ -36,10 +38,6 @@
         {
             "path": "/api/cron/sync-absent",
             "schedule": "*/20 21-23,0-14 * * *"
-        },
-        {
-            "path": "/api/cron/daily-points",
-            "schedule": "0 15 * * *"
         },
         {
             "path": "/api/cron/cleanup-notifications",

@@ -12,7 +12,6 @@ import { ChevronRight, Crown } from "lucide-react";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { ReloadButton } from "@/components/ReloadButton";
 import { ProfileShareButton } from "@/components/mypage/ProfileShareButton";
-import { PredictionList } from "@/components/mypage/PredictionList";
 import { BetList } from "@/components/mypage/BetList";
 
 export default async function MyPage() {
@@ -27,7 +26,7 @@ export default async function MyPage() {
     const currentMonth = now.getMonth() + 1;
 
     // userId さえあれば実行できる独立クエリはすべて並列取得する
-    const [user, stats, [dailyStats, dailyPredictions], userBets, purchases, subscription] = await Promise.all([
+    const [user, stats, [dailyStats, dailyPredictions], userBets, subscription] = await Promise.all([
         // Fetch full user for points
         prisma.user.findUnique({
             where: { id: userId },
@@ -61,29 +60,6 @@ export default async function MyPage() {
                 isHit: true,
             },
         }),
-        // 3. Get Purchased Predictions
-        prisma.transaction.findMany({
-            where: { userId, action: 'BUY_PREDICTION' },
-            take: 30,
-            select: {
-                prediction: {
-                    select: {
-                        id: true,
-                        placeName: true,
-                        raceNumber: true,
-                        title: true,
-                        price: true,
-                        isSettled: true,
-                        isHit: true,
-                        refundAmount: true,
-                        createdAt: true,
-                        author: { select: { name: true } },
-                        _count: { select: { transactions: { where: { action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] } } } } },
-                    }
-                }
-            },
-            orderBy: { createdAt: 'desc' },
-        }),
         getUserSubscription(userId),
     ]);
 
@@ -91,8 +67,6 @@ export default async function MyPage() {
 
     const followerCount = user._count.followers;
     const followingCount = user._count.following;
-
-    const purchasedPredictions = purchases.map(p => p.prediction).filter(p => p !== null);
 
     // 収支タブの件数はレース単位（同一レースの複数買い目はまとめる）
     const betRaceCount = new Set(userBets.map(b => `${b.placeName}-${b.raceNumber}-${b.raceDate?.toISOString()}`)).size;
@@ -244,9 +218,8 @@ export default async function MyPage() {
             {/* Tabs Section */}
             <div className="max-w-4xl mx-auto px-4">
                 <Tabs defaultValue="bets" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-6">
+                    <TabsList className="grid w-full grid-cols-1 mb-6">
                         <TabsTrigger value="bets" className="font-bold">収支 ({betRaceCount})</TabsTrigger>
-                        <TabsTrigger value="purchased" className="font-bold">購入した予想 ({purchasedPredictions.length})</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="bets">
@@ -265,21 +238,6 @@ export default async function MyPage() {
                         }))} />
                     </TabsContent>
 
-                    <TabsContent value="purchased">
-                        <PredictionList showAuthor items={purchasedPredictions.map(pred => ({
-                            id: pred.id,
-                            placeName: pred.placeName,
-                            raceNumber: pred.raceNumber,
-                            title: pred.title,
-                            price: pred.price,
-                            isSettled: pred.isSettled,
-                            isHit: pred.isHit,
-                            refundAmount: pred.refundAmount,
-                            createdAt: pred.createdAt.toISOString(),
-                            purchaseCount: pred._count?.transactions || 0,
-                            authorName: pred.author?.name || undefined,
-                        }))} />
-                    </TabsContent>
                 </Tabs>
             </div>
 

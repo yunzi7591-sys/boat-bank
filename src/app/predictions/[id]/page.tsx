@@ -1,16 +1,13 @@
 import { after } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isSubscriber } from "@/lib/subscription";
 import { notFound } from "next/navigation";
-import { UnlockButton } from "@/components/predictions/UnlockButton";
 import { Formation, normalizeCombo } from "@/lib/bet-logic";
 import { BackButton } from "@/components/BackButton";
 import { parseJsonSafely } from "@/lib/utils";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Lock, ExternalLink } from "lucide-react";
 import { ShareButton } from "@/components/predictions/ShareButton";
-import { SubscriberUnlockButton } from "@/components/predictions/SubscriberUnlockButton";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -103,44 +100,6 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
         });
     }
 
-    let isUnlocked = false;
-    let unlockedBySubscription = false;
-    const isClosed = new Date(prediction.deadlineAt) < new Date();
-
-    if (userId) {
-        if (prediction.authorId === userId) {
-            isUnlocked = true;
-        } else {
-            const transaction = await prisma.transaction.findFirst({
-                where: {
-                    userId,
-                    predictionId: params.id,
-                    action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] },
-                },
-                select: { action: true },
-            });
-            if (transaction) {
-                isUnlocked = true;
-                if (transaction.action === "SUBSCRIBER_UNLOCK") unlockedBySubscription = true;
-            }
-        }
-    }
-
-    // 会員特典: サブスク会員は「当日のレース」かつ「締切済み」の予想をpt消費なしでアンロックできる
-    // （締切前は通常の購入フロー。アンロックは明示操作が必要で、押下時に公開者へ通知される）
-    let canSubscriberUnlock = false;
-    let promptSubscribeForClosed = false; // 締切後・当日の非会員にサブスク誘導を出す
-    if (!isUnlocked && isClosed) {
-        const jstDate = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
-        const isRaceToday = jstDate(new Date(prediction.raceDate)) === jstDate(new Date());
-        if (isRaceToday && userId && (await isSubscriber(userId))) {
-            canSubscriberUnlock = true;
-        } else if (isRaceToday) {
-            // 当日のレースなので、会員になれば閲覧できる → サブスク誘導
-            promptSubscribeForClosed = true;
-        }
-    }
-
     // Safe parse
     // 投稿者本人かどうか（本人なら買い目非公開でも自分の買い目は見られる）
     const isAuthor = !!userId && prediction.authorId === userId;
@@ -211,36 +170,19 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
             {/* Main Content Body */}
             <div className="p-5">
 
-                {unlockedBySubscription && (
-                    <div className="mb-5 flex items-center gap-2 rounded-xl border border-[#533afd]/20 bg-[#533afd]/5 px-4 py-3">
-                        <span className="text-xs font-black bg-[#533afd] text-white px-1.5 py-0.5 rounded leading-none">会員特典</span>
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                            締切済みの当日レースのため、会員特典でアンロック済みです。
-                        </p>
+                {/* Commentary Section */}
+                {prediction.commentary?.trim() && (
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6">
+                        <h3 className="text-xs font-black tracking-widest text-slate-400 uppercase mb-4 flex items-center gap-2">
+                            <span className="w-1 h-3 bg-indigo-500 rounded-full"></span> 見解・分析
+                        </h3>
+                        <div className="prose prose-slate prose-sm max-w-none">
+                            <p className="whitespace-pre-wrap leading-relaxed text-slate-700 font-medium">
+                                {prediction.commentary}
+                            </p>
+                        </div>
                     </div>
                 )}
-
-                {/* Commentary Section */}
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6 relative overflow-hidden">
-                    <h3 className="text-xs font-black tracking-widest text-slate-400 uppercase mb-4 flex items-center gap-2">
-                        <span className="w-1 h-3 bg-indigo-500 rounded-full"></span> 見解・分析
-                    </h3>
-
-                    <div className={`prose prose-slate prose-sm max-w-none ${!isUnlocked && "blur-[4px] opacity-40 select-none pb-12"}`}>
-                        <p className="whitespace-pre-wrap leading-relaxed text-slate-700 font-medium">
-                            {isUnlocked ? prediction.commentary : "この予想の見解を閲覧するにはアンロックが必要です。"}
-                        </p>
-                    </div>
-
-                    {!isUnlocked && (
-                        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent flex flex-col items-center justify-end pb-8">
-                            <div className="bg-slate-900/5 backdrop-blur-xl p-4 rounded-full mb-3 border border-white/20 shadow-lg">
-                                <Lock className="w-6 h-6 text-slate-700" />
-                            </div>
-                            <p className="font-bold text-slate-800 text-sm">機密情報につきロックされています</p>
-                        </div>
-                    )}
-                </div>
 
                 {/* Predictions Area - Financial Breakdown */}
                 <div className="relative">
@@ -248,8 +190,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                         <span className="w-1 h-3 bg-indigo-500 rounded-full"></span> 買い目一覧
                     </h3>
 
-                    {isUnlocked ? (
-                        prediction.betsPublic === false && !isAuthor ? (
+                    {prediction.betsPublic === false && !isAuthor ? (
                             <div className="w-full bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-slate-200 shadow-sm">
                                 <div className="w-12 h-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center mb-4">
                                     <Lock className="w-5 h-5" />
@@ -357,59 +298,6 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                 );
                             })()}
 
-                        </div>
-                        )
-                    ) : (
-                        <div className="w-full bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-slate-200 shadow-sm relative overflow-hidden">
-                            <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(0,0,0,0.02)_25%,transparent_25%,transparent_50%,rgba(0,0,0,0.02)_50%,rgba(0,0,0,0.02)_75%,transparent_75%,transparent)] bg-[length:20px_20px]"></div>
-
-                            <div className="z-10 flex flex-col items-center w-full text-center">
-                                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-indigo-100 rotate-12">
-                                    <Lock className="w-5 h-5 -rotate-12" />
-                                </div>
-
-                                <h4 className="font-black text-slate-800 text-lg mb-1">
-                                    {!userId
-                                        ? "会員登録が必要です"
-                                        : canSubscriberUnlock
-                                            ? "会員特典でアンロック"
-                                            : promptSubscribeForClosed
-                                                ? "サブスク会員限定"
-                                                : "予想をアンロック"}
-                                </h4>
-                                <p className="text-xs font-semibold text-slate-500 mb-6 max-w-[220px]">
-                                    {!userId
-                                        ? "この予想を閲覧するにはログインまたは会員登録が必要です。"
-                                        : canSubscriberUnlock
-                                            ? "締切済みの当日レースです。会員特典でpt消費なしでアンロックできます。"
-                                            : promptSubscribeForClosed
-                                                ? "このレースは締切時刻を過ぎました。サブスク会員なら当日のレースの予想を閲覧できます。"
-                                                : isClosed
-                                                    ? "締切時刻を過ぎたため購入できません。当日のレースはサブスク会員のみ閲覧できます。"
-                                                    : prediction.price === 0
-                                                        ? "無料予想です。ログインすると閲覧できます。"
-                                                        : "買い目と金額配分を確認するにはポイントが必要です。"
-                                    }
-                                </p>
-
-                                {!userId ? (
-                                    <a href="/login" className="inline-flex items-center justify-center bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm px-6 py-3 rounded-lg transition-colors">
-                                        ログイン / 新規登録
-                                    </a>
-                                ) : canSubscriberUnlock ? (
-                                    <SubscriberUnlockButton predictionId={prediction.id} />
-                                ) : promptSubscribeForClosed ? (
-                                    <Link href="/subscribe" className="inline-flex items-center justify-center bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm px-6 py-3 rounded-lg transition-colors shadow-md">
-                                        サブスク会員になって閲覧する
-                                    </Link>
-                                ) : (
-                                    <UnlockButton
-                                        predictionId={prediction.id}
-                                        price={prediction.price}
-                                        isClosed={isClosed}
-                                    />
-                                )}
-                            </div>
                         </div>
                     )}
                 </div>

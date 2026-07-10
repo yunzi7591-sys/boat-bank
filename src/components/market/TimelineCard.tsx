@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Eye, Users, Clock, FileText } from "lucide-react";
+import { Eye, Clock, FileText } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import { FollowButton } from "@/components/market/FollowButton";
@@ -14,9 +14,6 @@ export function TimelineCard({
     currentUserId?: string;
     isFollowingAuthor: boolean;
 }) {
-    const isFree = prediction.price === 0;
-    const purchaseCount = prediction._count?.transactions || 0;
-
     return (
         <Link href={`/predictions/${prediction.id}`} className="block group">
             <div className={`border hover:shadow-[0_4px_12px_rgba(50,50,93,0.12)] transition-shadow rounded-lg overflow-hidden mb-2 ${prediction.isSettled && prediction.isHit ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300' : 'bg-white border-[#dde5ef] hover:border-[#b9b9f9]'}`}>
@@ -46,16 +43,8 @@ export function TimelineCard({
                                 <FollowButton targetUserId={prediction.authorId} initialIsFollowing={isFollowingAuthor} />
                             )}
                             <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" />{new Date(prediction.deadlineAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })}</span>
-                            <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5" />{purchaseCount}</span>
                             <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" />{prediction.viewCount}</span>
                         </div>
-                    </div>
-
-                    {/* Price badge */}
-                    <div className={`shrink-0 px-2.5 py-1.5 rounded-lg text-center ${isFree ? 'bg-[#15be53]/10' : 'bg-[#533afd]/10'}`}>
-                        <span className={`text-xs font-black ${isFree ? 'text-[#15be53]' : 'text-[#533afd]'}`}>
-                            {isFree ? "FREE" : `${prediction.price}pt`}
-                        </span>
                     </div>
                 </div>
             </div>

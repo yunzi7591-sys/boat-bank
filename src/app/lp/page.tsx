@@ -83,8 +83,8 @@ export default function LPPage() {
                 <div className={styles.manifesto}>
                     <p className={styles.manifestoText}>
                         <span className={styles.manifestoLine}>自身の収支分析＆</span>
-                        <span className={styles.manifestoLine}>回収率・的中率・販売数まで公開された予想屋から、</span>
-                        <em className={styles.manifestoLine}>買い目を購入できるサービスです。</em>
+                        <span className={styles.manifestoLine}>回収率・的中率まで公開された予想屋の、</span>
+                        <em className={styles.manifestoLine}>買い目を無料で見られるサービスです。</em>
                     </p>
                 </div>
             </section>
@@ -109,7 +109,7 @@ export default function LPPage() {
                         number="02"
                         tag="INSIGHT"
                         title="予想屋の成績、ぜんぶ公開"
-                        description="回収率・的中率・販売数まで全公開。本物の予想屋だけを、数字で選べる。"
+                        description="回収率・的中率まで全公開。本物の予想屋だけを、数字で選べる。"
                     />
                     <FeatureCard
                         number="03"
