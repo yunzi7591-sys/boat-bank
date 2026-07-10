@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { isSubscriber } from "@/lib/subscription";
+import { SubscriberUnlockButton } from "@/components/predictions/SubscriberUnlockButton";
 import { Formation, normalizeCombo } from "@/lib/bet-logic";
 import { BackButton } from "@/components/BackButton";
 import { parseJsonSafely } from "@/lib/utils";
@@ -105,11 +106,34 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
     // 投稿者本人かどうか（本人なら買い目非公開でも自分の買い目は見られる）
     const isAuthor = !!userId && prediction.authorId === userId;
 
-    // 閲覧ルール: 締切前は誰でも無料。締切後（過去予想）は本人またはサブスク会員のみ
+    // 閲覧ルール: 締切前は誰でも無料。
+    // 締切後は本人・アンロック済みの人のみ。当日レースに限り、サブスク会員が明示的にアンロックできる
+    // （アンロック時に公開者へ通知が飛ぶため、自動開放ではなくボタン操作を挟む）
     const isClosed = new Date(prediction.deadlineAt) < new Date();
     let canView = !isClosed || isAuthor;
     if (!canView && userId) {
-        canView = await isSubscriber(userId);
+        const transaction = await prisma.transaction.findFirst({
+            where: {
+                userId,
+                predictionId: params.id,
+                action: { in: ["BUY_PREDICTION", "SUBSCRIBER_UNLOCK"] },
+            },
+            select: { id: true },
+        });
+        if (transaction) canView = true;
+    }
+
+    // 当日レースなら: 会員→アンロックボタン / 非会員→サブスク誘導
+    let canSubscriberUnlock = false;
+    let promptSubscribeForClosed = false;
+    if (!canView) {
+        const jstDate = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
+        const isRaceToday = jstDate(new Date(prediction.raceDate)) === jstDate(new Date());
+        if (isRaceToday && userId && (await isSubscriber(userId))) {
+            canSubscriberUnlock = true;
+        } else if (isRaceToday) {
+            promptSubscribeForClosed = true;
+        }
     }
 
     let formations: Formation[] = [];
@@ -205,19 +229,33 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
                                 <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-indigo-100 rotate-12">
                                     <Lock className="w-5 h-5 -rotate-12" />
                                 </div>
-                                <h4 className="font-black text-slate-800 text-lg mb-1">過去の予想はサブスク会員限定</h4>
+                                <h4 className="font-black text-slate-800 text-lg mb-1">
+                                    {canSubscriberUnlock
+                                        ? "会員特典でアンロック"
+                                        : promptSubscribeForClosed
+                                            ? "サブスク会員限定"
+                                            : "閲覧期間が終了しました"}
+                                </h4>
                                 <p className="text-xs font-semibold text-slate-500 mb-6 max-w-[240px]">
-                                    このレースは締切時刻を過ぎました。締切後の予想（見解・買い目）はサブスク会員のみ閲覧できます。
+                                    {canSubscriberUnlock
+                                        ? "締切済みの当日レースです。会員特典でアンロックして閲覧できます。"
+                                        : promptSubscribeForClosed
+                                            ? "このレースは締切時刻を過ぎました。当日のレースの予想はサブスク会員のみ閲覧できます。"
+                                            : "締切時刻を過ぎたため閲覧できません。当日のレースはサブスク会員のみ閲覧できます。"}
                                 </p>
-                                {!userId ? (
-                                    <a href="/login" className="inline-flex items-center justify-center bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm px-6 py-3 rounded-lg transition-colors">
-                                        ログイン / 新規登録
-                                    </a>
-                                ) : (
-                                    <Link href="/subscribe" className="inline-flex items-center justify-center bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm px-6 py-3 rounded-lg transition-colors shadow-md">
-                                        サブスク会員になって閲覧する
-                                    </Link>
-                                )}
+                                {canSubscriberUnlock ? (
+                                    <SubscriberUnlockButton predictionId={prediction.id} />
+                                ) : promptSubscribeForClosed ? (
+                                    !userId ? (
+                                        <a href="/login" className="inline-flex items-center justify-center bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm px-6 py-3 rounded-lg transition-colors">
+                                            ログイン / 新規登録
+                                        </a>
+                                    ) : (
+                                        <Link href="/subscribe" className="inline-flex items-center justify-center bg-[#533afd] hover:bg-[#4434d4] text-white font-bold text-sm px-6 py-3 rounded-lg transition-colors shadow-md">
+                                            サブスク会員になって閲覧する
+                                        </Link>
+                                    )
+                                ) : null}
                             </div>
                         </div>
                     ) : prediction.betsPublic === false && !isAuthor ? (
