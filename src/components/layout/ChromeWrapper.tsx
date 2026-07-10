@@ -2,9 +2,12 @@
 
 import { usePathname } from "next/navigation";
 
+// ヘッダー・フッター等のアプリUIを出さないページ（LP・診断などの独立コンテンツ）
+const CHROMELESS_PREFIXES = ["/lp", "/shindan"];
+
 export function HideOnLp({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    if (pathname?.startsWith("/lp")) return null;
+    if (pathname && CHROMELESS_PREFIXES.some(p => pathname.startsWith(p))) return null;
     return <>{children}</>;
 }
 

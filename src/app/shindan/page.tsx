@@ -27,7 +27,10 @@ export const metadata = {
 export default function ShindanPage() {
     return (
         <div className="min-h-full bg-[#f8fafc] pb-24">
-            <div className="max-w-md mx-auto px-4 pt-6">
+            <div className="max-w-md mx-auto px-4 pt-4">
+                <Link href="/" className="inline-flex items-center gap-1 text-xs font-black text-[#061b31] mb-3">
+                    <span className="bg-[#533afd] text-white px-1.5 py-0.5 rounded text-[10px]">BOAT</span>BANK
+                </Link>
                 <ShindanClient />
 
                 {/* 8タイプ一覧 */}
