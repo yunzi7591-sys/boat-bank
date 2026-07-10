@@ -11,6 +11,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { ensureVisibleAboveKeyboard } from '@/lib/keyboard-scroll';
 import { publishPrediction } from '@/actions/prediction';
 import { submitBets } from '@/actions/bet';
 import { submitEventBets } from '@/actions/event-bet';
@@ -523,7 +524,7 @@ export function BetListCart({ deadlineAt, userPoints: initialUserPoints, initial
                                     onFocusCapture={(e) => {
                                         const t = e.target as HTMLElement;
                                         if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) {
-                                            setTimeout(() => t.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
+                                            setTimeout(() => ensureVisibleAboveKeyboard(t), 300);
                                         }
                                     }}
                                 >

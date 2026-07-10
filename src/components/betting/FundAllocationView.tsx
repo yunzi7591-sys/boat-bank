@@ -6,6 +6,7 @@ import { unrollCombinations, BOAT_COLORS } from '@/lib/bet-logic';
 import { memo, useMemo, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { ensureVisibleAboveKeyboard } from '@/lib/keyboard-scroll';
 
 interface OddsMap {
     [oddsType: string]: { data: Record<string, number>; fetchedAt: string };
@@ -48,7 +49,7 @@ const AmountInput = memo(function AmountInput({
                     onChange={handleChange}
                     onFocus={() => {
                         setTimeout(() => {
-                            inputRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                            if (inputRef.current) ensureVisibleAboveKeyboard(inputRef.current);
                         }, 300);
                     }}
                     style={{
