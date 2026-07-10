@@ -87,10 +87,22 @@ export default async function PlacePage(props: {
         activeRaceNumber = upcomingRaces.length > 0 ? upcomingRaces[0].raceNumber : 1;
     }
 
+    // 投稿者の星評価（平均・件数）をまとめて取得
+    const authorIds = [...new Set(allMarketPredictions.map(p => p.authorId))];
+    const ratingRows = authorIds.length > 0
+        ? await prisma.userRating.groupBy({
+            by: ["targetId"],
+            where: { targetId: { in: authorIds } },
+            _avg: { rating: true },
+            _count: true,
+        })
+        : [];
+    const ratingMap = new Map(ratingRows.map(r => [r.targetId, { avg: r._avg.rating ?? 0, count: r._count }]));
+
     // 一覧に見解本文・買い目は不要なため送らない（見解の有無だけ hasCommentary で渡す）
     const timelinePredictions = allMarketPredictions.map(p => {
         const { commentary, analysisComment, predictedNumbers, ...rest } = p;
-        return { ...rest, hasCommentary: !!commentary?.trim() };
+        return { ...rest, hasCommentary: !!commentary?.trim(), authorRating: ratingMap.get(p.authorId) ?? null };
     });
 
     return (

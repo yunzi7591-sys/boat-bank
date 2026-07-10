@@ -28,6 +28,8 @@ export type TimelineCardPrediction = Pick<
 > & {
     /** 見解・分析（commentary）が書かれているか。本文はアンロック制のため一覧には旗だけ渡す */
     hasCommentary?: boolean;
+    /** 投稿者の星評価（0件のときは null） */
+    authorRating?: { avg: number; count: number } | null;
     author: {
         name: string | null;
         role: string;

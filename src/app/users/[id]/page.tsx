@@ -10,7 +10,8 @@ import Link from "next/link";
 import { FollowButton } from "@/components/market/FollowButton";
 import { CalendarPnLWrapper } from "@/components/mypage/CalendarPnLWrapper";
 import { auth } from "@/auth";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Star } from "lucide-react";
+import { StarRating } from "@/components/users/StarRating";
 import { BackButton } from "@/components/BackButton";
 import { PredictionList } from "@/components/mypage/PredictionList";
 import { ProfileShareButton } from "@/components/mypage/ProfileShareButton";
@@ -70,6 +71,23 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
     const stats = await getPublicUserStats(userId);
     const isPositiveReturn = stats.recoveryRate >= 100;
 
+    // 星評価（平均・件数・自分の評価）
+    const [ratingAgg, myRatingRow] = await Promise.all([
+        prisma.userRating.aggregate({
+            where: { targetId: userId },
+            _avg: { rating: true },
+            _count: true,
+        }),
+        currentUserId && currentUserId !== userId
+            ? prisma.userRating.findUnique({
+                where: { raterId_targetId: { raterId: currentUserId, targetId: userId } },
+                select: { rating: true },
+            })
+            : Promise.resolve(null),
+    ]);
+    const ratingCount = ratingAgg._count;
+    const ratingAvg = ratingAgg._avg.rating;
+
     // 1b. Calendar data (public predictions only)
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -124,6 +142,13 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
                                     <span className="text-[9px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">公式</span>
                                 )}
                             </div>
+                            {ratingCount > 0 && ratingAvg && (
+                                <div className="flex items-center gap-1 mt-1">
+                                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                    <span className="text-sm font-bold text-amber-300">{ratingAvg.toFixed(1)}</span>
+                                    <span className="text-[10px] text-slate-400">（{ratingCount}件）</span>
+                                </div>
+                            )}
                         </div>
 
                         <div className="mt-2 flex items-center gap-1">
@@ -146,6 +171,15 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
                         <a href={user.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#b9b9f9] hover:text-white transition-colors mt-2">
                             🔗 {user.link.replace(/^https?:\/\//, '')}
                         </a>
+                    )}
+                    {currentUserId && currentUserId !== userId && publishedPredictions.length > 0 && (
+                        <div className="mt-3 bg-white/10 border border-white/15 rounded-lg px-3 py-2 w-fit">
+                            <StarRating
+                                targetUserId={userId}
+                                initialMyRating={myRatingRow?.rating ?? null}
+                                canRate
+                            />
+                        </div>
                     )}
                 </div>
             </div>

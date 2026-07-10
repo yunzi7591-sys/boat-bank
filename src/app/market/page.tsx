@@ -15,12 +15,6 @@ export default async function MarketPage() {
     const session = await auth();
     const userId = session?.user?.id;
 
-    // 一覧に見解本文・買い目は不要なため送らない（見解の有無だけ hasCommentary で渡す）
-    const toTimelineCard = <T extends { commentary: string | null; analysisComment: string | null; predictedNumbers: unknown }>(p: T) => {
-        const { commentary, analysisComment, predictedNumbers, ...rest } = p;
-        return { ...rest, hasCommentary: !!commentary?.trim() };
-    };
-
     // internal + external の公開予想（締切前のみ）
     const now = new Date();
     const allPredictions = await prisma.prediction.findMany({
@@ -54,6 +48,24 @@ export default async function MarketPage() {
             });
         }
     }
+
+    // 投稿者の星評価（平均・件数）をまとめて取得
+    const authorIds = [...new Set([...allPredictions, ...followingPredictions].map(p => p.authorId))];
+    const ratingRows = authorIds.length > 0
+        ? await prisma.userRating.groupBy({
+            by: ["targetId"],
+            where: { targetId: { in: authorIds } },
+            _avg: { rating: true },
+            _count: true,
+        })
+        : [];
+    const ratingMap = new Map(ratingRows.map(r => [r.targetId, { avg: r._avg.rating ?? 0, count: r._count }]));
+
+    // 一覧に見解本文・買い目は不要なため送らない（見解の有無だけ hasCommentary で渡す）
+    const toTimelineCard = <T extends { authorId: string; commentary: string | null; analysisComment: string | null; predictedNumbers: unknown }>(p: T) => {
+        const { commentary, analysisComment, predictedNumbers, ...rest } = p;
+        return { ...rest, hasCommentary: !!commentary?.trim(), authorRating: ratingMap.get(p.authorId) ?? null };
+    };
 
     return (
         <div className="min-h-full pb-20">

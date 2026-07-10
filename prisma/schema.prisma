@@ -47,6 +47,25 @@ model User {
   eventParticipants EventParticipant[]
   eventBets         EventBet[]
   subscription      Subscription?
+
+  ratingsGiven      UserRating[] @relation("Rater")
+  ratingsReceived   UserRating[] @relation("Rated")
+}
+
+// 予想家への星評価（星のみ・コメントなし・1人1件）
+model UserRating {
+  id        String   @id @default(cuid())
+  raterId   String   // 評価した人
+  targetId  String   // 評価された予想家
+  rating    Int      // 1〜5
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rater  User @relation("Rater", fields: [raterId], references: [id], onDelete: Cascade)
+  target User @relation("Rated", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([raterId, targetId])
+  @@index([targetId])
 }
 
 model Follows {
