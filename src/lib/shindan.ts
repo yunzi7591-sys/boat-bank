@@ -37,7 +37,7 @@ export const QUESTIONS: ShindanQuestion[] = [
         text: "買い目を決める時、最初に見るのは？",
         options: [
             { text: "出走表と選手のデータ", pole: "D" },
-            { text: "選手の顔つきとその日の雰囲気", pole: "I" },
+            { text: "好きな選手・番号と、その日の直感", pole: "I" },
         ],
     },
     {
