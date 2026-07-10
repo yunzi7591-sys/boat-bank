@@ -40,9 +40,6 @@ export default async function ShindanResultPage(props: { params: Promise<{ type:
     const t = getTypeBySlug(type);
     if (!t) notFound();
 
-    const good = getTypeBySlug(t.goodPartner)!;
-    const bad = getTypeBySlug(t.badPartner)!;
-
     const shareText = `私のギャンブラータイプは「${t.name}」でした！\n${t.catch}\n#ギャンブラー診断 #BOATBANK`;
     const shareUrl = `https://boatbank.jp/shindan/${t.slug}`;
     const xIntent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
@@ -111,24 +108,6 @@ export default async function ShindanResultPage(props: { params: Promise<{ type:
                     </div>
                 </div>
 
-                {/* 相性 */}
-                <div className="bg-white rounded-xl border border-[#e5edf5] p-4 mb-4">
-                    <h2 className="text-xs font-black text-[#061b31] mb-3">タイプ相性</h2>
-                    <div className="grid grid-cols-2 gap-3">
-                        {[{ label: "相性 ◎", partner: good, color: "#15be53" }, { label: "相性 ✕", partner: bad, color: "#ea2261" }].map(({ label, partner, color }) => (
-                            <Link key={partner.slug} href={`/shindan/${partner.slug}`} className="group">
-                                <div className="border border-[#e5edf5] group-hover:border-[#533afd]/40 rounded-xl p-3 text-center transition-colors">
-                                    <p className="text-[10px] font-black mb-1.5" style={{ color }}>{label}</p>
-                                    <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden mb-1.5" style={{ backgroundColor: `${partner.color}14` }}>
-                                        <Image src={`/shindan/char-${partner.slug}.png`} alt={partner.name} width={64} height={64} className="w-full h-auto" />
-                                    </div>
-                                    <p className="text-[11px] font-bold text-[#061b31]">{partner.name}</p>
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
-                </div>
-
                 {/* BOATBANK 誘導 */}
                 <div className="rounded-2xl p-5 mb-4 text-white" style={{ background: `linear-gradient(160deg, ${t.colorDark}, ${t.color})` }}>
                     <h2 className="text-sm font-black mb-2">🚤 {t.name}のあなたへ</h2>
@@ -144,22 +123,9 @@ export default async function ShindanResultPage(props: { params: Promise<{ type:
                 </div>
 
                 {/* 診断へ */}
-                <Link href="/shindan" className="block bg-[#533afd] hover:bg-[#4434d4] active:scale-[0.99] transition-all text-white text-center font-black rounded-xl py-4 mb-8">
+                <Link href="/shindan" className="block bg-[#533afd] hover:bg-[#4434d4] active:scale-[0.99] transition-all text-white text-center font-black rounded-xl py-4">
                     自分も診断してみる（無料・約2分）
                 </Link>
-
-                {/* 他のタイプ */}
-                <h2 className="text-sm font-black text-[#061b31] mb-3">他のタイプも見る</h2>
-                <div className="grid grid-cols-4 gap-2">
-                    {TYPES.filter(x => x.slug !== t.slug).map(x => (
-                        <Link key={x.slug} href={`/shindan/${x.slug}`} className="group text-center">
-                            <div className="w-full aspect-square rounded-lg overflow-hidden border border-[#e5edf5] group-hover:border-[#533afd]/40 transition-colors" style={{ backgroundColor: `${x.color}14` }}>
-                                <Image src={`/shindan/char-${x.slug}.png`} alt={x.name} width={90} height={90} className="w-full h-auto" />
-                            </div>
-                            <p className="text-[9px] font-bold text-[#64748d] mt-1 leading-tight">{x.name}</p>
-                        </Link>
-                    ))}
-                </div>
             </div>
         </div>
     );
