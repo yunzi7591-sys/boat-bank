@@ -34,10 +34,10 @@ export const QUESTIONS: ShindanQuestion[] = [
     // ---- 軸1: データ派(D) ↔ 直感派(I) ----
     {
         axis: "style",
-        text: "買い目を決める時、最初に見るのは？",
+        text: "出走表で最初に見るのは？",
         options: [
-            { text: "出走表と選手のデータ", pole: "D" },
-            { text: "好きな選手・番号と、その日の直感", pole: "I" },
+            { text: "選手の名前", pole: "I" },
+            { text: "勝率などのデータ", pole: "D" },
         ],
     },
     {
