@@ -1,26 +1,41 @@
 import Link from "next/link";
+import { getTypeBySlug } from "@/lib/shindan";
 import { ShindanClient } from "./ShindanClient";
 
-export const metadata = {
-    title: "ギャンブラー診断｜30問でわかるあなたの舟券スタイル | BOAT BANK",
-    description:
-        "あなたはデータ職人型？それとも万舟ドリーマー型？30の質問でギャンブラータイプを8タイプに診断。無料・登録不要・約2分。競艇ファンのための性格診断です。",
-    alternates: { canonical: "https://boatbank.jp/shindan" },
-    openGraph: {
-        title: "ギャンブラー診断｜あなたの舟券スタイルを丸裸に",
-        description: "30の質問でギャンブラータイプを8タイプに診断。無料・約2分。",
-        url: "https://boatbank.jp/shindan",
-        images: [{ url: "https://boatbank.jp/shindan/og-top.png", width: 1200, height: 630 }],
-        type: "website",
-        siteName: "BOAT BANK",
-    },
-    twitter: {
-        card: "summary_large_image",
-        title: "ギャンブラー診断｜あなたの舟券スタイルを丸裸に",
-        description: "30の質問でギャンブラータイプを8タイプに診断。無料・約2分。",
-        images: ["https://boatbank.jp/shindan/og-top.png"],
-    },
-};
+// シェアリンク（/shindan?t=タイプ）で開かれた場合は、そのタイプの結果カードをOGPに出す
+export async function generateMetadata(props: { searchParams: Promise<{ t?: string }> }) {
+    const { t: slug } = await props.searchParams;
+    const shared = slug ? getTypeBySlug(slug) : undefined;
+
+    const ogImage = shared
+        ? `https://boatbank.jp/shindan/og-${shared.slug}.png`
+        : "https://boatbank.jp/shindan/og-top.png";
+    const ogTitle = shared
+        ? `私は「${shared.name}」でした｜ギャンブラー診断`
+        : "ギャンブラー診断｜あなたの舟券スタイルを丸裸に";
+    const description = "30の質問でギャンブラータイプを8タイプに診断。無料・登録不要・約2分。";
+
+    return {
+        title: "ギャンブラー診断｜30問でわかるあなたの舟券スタイル | BOAT BANK",
+        description:
+            "あなたはデータ職人型？それとも万舟ドリーマー型？30の質問でギャンブラータイプを8タイプに診断。無料・登録不要・約2分。競艇ファンのための性格診断です。",
+        alternates: { canonical: "https://boatbank.jp/shindan" },
+        openGraph: {
+            title: ogTitle,
+            description,
+            url: "https://boatbank.jp/shindan",
+            images: [{ url: ogImage, width: 1200, height: 630 }],
+            type: "website",
+            siteName: "BOAT BANK",
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: ogTitle,
+            description,
+            images: [ogImage],
+        },
+    };
+}
 
 export default function ShindanPage() {
     return (

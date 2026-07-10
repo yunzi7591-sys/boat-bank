@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { TYPES, getTypeBySlug } from "@/lib/shindan";
+import { ShareXButton } from "../ShareXButton";
 
 export function generateStaticParams() {
     return TYPES.map(t => ({ type: t.slug }));
@@ -41,8 +42,8 @@ export default async function ShindanResultPage(props: { params: Promise<{ type:
     if (!t) notFound();
 
     const shareText = `私のギャンブラータイプは「${t.name}」でした！\n${t.catch}\n#ギャンブラー診断 #BOATBANK`;
-    const shareUrl = `https://boatbank.jp/shindan/${t.slug}`;
-    const xIntent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    // リンクを踏んだ人は診断開始ページへ。?t= でタイプ別のOGPカードを出し分ける
+    const shareUrl = `https://boatbank.jp/shindan?t=${t.slug}`;
 
     return (
         <div className="min-h-full bg-[#f8fafc] pb-24">
@@ -75,14 +76,7 @@ export default async function ShindanResultPage(props: { params: Promise<{ type:
                 </div>
 
                 {/* シェア */}
-                <a
-                    href={xIntent}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block bg-[#061b31] hover:bg-[#0f2a47] active:scale-[0.99] transition-all text-white text-center font-black rounded-xl py-4 mb-4"
-                >
-                    𝕏 で結果をシェアする
-                </a>
+                <ShareXButton text={shareText} url={shareUrl} />
 
                 {/* 強み・弱み */}
                 <div className="grid grid-cols-1 gap-3 mb-4">
@@ -122,10 +116,6 @@ export default async function ShindanResultPage(props: { params: Promise<{ type:
                     </div>
                 </div>
 
-                {/* 診断へ */}
-                <Link href="/shindan" className="block bg-[#533afd] hover:bg-[#4434d4] active:scale-[0.99] transition-all text-white text-center font-black rounded-xl py-4">
-                    自分も診断してみる（無料・約2分）
-                </Link>
             </div>
         </div>
     );
