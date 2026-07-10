@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         { url: `${BASE}/market`, changeFrequency: "hourly", priority: 0.9 },
         { url: `${BASE}/lp`, changeFrequency: "weekly", priority: 0.8 },
         { url: `${BASE}/guide`, changeFrequency: "monthly", priority: 0.7 },
+        { url: `${BASE}/shindan`, changeFrequency: "monthly", priority: 0.8 },
         { url: `${BASE}/news`, changeFrequency: "daily", priority: 0.7 },
         { url: `${BASE}/ranking`, changeFrequency: "daily", priority: 0.7 },
         { url: `${BASE}/events`, changeFrequency: "weekly", priority: 0.5 },
@@ -26,5 +27,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: 0.8,
     }));
 
-    return [...staticPages, ...placePages];
+    // ギャンブラー診断の結果ページ（8タイプ）
+    const shindanPages: MetadataRoute.Sitemap = [
+        "shokunin", "sniper", "hunter", "kitaichi", "ishibashi", "nekketsu", "yumeoi", "banshou",
+    ].map(slug => ({
+        url: `${BASE}/shindan/${slug}`,
+        changeFrequency: "monthly" as const,
+        priority: 0.5,
+    }));
+
+    return [...staticPages, ...placePages, ...shindanPages];
 }

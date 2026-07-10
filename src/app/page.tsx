@@ -92,6 +92,27 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* 3. ギャンブラー診断バナー */}
+      <div className="mt-5 px-4">
+        <Link href="/shindan">
+          <div className="bg-gradient-to-r from-[#061b31] to-[#1c2f6e] rounded-lg p-4 flex items-center gap-3 hover:opacity-95 transition-opacity">
+            <div className="flex -space-x-3 shrink-0">
+              {["nekketsu", "shokunin", "banshou"].map(s => (
+                <div key={s} className="w-12 h-12 bg-white rounded-full overflow-hidden border-2 border-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/shindan/char-${s}.png`} alt="" className="w-full h-full object-cover" />
+                </div>
+              ))}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black text-white">ギャンブラー診断</p>
+              <p className="text-[11px] text-white/80 leading-snug">30問であなたの舟券スタイルを丸裸に。全8タイプ・無料</p>
+            </div>
+            <span className="text-white/70 text-lg shrink-0">›</span>
+          </div>
+        </Link>
+      </div>
+
 
       {/* 4. Latest Results */}
       <div className="mt-5 px-4">
