@@ -28,7 +28,7 @@ export function ShindanClient() {
 
     if (!started) {
         return (
-            <div className="bg-gradient-to-b from-[#061b31] to-[#1c2f6e] rounded-2xl px-5 py-8 text-center text-white">
+            <div className="px-1 py-8 text-center text-white">
                 <p className="text-[11px] font-bold tracking-[0.2em] text-white/70 mb-2">BOAT BANK presents</p>
                 <h1 className="text-3xl font-black mb-3">ギャンブラー診断</h1>
                 <p className="text-sm text-white/85 leading-relaxed mb-4">

@@ -24,13 +24,13 @@ export const metadata = {
 
 export default function ShindanPage() {
     return (
-        <div className="min-h-full bg-[#f8fafc] pb-16" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        <div className="min-h-full bg-gradient-to-b from-[#061b31] to-[#1c2f6e] pb-16" style={{ paddingTop: "env(safe-area-inset-top)" }}>
             <div className="max-w-md mx-auto px-4 pt-4">
-                <Link href="/" className="inline-flex items-center gap-1 text-xs font-black text-[#061b31] mb-3">
-                    <span className="bg-[#533afd] text-white px-1.5 py-0.5 rounded text-[10px]">BOAT</span>BANK
+                <Link href="/" className="inline-flex items-center gap-1 text-xs font-black text-white mb-3">
+                    <span className="bg-white/20 border border-white/30 px-1.5 py-0.5 rounded text-[10px]">BOAT</span>BANK
                 </Link>
                 <ShindanClient />
-                <p className="text-[10px] text-[#94a3b8] text-center leading-relaxed mt-4">
+                <p className="text-[10px] text-white/50 text-center leading-relaxed mt-4">
                     ※ 本診断はエンターテインメントです。舟券の購入は20歳から、無理のない範囲で。
                 </p>
             </div>
