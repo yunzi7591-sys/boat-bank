@@ -50,7 +50,7 @@ export default async function ShindanResultPage(props: { params: Promise<{ type:
     return (
         <div className="min-h-full bg-[#f8fafc] pb-24">
             {/* ヘッダー: タイプカラー */}
-            <div className="text-white px-4 pt-4 pb-14" style={{ background: `linear-gradient(160deg, ${t.colorDark}, ${t.color})` }}>
+            <div className="text-white px-4 pb-14" style={{ background: `linear-gradient(160deg, ${t.colorDark}, ${t.color})`, paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}>
                 <div className="max-w-md mx-auto">
                     <Link href="/" className="inline-flex items-center gap-1 text-xs font-black text-white mb-5">
                         <span className="bg-white/20 border border-white/30 px-1.5 py-0.5 rounded text-[10px]">BOAT</span>BANK
