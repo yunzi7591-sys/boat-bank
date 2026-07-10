@@ -66,6 +66,11 @@ export const viewport = {
   themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
+  // 16px未満の入力欄フォーカス時にOSが画面を自動ズームするのを防ぐ。
+  // 後からJSで書き換えてもWKWebViewには効かないため、初期HTMLに焼き込む必要がある。
+  // iOS Safariはこの指定があってもピンチ拡大は可能（OS側が上書きする）
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   colorScheme: "light",
 };

@@ -9,22 +9,6 @@ import { useEffect } from "react";
  * - visualViewport の resize でも検知して補正
  */
 export function KeyboardScrollFix() {
-    // ネイティブアプリのみ: 16px未満の入力欄フォーカス時にOSが自動ズームするのを止める
-    // （Webブラウザ版のピンチ拡大には影響させない）
-    useEffect(() => {
-        (async () => {
-            try {
-                const { Capacitor } = await import("@capacitor/core");
-                if (!Capacitor.isNativePlatform()) return;
-                const meta = document.querySelector('meta[name="viewport"]');
-                meta?.setAttribute(
-                    "content",
-                    "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
-                );
-            } catch { }
-        })();
-    }, []);
-
     useEffect(() => {
         const forceMainReflow = () => {
             try {
