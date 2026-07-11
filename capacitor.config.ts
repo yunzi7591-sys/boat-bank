@@ -4,7 +4,8 @@ import { KeyboardResize } from '@capacitor/keyboard';
 const config: CapacitorConfig = {
   appId: 'jp.boatbank.app',
   appName: 'BOAT BANK',
-  webDir: 'public',
+  // アプリはserver.urlから読み込むため、同梱アセットは空のプレースホルダのみ（サイズ削減）
+  webDir: 'capacitor-shell',
   // アプリのWebViewだけがUser-Agentに名乗る識別子。
   // サーバー側の「アプリ限定機能」（星評価など）の判定に使う
   appendUserAgent: 'BoatBankApp',
