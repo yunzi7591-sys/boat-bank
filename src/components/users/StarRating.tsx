@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { Star } from "lucide-react";
 import { setUserRating, clearUserRating } from "@/actions/rating";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 /**
  * 予想家への星評価（星のみ・1人1件）。
  * タップで評価、同じ星をもう一度タップで取り消し。
+ * 評価の操作はアプリ版のみ（Webでは案内のみ表示）。
  */
 export function StarRating({
     targetUserId,
@@ -20,8 +21,26 @@ export function StarRating({
 }) {
     const [myRating, setMyRating] = useState<number | null>(initialMyRating);
     const [isPending, startTransition] = useTransition();
+    const [isNativeApp, setIsNativeApp] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        import("@capacitor/core")
+            .then(({ Capacitor }) => { if (!cancelled) setIsNativeApp(Capacitor.isNativePlatform()); })
+            .catch(() => { if (!cancelled) setIsNativeApp(false); });
+        return () => { cancelled = true; };
+    }, []);
 
     if (!canRate) return null;
+    if (isNativeApp === null) return null; // 判定中は何も出さない（チラつき防止）
+
+    if (!isNativeApp) {
+        return (
+            <p className="text-[11px] text-[#94a3b8]">
+                ⭐ 予想家の評価はアプリ版から行えます
+            </p>
+        );
+    }
 
     const handleTap = (value: number) => {
         if (isPending) return;
