@@ -14,6 +14,7 @@ interface PredictionItem {
     refundAmount?: number;
     createdAt: string;
     authorName?: string;
+    isExternal?: boolean;
 }
 
 const PAGE_SIZE = 5;
@@ -36,6 +37,7 @@ export function PredictionList({ items, showAuthor = false }: { items: Predictio
                             <div className="flex items-center justify-between mb-1">
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold bg-[#061b31] text-white px-1.5 py-0.5 rounded">{pred.placeName} {pred.raceNumber}R</span>
+                                    {pred.isExternal && <span className="text-[10px] font-bold text-[#64748d] bg-[#f1f5f9] border border-[#e5edf5] px-1.5 py-0.5 rounded">外部</span>}
                                     <span className="text-[10px] text-[#64748d]">{new Date(pred.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>
                                 </div>
                                 {!pred.isSettled ? (
