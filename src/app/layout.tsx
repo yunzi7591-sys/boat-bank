@@ -118,7 +118,12 @@ export default async function RootLayout({
         <AppReviewPrompt accountCreatedAt={accountCreatedAt} />
         <SubscriptionPromoModal enabled={showSubscriptionPromo} />
         <PublishShareModal />
-        <Toaster position="top-center" />
+        {/* アプリではWebViewがステータスバー下まで広がるため、時計に被らないようセーフエリア分下げる */}
+        <Toaster
+          position="top-center"
+          offset={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}
+          mobileOffset={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}
+        />
         {process.env.NEXT_PUBLIC_GA_ID?.trim() && (
           <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID.trim()} />
         )}
