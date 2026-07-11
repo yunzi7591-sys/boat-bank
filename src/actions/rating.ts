@@ -1,12 +1,23 @@
 "use server";
 
 import { auth } from "@/auth";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { rateLimit } from "@/lib/rate-limit";
 
+/** アプリ（Capacitor WebView）からのリクエストかどうか。
+ * アプリはUser-Agentに "BoatBankApp" を付けて名乗る（capacitor.config.ts の appendUserAgent） */
+async function isFromNativeApp(): Promise<boolean> {
+    const ua = (await headers()).get("user-agent") || "";
+    return ua.includes("BoatBankApp");
+}
+
 /** 予想家への星評価を登録・更新する（星のみ・1人1件） */
 export async function setUserRating(targetId: string, rating: number) {
+    if (!(await isFromNativeApp())) {
+        return { success: false, error: "評価はアプリ版からのみ行えます。アプリを最新版に更新してください。" };
+    }
     const session = await auth();
     const raterId = session?.user?.id;
     if (!raterId) return { success: false, error: "ログインが必要です。" };
@@ -38,6 +49,9 @@ export async function setUserRating(targetId: string, rating: number) {
 
 /** 自分が付けた星評価を取り消す */
 export async function clearUserRating(targetId: string) {
+    if (!(await isFromNativeApp())) {
+        return { success: false, error: "評価はアプリ版からのみ行えます。アプリを最新版に更新してください。" };
+    }
     const session = await auth();
     const raterId = session?.user?.id;
     if (!raterId) return { success: false, error: "ログインが必要です。" };

@@ -5,6 +5,9 @@ const config: CapacitorConfig = {
   appId: 'jp.boatbank.app',
   appName: 'BOAT BANK',
   webDir: 'public',
+  // アプリのWebViewだけがUser-Agentに名乗る識別子。
+  // サーバー側の「アプリ限定機能」（星評価など）の判定に使う
+  appendUserAgent: 'BoatBankApp',
   server: {
     url: 'https://boatbank.jp',
     cleartext: false,
