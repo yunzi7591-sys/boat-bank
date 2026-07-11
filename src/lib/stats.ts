@@ -242,11 +242,16 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     let totalRefund = 0;
 
     const raceMap = new Map<string, { settled: boolean; hit: boolean }>();
+    // 的中した買い目のオッズ（払戻 ÷ 賭け金）。返還は除外
+    const hitOddsList: number[] = [];
 
     for (const bet of userBets) {
         totalInvestment += bet.betAmount || 0;
         if (bet.isSettled) {
             totalRefund += (bet.hitAmount || 0) + (bet.refundAmount || 0);
+            if (bet.isHit && (bet.betAmount || 0) > 0 && (bet.hitAmount || 0) > 0) {
+                hitOddsList.push((bet.hitAmount || 0) / (bet.betAmount || 1));
+            }
         }
         const key = `bet-${bet.placeName}-${bet.raceNumber}-${bet.raceDate?.toISOString()}`;
         const race = raceMap.get(key) || { settled: false, hit: false };
@@ -265,8 +270,9 @@ export async function getUserStats(userId: string): Promise<UserStats> {
         recoveryRate,
         hitCount,
         totalPredictions,
-        avgCombosPerRace: null,
-        avgHitOdds: null,
+        // 1行 = 1買い目なので、レース数で割れば1Rあたりの平均買い目点数になる
+        avgCombosPerRace: totalPredictions > 0 ? userBets.length / totalPredictions : null,
+        avgHitOdds: hitOddsList.length > 0 ? hitOddsList.reduce((a, b) => a + b, 0) / hitOddsList.length : null,
     };
 }
 
