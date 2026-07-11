@@ -360,6 +360,8 @@ model UserBet {
   isHit          Boolean   @default(false)
   hitAmount      Int       @default(0) // 的中時の払戻金額
 
+  memo           String?   // 展開予想などのメモ（同時登録した買い目に同じ値を保存、レース単位で表示）
+
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   race           Race?     @relation(fields: [raceId], references: [id], onDelete: Cascade)
 

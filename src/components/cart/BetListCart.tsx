@@ -65,6 +65,9 @@ export function BetListCart({ deadlineAt, initialPublishType, eventId, eventPoin
     // 自動資金配分: 合計金額（100円単位の数値文字列）
     const [allocTotal, setAllocTotal] = useState('');
 
+    // 非公開登録用のメモ（展開予想など・任意）
+    const [betMemo, setBetMemo] = useState('');
+
     // キーボードの高さ（公開ポップアップを開いている間だけ検知）。
     // resize:'none' のため画面が縮まらない → この分の余白を下に足してスクロール可能にする。
     const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -416,6 +419,15 @@ export function BetListCart({ deadlineAt, initialPublishType, eventId, eventPoin
                             </Button>
                         ) : (
                         // Private (isPrivate === true)
+                        <div className="flex-1 flex flex-col gap-2">
+                        <Textarea
+                            placeholder="メモ・展開予想（任意）"
+                            rows={2}
+                            value={betMemo}
+                            onChange={(e) => setBetMemo(e.target.value)}
+                            maxLength={500}
+                            className="border-[#e5edf5] bg-white text-sm"
+                        />
                         <Button
                             size="lg"
                             disabled={isBetPending || totalAmount === 0}
@@ -441,9 +453,11 @@ export function BetListCart({ deadlineAt, initialPublishType, eventId, eventPoin
                                             raceNumber: parseInt(qRaceNumber),
                                             raceDate: jstBusinessRaceDate().toISOString(),
                                             bets: allBets,
+                                            memo: betMemo,
                                         });
                                         if (res.success) {
                                             clearCart();
+                                            setBetMemo('');
                                             toast.success('保存しました！', { position: 'top-center' });
                                             router.push('/mypage');
                                         } else {
@@ -461,6 +475,7 @@ export function BetListCart({ deadlineAt, initialPublishType, eventId, eventPoin
                                 isClosed ? '収支登録' : '投票する（非公開）'
                             )}
                         </Button>
+                        </div>
                         )
                     ) : (
                         // Public (isPublic === true)

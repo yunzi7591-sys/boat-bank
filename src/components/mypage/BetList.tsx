@@ -23,6 +23,7 @@ export interface BetItem {
     refundAmount: number;
     isSettled: boolean;
     isHit: boolean;
+    memo?: string | null;
 }
 
 interface RaceGroup {
@@ -30,6 +31,7 @@ interface RaceGroup {
     placeName: string | null;
     raceNumber: number | null;
     raceDate: string | null;
+    memo: string | null;
     bets: BetItem[];
     totalBet: number;
     totalPayout: number;
@@ -49,6 +51,7 @@ function groupByRace(items: BetItem[]): RaceGroup[] {
                 placeName: bet.placeName,
                 raceNumber: bet.raceNumber,
                 raceDate: bet.raceDate,
+                memo: null,
                 bets: [],
                 totalBet: 0,
                 totalPayout: 0,
@@ -59,6 +62,7 @@ function groupByRace(items: BetItem[]): RaceGroup[] {
             map.set(key, g);
         }
         g.bets.push(bet);
+        if (!g.memo && bet.memo?.trim()) g.memo = bet.memo.trim();
         g.totalBet += bet.betAmount;
         g.totalPayout += bet.hitAmount + bet.refundAmount;
         if (bet.isSettled) g.anySettled = true;
@@ -139,6 +143,12 @@ export function BetList({ items }: { items: BetItem[] }) {
 
                             {isOpen && (
                                 <div className="border-t border-black/[0.06] px-3 py-2 space-y-1.5 bg-white/40">
+                                    {race.memo && (
+                                        <div className="mb-1">
+                                            <p className="text-[10px] font-bold text-[#94a3b8]">メモ</p>
+                                            <p className="text-xs text-[#273951] whitespace-pre-wrap leading-relaxed">{race.memo}</p>
+                                        </div>
+                                    )}
                                     <p className="text-[10px] font-bold text-[#94a3b8]">買い目</p>
                                     {race.bets.map(bet => {
                                         const label = bet.betType ? (BET_TYPE_LABELS[bet.betType] || bet.betType) : "";

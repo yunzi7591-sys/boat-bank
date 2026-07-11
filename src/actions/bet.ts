@@ -41,6 +41,7 @@ interface SubmitBetsPayload {
     raceNumber: number;
     raceDate: string; // ISO string
     bets: BetInput[];
+    memo?: string; // 展開予想などのメモ（任意）
 }
 
 export async function submitBets(payload: SubmitBetsPayload) {
@@ -69,6 +70,9 @@ export async function submitBets(payload: SubmitBetsPayload) {
                 return { success: false, error: "ベット金額が上限を超えています。" };
             }
         }
+
+        // メモは任意・500文字まで
+        const memo = (payload.memo || "").trim().slice(0, 500) || null;
 
         const raceDate = new Date(payload.raceDate);
 
@@ -103,6 +107,7 @@ export async function submitBets(payload: SubmitBetsPayload) {
             placeName: payload.placeName,
             raceNumber: payload.raceNumber,
             raceDate: raceDate,
+            memo,
         }));
 
         // 4. Bulk insert (賭け記録のみ、ポイント消費なし — 実際の舟券購入の記録)

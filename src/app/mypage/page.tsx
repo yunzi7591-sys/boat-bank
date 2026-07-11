@@ -58,6 +58,7 @@ export default async function MyPage() {
                 refundAmount: true,
                 isSettled: true,
                 isHit: true,
+                memo: true,
             },
         }),
         getUserSubscription(userId),
@@ -249,6 +250,7 @@ export default async function MyPage() {
                             refundAmount: bet.isSettled ? bet.refundAmount : 0,
                             isSettled: bet.isSettled,
                             isHit: bet.isHit,
+                            memo: bet.memo,
                         }))} />
                     </TabsContent>
 
