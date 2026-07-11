@@ -6,6 +6,7 @@ import { settleRacePredictions } from "@/lib/evaluate";
 import { syncTodaySchedule, syncOfficialGradeAndDay, syncTodayResults, syncAndSaveSingleResult } from "@/lib/boatrace-api";
 import { revalidatePath } from "next/cache";
 import { errorMessage } from "@/lib/errors";
+import { jstBusinessRaceDate } from "@/lib/business-day";
 
 // Function removed
 
@@ -44,12 +45,8 @@ export async function triggerApiEvaluation(formData: FormData) {
         const raceNumber = parseInt(formData.get("raceNumber") as string);
 
         // 1. Fetch and save race result (scraping + API fallback)
-        const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
-        const currentDate = new Date(todayStr);
-        const yyyy = currentDate.getFullYear();
-        const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const dd = String(currentDate.getDate()).padStart(2, '0');
-        const raceDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
+        // 深夜2時(26時)までは前日扱い
+        const raceDate = jstBusinessRaceDate();
 
         await syncAndSaveSingleResult(placeName, raceNumber, raceDate);
 

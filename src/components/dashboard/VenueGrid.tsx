@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Map } from "lucide-react";
 import { RefreshButton } from "./RefreshButton";
+import { jstBusinessRaceDate } from "@/lib/business-day";
 
 const getGradeColor = (grade: string) => {
     switch (grade) {
@@ -15,11 +16,8 @@ const getGradeColor = (grade: string) => {
 };
 
 export async function VenueGrid() {
-    const nowJst = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
-    const yyyy = nowJst.getFullYear();
-    const mm = String(nowJst.getMonth() + 1).padStart(2, '0');
-    const dd = String(nowJst.getDate()).padStart(2, '0');
-    const searchDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
+    // 深夜2時(26時)までは前日扱い
+    const searchDate = jstBusinessRaceDate();
 
     const schedules = await prisma.raceSchedule.findMany({
         where: { raceDate: searchDate }

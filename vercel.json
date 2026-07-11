@@ -41,7 +41,7 @@
         },
         {
             "path": "/api/cron/cleanup-notifications",
-            "schedule": "0 15 * * *"
+            "schedule": "30 17 * * *"
         },
         {
             "path": "/api/cron/cleanup-unused-races",

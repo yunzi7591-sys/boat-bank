@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { VENUES } from '@/lib/constants/venues';
 import { cn } from '@/lib/utils';
 import { usePublishShareStore } from '@/store/publish-share-store';
+import { jstBusinessRaceDate } from '@/lib/business-day';
 
 interface OddsMap {
     [oddsType: string]: { data: Record<string, number>; fetchedAt: string };
@@ -386,17 +387,12 @@ export function BetListCart({ deadlineAt, initialPublishType, eventId, eventPoin
                                                     amount: comb.amount,
                                                 }))
                                             );
-                                            const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
-                                            const currentDate = new Date(todayStr);
-                                            const yyyy = currentDate.getFullYear();
-                                            const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-                                            const dd = String(currentDate.getDate()).padStart(2, '0');
 
                                             const res = await submitEventBets({
                                                 eventId,
                                                 placeName: qPlaceName,
                                                 raceNumber: parseInt(qRaceNumber),
-                                                raceDate: `${yyyy}-${mm}-${dd}T00:00:00.000Z`,
+                                                raceDate: jstBusinessRaceDate().toISOString(),
                                                 bets: allBets,
                                             });
                                             if (res.success) {
@@ -439,16 +435,11 @@ export function BetListCart({ deadlineAt, initialPublishType, eventId, eventPoin
                                                 amount: comb.amount,
                                             }))
                                         );
-                                        const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
-                                        const currentDate = new Date(todayStr);
-                                        const yyyy = currentDate.getFullYear();
-                                        const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-                                        const dd = String(currentDate.getDate()).padStart(2, '0');
 
                                         const res = await submitBets({
                                             placeName: qPlaceName,
                                             raceNumber: parseInt(qRaceNumber),
-                                            raceDate: `${yyyy}-${mm}-${dd}T00:00:00.000Z`,
+                                            raceDate: jstBusinessRaceDate().toISOString(),
                                             bets: allBets,
                                         });
                                         if (res.success) {
@@ -592,14 +583,7 @@ export function BetListCart({ deadlineAt, initialPublishType, eventId, eventPoin
                                                             price: 0,
                                                             placeName: formData.get('placeName') as string || qPlaceName,
                                                             raceNumber: parseInt(formData.get('raceNumber') as string) || parseInt(qRaceNumber),
-                                                            raceDate: (() => {
-                                                                // JST基準で当日の00:00:00 UTCを生成
-                                                                const jst = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
-                                                                const y = jst.getFullYear();
-                                                                const m = String(jst.getMonth() + 1).padStart(2, '0');
-                                                                const d = String(jst.getDate()).padStart(2, '0');
-                                                                return new Date(`${y}-${m}-${d}T00:00:00.000Z`);
-                                                            })(),
+                                                            raceDate: jstBusinessRaceDate(),
                                                             deadlineAt: new Date(formData.get('deadlineAt') as string),
                                                             cartData: cart,
                                                             isPrivate: false,

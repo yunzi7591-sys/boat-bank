@@ -4,6 +4,7 @@ import { VENUES } from "@/lib/constants/venues";
 import { prisma } from "@/lib/prisma";
 import PredictClient from "./PredictClient";
 import { MockRacer } from "@/components/betting/VerticalGrid";
+import { jstBusinessRaceDate } from "@/lib/business-day";
 
 export default async function PredictPage(props: {
     searchParams: Promise<{ placeId?: string; raceNumber?: string; isPrivate?: string; eventId?: string }>;
@@ -24,19 +25,12 @@ export default async function PredictPage(props: {
     let racers: MockRacer[] = [];
 
     if (venue) {
-        // We look for today's entries
-        const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
-        const currentDate = new Date(todayStr);
-        const yyyy = currentDate.getFullYear();
-        const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const dd = String(currentDate.getDate()).padStart(2, '0');
-        const localDateStr = `${yyyy}-${mm}-${dd}`;
-
+        // 営業日（深夜2時までは前日扱い）のレースを見る
         const entries = await prisma.raceEntry.findMany({
             where: {
                 placeName: venue.name,
                 raceNumber: raceNumber,
-                raceDate: new Date(`${localDateStr}T00:00:00.000Z`)
+                raceDate: jstBusinessRaceDate()
             },
             include: {
                 racer: true
@@ -75,11 +69,8 @@ export default async function PredictPage(props: {
     // Fetch schedule for deadlineAt
     let deadlineAt: Date | null = null;
     if (venue) {
-        const todayStr2 = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
-        const cd2 = new Date(todayStr2);
-        const localDateStr2 = `${cd2.getFullYear()}-${String(cd2.getMonth() + 1).padStart(2, '0')}-${String(cd2.getDate()).padStart(2, '0')}`;
         const schedule = await prisma.raceSchedule.findFirst({
-            where: { placeName: venue.name, raceNumber, raceDate: new Date(`${localDateStr2}T00:00:00.000Z`) },
+            where: { placeName: venue.name, raceNumber, raceDate: jstBusinessRaceDate() },
             select: { deadlineAt: true },
         });
         if (schedule) deadlineAt = schedule.deadlineAt;
@@ -96,10 +87,8 @@ export default async function PredictPage(props: {
         eventPoints = participant?.points ?? null;
     }
 
-    // raceDate (JST当日のUTC midnight)
-    const todayStr3 = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
-    const cd3 = new Date(todayStr3);
-    const raceDateStr = `${cd3.getFullYear()}-${String(cd3.getMonth() + 1).padStart(2, '0')}-${String(cd3.getDate()).padStart(2, '0')}T00:00:00.000Z`;
+    // raceDate (営業日基準のUTC midnight)
+    const raceDateStr = jstBusinessRaceDate().toISOString();
 
     return (
         <PredictClient

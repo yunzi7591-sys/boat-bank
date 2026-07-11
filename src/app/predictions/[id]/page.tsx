@@ -12,6 +12,7 @@ import { Lock, ExternalLink } from "lucide-react";
 import { ShareButton } from "@/components/predictions/ShareButton";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { isBusinessToday } from "@/lib/business-day";
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ref?: string | string[] }> }): Promise<Metadata> {
     const { id } = await params;
@@ -127,8 +128,7 @@ export default async function PredictionPage(props: { params: Promise<{ id: stri
     let canSubscriberUnlock = false;
     let promptSubscribeForClosed = false;
     if (!canView) {
-        const jstDate = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
-        const isRaceToday = jstDate(new Date(prediction.raceDate)) === jstDate(new Date());
+        const isRaceToday = isBusinessToday(new Date(prediction.raceDate));
         if (isRaceToday && userId && (await isSubscriber(userId))) {
             canSubscriberUnlock = true;
         } else if (isRaceToday) {

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { VENUES } from "@/lib/constants/venues";
+import { jstBusinessRaceDate } from "@/lib/business-day";
 
 export async function getRaceEntriesAndSchedule(stadiumId: string, raceNumber: number) {
     try {
@@ -10,12 +11,8 @@ export async function getRaceEntriesAndSchedule(stadiumId: string, raceNumber: n
             return { success: false, error: "Invalid venue ID" };
         }
 
-        const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
-        const currentDate = new Date(todayStr);
-        const yyyy = currentDate.getFullYear();
-        const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const dd = String(currentDate.getDate()).padStart(2, '0');
-        const searchDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
+        // 深夜2時(26時)までは前日扱い
+        const searchDate = jstBusinessRaceDate();
 
         const schedule = await prisma.raceSchedule.findUnique({
             where: {

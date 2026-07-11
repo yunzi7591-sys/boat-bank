@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { sendPushNotification } from "@/lib/push";
 import { isSubscriber } from "@/lib/subscription";
+import { isBusinessToday } from "@/lib/business-day";
 
 /**
  * 会員特典で締切後・当日の予想をアンロックする（pt消費なし）。
@@ -28,8 +29,7 @@ export async function unlockBySubscription(predictionId: string) {
     // 締切後のみ（締切前は誰でも無料で閲覧できる）
     if (new Date(prediction.deadlineAt) >= new Date()) return { success: false, error: "締切前の予想はそのまま閲覧できます。" };
     // 当日のレースのみ（JST）
-    const jstDate = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
-    if (jstDate(new Date(prediction.raceDate)) !== jstDate(new Date())) return { success: false, error: "当日のレースのみ閲覧できます。" };
+    if (!isBusinessToday(new Date(prediction.raceDate))) return { success: false, error: "当日のレースのみ閲覧できます。" };
     // サブスク会員のみ
     if (!(await isSubscriber(userId))) return { success: false, error: "サブスク会員のみ閲覧できます。" };
 

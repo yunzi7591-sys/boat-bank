@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BOAT_COLORS } from "@/lib/bet-logic";
 
 import { RaceHubClient } from "./RaceHubClient";
+import { jstBusinessRaceDate } from "@/lib/business-day";
 
 export async function generateMetadata(props: { params: Promise<{ placeId: string }> }) {
     const params = await props.params;
@@ -32,14 +33,8 @@ export default async function PlacePage(props: {
         return <div className="p-8 text-center text-red-500 font-bold">会場が見つかりません</div>;
     }
 
-    const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
-    const currentDate = new Date(todayStr);
-    const yyyy = currentDate.getFullYear();
-    const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(currentDate.getDate()).padStart(2, '0');
-    const localDateStr = `${yyyy}-${mm}-${dd}`;
-
-    const raceDateFilter = new Date(`${localDateStr}T00:00:00.000Z`);
+    // 深夜2時(26時)までは前日扱い
+    const raceDateFilter = jstBusinessRaceDate();
 
     // Fetch all data in parallel
     const [schedules, allMarketPredictions, allRaceResults, allRaceEntries, activeEvent] = await Promise.all([
