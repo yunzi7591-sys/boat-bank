@@ -214,6 +214,20 @@ export default async function UserProfilePage(props: { params: Promise<{ id: str
                             <p className="text-[10px] text-[#64748d] font-bold">的中</p>
                             <p className="text-sm font-bold text-[#061b31] tabular-nums">{stats.hitCount}<span className="text-[10px] text-[#64748d] ml-0.5">/ {stats.totalPredictions}R</span></p>
                         </div>
+                        <div>
+                            <p className="text-[10px] text-[#64748d] font-bold">平均買い目</p>
+                            <p className="text-sm font-bold text-[#061b31] tabular-nums">
+                                {stats.avgCombosPerRace !== null ? stats.avgCombosPerRace.toFixed(1) : "－"}
+                                <span className="text-[10px] text-[#64748d] ml-0.5">点/R</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-[#64748d] font-bold">平均的中オッズ</p>
+                            <p className="text-sm font-bold text-[#061b31] tabular-nums">
+                                {stats.avgHitOdds !== null ? stats.avgHitOdds.toFixed(1) : "－"}
+                                <span className="text-[10px] text-[#64748d] ml-0.5">倍</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Formation } from "@/lib/bet-logic";
+import { Formation, normalizeCombo } from "@/lib/bet-logic";
 import { parseJsonSafely } from "@/lib/utils";
 import { VENUES } from "@/lib/constants/venues";
 
@@ -9,6 +9,10 @@ export interface UserStats {
     recoveryRate: number;
     hitCount: number;
     totalPredictions: number;
+    /** 1Rあたりの平均買い目点数（買い目のある予想が無い場合は null） */
+    avgCombosPerRace: number | null;
+    /** 的中した買い目の平均オッズ（的中が無い場合は null） */
+    avgHitOdds: number | null;
 }
 
 export interface VenueStats {
@@ -29,19 +33,77 @@ export async function getPublicUserStats(userId: string): Promise<UserStats> {
             betAmount: true,
             hitAmount: true,
             refundAmount: true,
+            predictedNumbers: true,
+            placeName: true,
+            raceNumber: true,
+            raceDate: true,
         },
     });
 
     let totalInvestment = 0;
     let totalRefund = 0;
     let hitCount = 0;
-    let totalPredictions = predictions.length;
+    const totalPredictions = predictions.length;
+
+    // 1Rあたりの平均買い目点数
+    let combosTotal = 0;
+    let combosRaces = 0;
 
     for (const pred of predictions) {
         totalInvestment += pred.betAmount || 0;
         if (pred.isSettled) {
             totalRefund += (pred.hitAmount || 0) + (pred.refundAmount || 0);
             if (pred.isHit) hitCount++;
+        }
+        try {
+            const formations = parseJsonSafely<Formation[]>(pred.predictedNumbers);
+            const count = formations.reduce((sum, f) => sum + (f.combinations?.length || 0), 0);
+            if (count > 0) {
+                combosTotal += count;
+                combosRaces++;
+            }
+        } catch { }
+    }
+
+    // 平均的中オッズ: 的中予想のレース結果（払戻）と買い目を突き合わせて算出
+    const hitPredictions = predictions.filter(p => p.isSettled && p.isHit);
+    let avgHitOdds: number | null = null;
+    if (hitPredictions.length > 0) {
+        const results = await prisma.raceResult.findMany({
+            where: {
+                OR: hitPredictions.map(p => ({
+                    placeName: p.placeName,
+                    raceNumber: p.raceNumber,
+                    raceDate: p.raceDate,
+                })),
+            },
+            select: { placeName: true, raceNumber: true, raceDate: true, payouts: true },
+        });
+        const resultMap = new Map(
+            results.map(r => [`${r.placeName}-${r.raceNumber}-${r.raceDate.getTime()}`, r]),
+        );
+
+        const hitOddsList: number[] = [];
+        for (const pred of hitPredictions) {
+            const result = resultMap.get(`${pred.placeName}-${pred.raceNumber}-${pred.raceDate.getTime()}`);
+            if (!result?.payouts) continue;
+            try {
+                const payouts = (typeof result.payouts === "string" ? JSON.parse(result.payouts) : result.payouts) as { type: string; numbers: string; amount: number }[];
+                const formations = parseJsonSafely<Formation[]>(pred.predictedNumbers);
+                for (const f of formations) {
+                    const officialPayouts = payouts.filter(p => p.type === f.betType);
+                    for (const c of f.combinations || []) {
+                        for (const op of officialPayouts) {
+                            if (normalizeCombo(c.id, f.betType) === normalizeCombo(op.numbers, f.betType)) {
+                                hitOddsList.push(op.amount / 100); // 100円あたり払戻 → 倍率
+                            }
+                        }
+                    }
+                }
+            } catch { }
+        }
+        if (hitOddsList.length > 0) {
+            avgHitOdds = hitOddsList.reduce((a, b) => a + b, 0) / hitOddsList.length;
         }
     }
 
@@ -53,6 +115,8 @@ export async function getPublicUserStats(userId: string): Promise<UserStats> {
         recoveryRate,
         hitCount,
         totalPredictions,
+        avgCombosPerRace: combosRaces > 0 ? combosTotal / combosRaces : null,
+        avgHitOdds,
     };
 }
 
@@ -201,6 +265,8 @@ export async function getUserStats(userId: string): Promise<UserStats> {
         recoveryRate,
         hitCount,
         totalPredictions,
+        avgCombosPerRace: null,
+        avgHitOdds: null,
     };
 }
 
